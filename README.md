@@ -3,13 +3,12 @@
 Binary Tries
 
 Btrie is a library with a few binary trie implementations. These are
-roughly equivalent to a `map[[]byte]<value type>`, but without a
-`map`'s syntax or its full semantics. Currently, they are all
-in-memory only.
-
+roughly equivalent to an ordered `map[[]byte]<value type>`, but
+without a `map`'s syntax or its full semantics. Currently, these
+implementations are all in-memory only.
 * neither persistent nor thread-safe
-* fully persistent and thread-safe, in [this sense]
-  (https://en.wikipedia.org/wiki/Persistent_data_structure).
+* fully persistent and thread-safe, in [this
+  sense](https://en.wikipedia.org/wiki/Persistent_data_structure).
 * partially persistent and thread-safe
 * thread-safe  
   This uses the same mechanism as the partially persistent variant to
