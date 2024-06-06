@@ -13,13 +13,13 @@ implementations are all in-memory only.
 * thread-safe  
   This uses the same mechanism as the partially persistent variant to
   allow concurrent reads with no synchronization (path copying), but
-  does not allow explictly querying previous versions. All reads use
+  does not allow explicitly querying previous versions. All reads use
   the data structure at the time a reference to the trie is taken,
-  which can be garbage collected when it is no longer referencable.
+  which can be garbage collected when it can no longer be referenced.
   This allows the trie to be compacted.
 
 Binary tries make an excellent in-memory index for [lexicographically
-byte-ordered data](https://github.com/phiryll/lexy). The princples
+byte-ordered data](https://github.com/phiryll/lexy). The principles
 could also possibly be applied to a [data history tracking
 database](https://phiryll.github.io/projects/data-history.html).
 
