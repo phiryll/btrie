@@ -29,5 +29,6 @@ After the initial implementations, define a common interface. Use this
 to allow different representations at different levels of the binary
 trie. The goal would be to self-optimize the trie for speed or space
 at different levels. I'm specifically considering sparse vs. dense
-data, but there may be other possibilities. This might not be
-reasonable with the fully or partially persistent variants.
+data, but there may be other possibilities. This is probably not
+feasible for the fully or partially persistent variants since those
+need to maintain all history.
