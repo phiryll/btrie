@@ -83,6 +83,8 @@ linters:
   # Disable specific linter
   # https://golangci-lint.run/usage/linters/#disabled-by-default
   disable:
+    # temporary, lots of TODOs in the code right now
+    - godox
     # causes problems if golangci-lint is compiled with a different version of go
     - typecheck
     # not needed/wanted in this project
@@ -91,6 +93,7 @@ linters:
     - gochecknoglobals  # no config options to limit to exported elements
     - goheader          # no headers in source files. LICENSE is enough
     - gomodguard        # depguard is sufficient, this is overkill here
+    - ireturn           # I need to think about this one, I like returning interfaces
     - makezero          # this is an absurd linter
     - nlreturn          # also absurd, a blank line before every return and branch?
     - promlinter        # metrics collection not used

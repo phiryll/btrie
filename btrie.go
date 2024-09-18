@@ -56,3 +56,9 @@ type Entry struct {
 	Key   []byte
 	Value []byte
 }
+
+// NewSimple returns a new, absurdly simple, and badly coded BTrie.
+// This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
+func NewSimple() BTrie {
+	return &node{nil, nil, 0}
+}
