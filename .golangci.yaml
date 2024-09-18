@@ -1,0 +1,437 @@
+# output configuration options
+output:
+  # Make issues output unique by line.
+  # Default: true
+  uniq-by-line: false
+
+  # Show statistics per linter.
+  # Default: false
+  show-stats: true
+
+  # Sort results by the order defined in `sort-order`.
+  # Default: false
+  sort-results: true
+
+  # Order to use when sorting results.
+  # Require `sort-results` to `true`.
+  # Possible values: `file`, `linter`, and `severity`.
+  #
+  # If the severity values are inside the following list, they are ordered in this order:
+  #   1. error
+  #   2. warning
+  #   3. high
+  #   4. medium
+  #   5. low
+  # Either they are sorted alphabetically.
+  #
+  # Default: ["file"]
+  sort-order:
+    - linter
+    - file # filepath, line, and column.
+    - severity
+
+issues:
+  # Independently of option `exclude` we use default exclude patterns,
+  # it can be disabled by this option.
+  # To list all excluded by default patterns execute `golangci-lint run --help`.
+  # Default: true
+  exclude-use-default: false
+
+  # Maximum issues count per one linter.
+  # Set to 0 to disable.
+  # Default: 50
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text.
+  # Set to 0 to disable.
+  # Default: 3
+  max-same-issues: 0
+
+  # cmdline option: -n, --new
+  #
+  # Show only new issues: if there are unstaged changes or untracked files,
+  # only those changes are analyzed, else only changes in HEAD~ are analyzed.
+  # It's a super-useful option for integration of golangci-lint into existing large codebase.
+  # It's not practical to fix all existing issues at the moment of integration:
+  # much better don't allow issues in new code.
+  #
+  # Default: false
+  # new: true
+
+  # Fix found issues (if it's supported by the linter).
+  # Default: false
+  # fix: true
+
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupword
+        - gosec
+        - prealloc
+
+    - path: _test\.go
+      linters:
+        - govet
+      text: "fieldalignment"
+
+linters:
+  # Enable all available linters.
+  # Default: false
+  enable-all: true
+
+  # Disable specific linter
+  # https://golangci-lint.run/usage/linters/#disabled-by-default
+  disable:
+    # causes problems if golangci-lint is compiled with a different version of go
+    - typecheck
+    # not needed/wanted in this project
+    - execinquery       # SQL not used
+    - ginkgolinter      # not using this testing framework
+    - gochecknoglobals  # no config options to limit to exported elements
+    - goheader          # no headers in source files. LICENSE is enough
+    - gomodguard        # depguard is sufficient, this is overkill here
+    - makezero          # this is an absurd linter
+    - nlreturn          # also absurd, a blank line before every return and branch?
+    - promlinter        # metrics collection not used
+    - protogetter       # protocol buffers not used
+    - rowserrcheck      # SQL not used
+    - spancheck         # OpenTelemetry/Census not used
+    - thelper           # I need the line numbers
+    - varnamelen        # I don't agree with this one most of the time
+    - wsl               # might be able to configure this well, but it'll take effort
+    # replaced or duplicated
+    - gocyclo           # by cyclop
+    - gomnd             # by mnd
+
+# Settings for specific linters.
+#
+# Setting these to be as strict as possible while still being sane.
+# Using // nolint: ... comments in the code as necessary.
+linters-settings:
+  asasalint:
+    # To enable/disable the asasalint builtin exclusions of function names.
+    # See the default value of `exclude` to get the builtin exclusions.
+    # Default: true
+    use-builtin-exclusions: false
+
+  copyloopvar:
+    # Disabled for go version <= 1.21
+    # Check all assigning the loop variable to another variable.
+    # Default: false
+    check-alias: true
+
+  cyclop:
+    # cyclop annoyingly counts switch statements and if err != nil { ... }.
+    # The maximal code complexity to report.
+    # Default: 10
+    max-complexity: 15
+
+  decorder:
+    # If true, `init` func can be anywhere in file (does not have to be declared before all other functions).
+    # Default: true (disabled)
+    disable-init-func-first-check: false
+
+  depguard:
+    rules:
+      main:
+        list-mode: strict
+        files:
+          - !$test
+        allow:
+          - $gostd
+      test:
+        list-mode: strict
+        files:
+          - $test
+        allow:
+          - $gostd
+          - github.com/stretchr/testify
+          - github.com/phiryll/btrie
+
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-type-assertions: true
+
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-blank: true
+
+  errorlint:
+    # Permit more than 1 %w verb, valid per Go 1.20 (Requires errorf:true)
+    # Default: true
+    errorf-multi: false
+
+  forbidigo:
+    # Instead of matching the literal source code,
+    # use type information to replace expressions with strings that contain the package name
+    # and (for methods and fields) the type name.
+    # This makes it possible to handle import renaming and forbid struct fields and methods.
+    # Default: false
+    analyze-types: true
+
+  funlen:
+    # Ignore comments when counting lines.
+    # Default false
+    ignore-comments: true
+
+  gocognit:
+    # Minimal code complexity to report.
+    # Default: 30 (but we recommend 10-20)
+    min-complexity: 20
+
+  gocritic:
+    # Enable all checks.
+    # Default: false
+    enable-all: true
+
+    # Which checks should be disabled; can't be combined with 'enabled-checks'.
+    # Default: []
+    disabled-checks:
+      - commentedOutCode
+      - whyNoLint
+      - unnamedResult
+
+    # Settings passed to gocritic.
+    # The settings key is the name of a supported gocritic checker.
+    # The list of supported checkers can be find in https://go-critic.github.io/overview.
+    settings:
+      captLocal:  # don't capitalize local variable names
+        # Whether to restrict checker to params only.
+        # Default: true
+        paramsOnly: false
+      elseif:  # use if ... elseif .. instead of if ... else { if ...
+        # Whether to skip balanced if-else pairs.
+        # Default: true
+        skipBalanced: false
+      hugeParam:
+        # Size in bytes that makes the warning trigger.
+        # Default: 80
+        sizeThreshold: 64
+      nestingReduce:
+        # Min number of statements inside a branch to trigger a warning.
+        # Default: 5
+        bodyWidth: 2
+      rangeExprCopy:
+        # Size in bytes that makes the warning trigger.
+        # Default: 512
+        sizeThreshold: 64
+        # Whether to check test functions
+        # Default: true
+        skipTestFuncs: false
+      rangeValCopy:
+        # Size in bytes that makes the warning trigger.
+        # Default: 128
+        sizeThreshold: 64
+      tooManyResultsChecker:
+        # Maximum number of results.
+        # Default: 5
+        maxResults: 3
+      truncateCmp:
+        # Whether to skip int/uint/uintptr types.
+        # Default: true
+        skipArchDependent: false
+      underef:
+        # Whether to skip (*x).method() calls where x is a pointer receiver.
+        # Default: true
+        skipRecvDeref: false
+
+  gofmt:
+    # Apply the rewrite rules to the source before reformatting.
+    # https://pkg.go.dev/cmd/gofmt
+    # Default: []
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
+      - pattern: 'a[b:len(a)]'
+        replacement: 'a[b:]'
+
+  gofumpt:
+    # Choose whether to use the extra rules.
+    # Default: false
+    extra-rules: true
+
+  goimports:
+    # A comma-separated list of prefixes, which, if set, checks import paths
+    # with the given prefixes are grouped after 3rd-party packages.
+    # Default: ""
+    local-prefixes: github.com/phyrill/btrie
+
+  gosec:
+    # To specify the configuration of rules.
+    config:
+      # Globals are applicable to all rules.
+      global:
+        # Audit mode enables addition checks that for normal code analysis might be too nosy.
+        # Default: false
+        audit: true
+      G101:
+        # If true, complain about all cases (even with low entropy).
+        # Default: false
+        ignore_entropy: true
+
+  govet:
+    # Enable all analyzers.
+    # Default: false
+    enable-all: true
+
+  importas:
+    # Do not allow non-required aliases.
+    # Default: false
+    no-extra-aliases: true
+
+  ireturn:
+    # keywords:
+    # - `empty` for `interface{}`
+    # - `error` for errors
+    # - `stdlib` for standard library
+    # - `anon` for anonymous interfaces
+    # - `generic` for generic interfaces added in go 1.18
+
+    # By default, it allows using errors, empty interfaces, anonymous interfaces,
+    # and interfaces provided by the standard library.
+    allow:
+      - error
+      - generic
+
+  lll:
+    # Tab width in spaces.
+    # Default: 1
+    tab-width: 4
+
+  maintidx:
+    # Show functions with maintainability index lower than N.
+    # A high index indicates better maintainability (it's kind of the opposite of complexity).
+    # Default: 20
+    under: 30
+
+  nakedret:
+    # Make an issue if func has more lines of code than this setting, and it has naked returns.
+    # Default: 30
+    max-func-lines: 0
+
+  nestif:
+    # Minimal complexity of if statements to report.
+    # Default: 5
+    min-complexity: 3
+
+  nolintlint:
+    # Enable to require nolint directives to mention the specific linter being suppressed.
+    # Default: false
+    require-specific: true
+
+  nonamedreturns:
+    # Report named error if it is assigned inside defer.
+    # Default: false
+    report-error-in-defer: true
+
+  prealloc:
+    # Report pre-allocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
+    # Default: true
+    simple: false
+    # Report pre-allocation suggestions on for loops.
+    # Default: false
+    for-loops: true
+
+  predeclared:
+    # Include method names and field names (i.e., qualified names) in checks.
+    # Default: false
+    q: true
+
+  reassign:
+    # Patterns for global variable names that are checked for reassignment.
+    # See https://github.com/curioswitch/go-reassign#usage
+    # Default: ["EOF", "Err.*"]
+    patterns:
+      - ".*"
+
+  revive:
+    # Enable all available rules.
+    # Default: false
+    enable-all-rules: true
+
+    # Sets the default failure confidence.
+    # This means that linting errors with less than 0.8 confidence will be ignored.
+    # Default: 0.8
+    confidence: 0.6
+
+    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
+    rules:
+      # disabling these instead of what they duplicate because the top-level linters can use nolint
+      - name: add-constant          # duplicated by mnd
+        disabled: true
+      - name: bare-return           # duplicated by nakedret
+        disabled: true
+      - name: cognitive-complexity  # duplicated by gocognit
+        disabled: true
+      - name: cyclomatic            # duplicated by cyclop
+        disabled: true
+      - name: function-length       # duplicated by funlen
+        disabled: true
+      - name: line-length-limit     # duplicated by lll
+        disabled: true
+
+      # disabled for other reasons
+      - name: comment-spacings      # configuration of this rule does not work, and gofmt should fix it anyway.
+        disabled: true
+      - name: confusing-naming      # can't handle multiple implementations of an interface
+        disabled: true
+      - name: file-header           # not using file headers
+        disabled: true
+      - name: max-public-structs    # don't know how to limit to one file
+        disabled: true
+
+      - name: enforce-map-style
+        arguments:
+          - "literal"
+      - name: enforce-repeated-arg-type-style
+        arguments:
+          - "short"
+      - name: enforce-slice-style
+        arguments:
+          - "literal"
+      - name: max-control-nesting
+        arguments: [ 3 ]
+      - name: unhandled-error
+        arguments:
+          - "fmt.Printf"
+          - "fmt.Println"
+
+  tenv:
+    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
+    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
+    # Default: false
+    all: true
+
+  testifylint:
+    # Enable all checkers (https://github.com/Antonboom/testifylint#checkers).
+    # Default: false
+    enable-all: true
+
+    disable:
+      - float-compare
+      - require-error
+
+  testpackage:
+    # List of packages that don't end with _test that tests are allowed to be in.
+    # Default: "main"
+    allow-packages:
+
+  usestdlibvars:
+    # Suggest the use of time.Month.String().
+    # Default: false
+    time-month: true
+    # Suggest the use of time.Layout.
+    # Default: false
+    time-layout: true
+    # Suggest the use of constant.Kind.String().
+    # Default: false
+    constant-kind: true
+
+  unconvert:
+    # Remove conversions that force intermediate rounding.
+    # Default: false
+    fast-math: true
