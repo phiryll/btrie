@@ -30,6 +30,9 @@ package btrie
 // - partially persistent and thread-safe
 //   all versions can be accessed but only newest can be modified
 
+// TODO: This interface is not actually a BTrie, that's an implementation detail.
+// This is an ordered key-value store, which means reference does implement the interface.
+
 // BTrie is ....
 type BTrie interface {
 	// Potential methods, still fleshing this out.
