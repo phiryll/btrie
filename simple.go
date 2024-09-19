@@ -102,37 +102,28 @@ func (c *cursor) Next() Entry {
 
 func (n *node) put(key, value []byte) []byte {
 	index, found := n.search(key[0])
-	// fmt.Printf("search: %d, %v, %v\n", index, found, key)
 	if len(key) == 1 {
 		if found {
-			// fmt.Printf("len 1, found\n")
 			child := n.children[index]
 			oldValue := child.value
 			child.value = value
 			return oldValue
 		}
-		// fmt.Printf("len 1, not found\n")
 		n.insert(index, &node{nil, value, key[0]})
 		return nil
 	}
 	if found {
-		// fmt.Printf("len > 1, found\n")
 		return n.children[index].put(key[1:], value)
 	}
-	// fmt.Printf("len > 1, not found\n")
 	child := node{nil, nil, key[0]}
 	n.insert(index, &child)
-	// fmt.Printf("root: %s", n.String())
 	prev := &child
 	for _, b := range key[1:] {
-		// fmt.Printf("byte: %v\n", b)
 		next := node{nil, nil, b}
 		prev.children = []*node{&next}
-		// fmt.Printf("iter: %s", n.String())
 		prev = &next
 	}
 	prev.value = value
-	// fmt.Printf("final: %s", n.String())
 	return nil
 }
 
