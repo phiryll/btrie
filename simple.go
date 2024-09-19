@@ -179,10 +179,12 @@ func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]Entry) {
 	}
 	beginIndex, beginFound := n.search(begin[0])
 	if begin[0] == end[0] {
+		// len(end) > 1, because otherwise begin >= end
 		if beginFound {
 			child := n.children[beginIndex]
 			child.rangeBetween(with(prefix, child.keyByte), begin[1:], end[1:], entries)
 		}
+		// the entire search range is not present
 		return
 	}
 	// begin[0] < end[0]
@@ -220,13 +222,17 @@ func (n *node) rangeFrom(prefix, begin []byte, entries *[]Entry) {
 
 // entries < end.
 func (n *node) rangeTo(prefix, end []byte, entries *[]Entry) {
-	// invariant: end is not empty
+	if len(end) == 0 {
+		return
+	}
+	if n.value != nil {
+		*entries = append(*entries, Entry{prefix, n.value})
+	}
 	index, found := n.search(end[0])
 	for _, child := range n.children[:index] {
 		child.descendants(with(prefix, child.keyByte), entries)
 	}
-	// if found && len(end) == 1, that child is not included
-	if found && len(end) > 1 {
+	if found {
 		child := n.children[index]
 		child.rangeTo(with(prefix, child.keyByte), end[1:], entries)
 	}
