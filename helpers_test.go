@@ -79,7 +79,7 @@ func testBTrie(t *testing.T, f func() BTrie, seed int64) {
 	random := rand.New(rand.NewSource(seed))
 	ref := newReference()
 
-	for i := 0; i < opCount; i++ {
+	for range opCount {
 		entry := Entry{randomKey(random), randomBytes(1, random)}
 		switch randOp := random.Float32(); {
 		case randOp < 0.5:
@@ -98,7 +98,7 @@ func testBTrie(t *testing.T, f func() BTrie, seed int64) {
 	}
 	assert.Equal(t, collect(ref.Range(nil, nil)), collect(bt.Range(nil, nil)))
 
-	for i := 0; i < rangeCount; i++ {
+	for range rangeCount {
 		begin := randomKey(random)
 		end := randomKey(random)
 		if bytes.Equal(begin, end) {
