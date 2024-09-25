@@ -88,6 +88,7 @@ linters:
     # causes problems if golangci-lint is compiled with a different version of go
     - typecheck
     # not needed/wanted in this project
+    - exportloopref     # not needed with Go 1.22+
     - execinquery       # SQL not used
     - ginkgolinter      # not using this testing framework
     - gochecknoglobals  # no config options to limit to exported elements
