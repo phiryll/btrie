@@ -14,8 +14,11 @@ import (
 
 type (
 	BTrie  = btrie.BTrie
-	Entry  = btrie.Entry
 	Cursor = btrie.Cursor
+
+	Entry struct {
+		Key, Value []byte
+	}
 )
 
 func collect(c Cursor) []Entry {
@@ -24,7 +27,8 @@ func collect(c Cursor) []Entry {
 	}
 	entries := []Entry{}
 	for c.HasNext() {
-		entries = append(entries, c.Next())
+		k, v := c.Next()
+		entries = append(entries, Entry{k, v})
 	}
 	return entries
 }

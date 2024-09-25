@@ -21,8 +21,12 @@ type node struct {
 	keyByte  byte
 }
 
+type entry struct {
+	key, value []byte
+}
+
 type cursor struct {
-	entries []Entry
+	entries []entry
 	index   int
 }
 
@@ -74,7 +78,7 @@ func (n *node) Delete(key []byte) []byte {
 }
 
 func (n *node) Range(begin, end []byte) Cursor {
-	var entries []Entry
+	var entries []entry
 	// TODO: make this lazy and non-recursive - DFS
 
 	// this if catches an empty end
@@ -94,10 +98,10 @@ func (c *cursor) HasNext() bool {
 	return c.index < len(c.entries)
 }
 
-func (c *cursor) Next() Entry {
-	entry := c.entries[c.index]
+func (c *cursor) Next() ([]byte, []byte) {
+	e := c.entries[c.index]
 	c.index++
-	return entry
+	return e.key, e.value
 }
 
 func (n *node) put(key, value []byte) []byte {
@@ -171,7 +175,7 @@ func with(prefix []byte, b byte) []byte {
 }
 
 // begin <= entries < end.
-func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]Entry) {
+func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]entry) {
 	// invariant: end is not empty
 	if len(begin) == 0 {
 		n.rangeTo(prefix, end, entries)
@@ -204,7 +208,7 @@ func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]Entry) {
 }
 
 // begin <= entries.
-func (n *node) rangeFrom(prefix, begin []byte, entries *[]Entry) {
+func (n *node) rangeFrom(prefix, begin []byte, entries *[]entry) {
 	if len(begin) == 0 {
 		n.descendants(prefix, entries)
 		return
@@ -221,12 +225,12 @@ func (n *node) rangeFrom(prefix, begin []byte, entries *[]Entry) {
 }
 
 // entries < end.
-func (n *node) rangeTo(prefix, end []byte, entries *[]Entry) {
+func (n *node) rangeTo(prefix, end []byte, entries *[]entry) {
 	if len(end) == 0 {
 		return
 	}
 	if n.value != nil {
-		*entries = append(*entries, Entry{prefix, n.value})
+		*entries = append(*entries, entry{prefix, n.value})
 	}
 	index, found := n.search(end[0])
 	for _, child := range n.children[:index] {
@@ -238,9 +242,9 @@ func (n *node) rangeTo(prefix, end []byte, entries *[]Entry) {
 	}
 }
 
-func (n *node) descendants(prefix []byte, entries *[]Entry) {
+func (n *node) descendants(prefix []byte, entries *[]entry) {
 	if n.value != nil {
-		*entries = append(*entries, Entry{prefix, n.value})
+		*entries = append(*entries, entry{prefix, n.value})
 	}
 	for _, child := range n.children {
 		child.descendants(with(prefix, child.keyByte), entries)

@@ -96,8 +96,8 @@ func (c *cursor) HasNext() bool {
 	return c.index < len(c.entries)
 }
 
-func (c *cursor) Next() Entry {
+func (c *cursor) Next() ([]byte, []byte) {
 	entry := c.entries[c.index]
 	c.index++
-	return entry
+	return entry.Key, entry.Value
 }
