@@ -10,8 +10,6 @@ package btrie
 // How do you get a handle to a specific version?
 // This isn't necessary for the neither persistent nor thread-safe variant.
 // This argues for some other interface.
-// Also, should read-only have another interface, or do operations panic?
-// I think another interface.
 
 // Is each Put a new version, or is there some concept of transaction?
 
@@ -30,6 +28,9 @@ package btrie
 // - partially persistent and thread-safe
 //   all versions can be accessed but only newest can be modified
 
+// TODO: This interface is not actually a BTrie, that's an implementation detail.
+// This is an ordered key-value store, which means reference does implement the interface.
+
 // BTrie is ....
 type BTrie interface {
 	// Potential methods, still fleshing this out.
@@ -37,24 +38,23 @@ type BTrie interface {
 	Put(key, value []byte) (previous []byte)
 	Get(key []byte) []byte
 	Delete(key []byte) (previous []byte)
+	// Get(key []byte, value *[]byte)  // to avoid allocations
 
-	// if begin > end, go backwards, or separate method?
+	// if begin > end, go backwards.
+	// alternatively:
+	//   Cursor() Cursor
+	//     First/Last/Seek, Set/Delete, Next/Prev (key, value []byte)
 	Range(begin, end []byte) Cursor
 
-	// PutIfAbsent(key, value []byte) (previous []byte)
-	// DeleteIfPresent(key, value []byte) (found bool)
+	// nil value => put-if-absent
+	// not necessary with transactions
+	// PutIf(key, value []byte) (found bool)
 }
 
-// Cursor is what is returned by [BTrie.Range].
+// Cursor is the type returned by [BTrie.Range].
 type Cursor interface {
 	HasNext() bool
-	Next() Entry
-}
-
-// Entry is what is returned by [Cursor.Next].
-type Entry struct {
-	Key   []byte
-	Value []byte
+	Next() (key, value []byte)
 }
 
 // NewSimple returns a new, absurdly simple, and badly coded BTrie.

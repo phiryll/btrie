@@ -21,8 +21,12 @@ type node struct {
 	keyByte  byte
 }
 
+type entry struct {
+	key, value []byte
+}
+
 type cursor struct {
-	entries []Entry
+	entries []entry
 	index   int
 }
 
@@ -74,7 +78,7 @@ func (n *node) Delete(key []byte) []byte {
 }
 
 func (n *node) Range(begin, end []byte) Cursor {
-	var entries []Entry
+	var entries []entry
 	// TODO: make this lazy and non-recursive - DFS
 
 	// this if catches an empty end
@@ -94,45 +98,36 @@ func (c *cursor) HasNext() bool {
 	return c.index < len(c.entries)
 }
 
-func (c *cursor) Next() Entry {
-	entry := c.entries[c.index]
+func (c *cursor) Next() ([]byte, []byte) {
+	e := c.entries[c.index]
 	c.index++
-	return entry
+	return e.key, e.value
 }
 
 func (n *node) put(key, value []byte) []byte {
 	index, found := n.search(key[0])
-	// fmt.Printf("search: %d, %v, %v\n", index, found, key)
 	if len(key) == 1 {
 		if found {
-			// fmt.Printf("len 1, found\n")
 			child := n.children[index]
 			oldValue := child.value
 			child.value = value
 			return oldValue
 		}
-		// fmt.Printf("len 1, not found\n")
 		n.insert(index, &node{nil, value, key[0]})
 		return nil
 	}
 	if found {
-		// fmt.Printf("len > 1, found\n")
 		return n.children[index].put(key[1:], value)
 	}
-	// fmt.Printf("len > 1, not found\n")
 	child := node{nil, nil, key[0]}
 	n.insert(index, &child)
-	// fmt.Printf("root: %s", n.String())
 	prev := &child
 	for _, b := range key[1:] {
-		// fmt.Printf("byte: %v\n", b)
 		next := node{nil, nil, b}
 		prev.children = []*node{&next}
-		// fmt.Printf("iter: %s", n.String())
 		prev = &next
 	}
 	prev.value = value
-	// fmt.Printf("final: %s", n.String())
 	return nil
 }
 
@@ -180,7 +175,7 @@ func with(prefix []byte, b byte) []byte {
 }
 
 // begin <= entries < end.
-func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]Entry) {
+func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]entry) {
 	// invariant: end is not empty
 	if len(begin) == 0 {
 		n.rangeTo(prefix, end, entries)
@@ -188,10 +183,12 @@ func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]Entry) {
 	}
 	beginIndex, beginFound := n.search(begin[0])
 	if begin[0] == end[0] {
+		// len(end) > 1, because otherwise begin >= end
 		if beginFound {
 			child := n.children[beginIndex]
 			child.rangeBetween(with(prefix, child.keyByte), begin[1:], end[1:], entries)
 		}
+		// the entire search range is not present
 		return
 	}
 	// begin[0] < end[0]
@@ -211,7 +208,7 @@ func (n *node) rangeBetween(prefix, begin, end []byte, entries *[]Entry) {
 }
 
 // begin <= entries.
-func (n *node) rangeFrom(prefix, begin []byte, entries *[]Entry) {
+func (n *node) rangeFrom(prefix, begin []byte, entries *[]entry) {
 	if len(begin) == 0 {
 		n.descendants(prefix, entries)
 		return
@@ -228,22 +225,26 @@ func (n *node) rangeFrom(prefix, begin []byte, entries *[]Entry) {
 }
 
 // entries < end.
-func (n *node) rangeTo(prefix, end []byte, entries *[]Entry) {
-	// invariant: end is not empty
+func (n *node) rangeTo(prefix, end []byte, entries *[]entry) {
+	if len(end) == 0 {
+		return
+	}
+	if n.value != nil {
+		*entries = append(*entries, entry{prefix, n.value})
+	}
 	index, found := n.search(end[0])
 	for _, child := range n.children[:index] {
 		child.descendants(with(prefix, child.keyByte), entries)
 	}
-	// if found && len(end) == 1, that child is not included
-	if found && len(end) > 1 {
+	if found {
 		child := n.children[index]
 		child.rangeTo(with(prefix, child.keyByte), end[1:], entries)
 	}
 }
 
-func (n *node) descendants(prefix []byte, entries *[]Entry) {
+func (n *node) descendants(prefix []byte, entries *[]entry) {
 	if n.value != nil {
-		*entries = append(*entries, Entry{prefix, n.value})
+		*entries = append(*entries, entry{prefix, n.value})
 	}
 	for _, child := range n.children {
 		child.descendants(with(prefix, child.keyByte), entries)
