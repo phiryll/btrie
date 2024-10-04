@@ -15,6 +15,12 @@ import (
 // no way to distinguish the root from an internal node,
 // so top-level functions must handle it differently.
 
+// NewSimple returns a new, absurdly simple, and badly coded BTrie.
+// This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
+func NewSimple() BTrie {
+	return &node{nil, nil, 0}
+}
+
 type node struct {
 	children []*node
 	value    []byte // non-nil only if this is a terminal node
