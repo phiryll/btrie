@@ -28,9 +28,6 @@ package btrie
 // - partially persistent and thread-safe
 //   all versions can be accessed but only newest can be modified
 
-// TODO: This interface is not actually a BTrie, that's an implementation detail.
-// This is an ordered key-value store, which means reference does implement the interface.
-
 // BTrie is ....
 type BTrie interface {
 	// Potential methods, still fleshing this out.
@@ -62,3 +59,9 @@ type Cursor interface {
 func NewSimple() BTrie {
 	return &node{nil, nil, 0}
 }
+
+// EmptySeq is an empty [iter.Seq].
+func EmptySeq[T any](_ func(T) bool) {}
+
+// EmptySeq2 is an empty [iter.Seq2].
+func EmptySeq2[K, V any](_ func(K, V) bool) {}
