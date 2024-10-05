@@ -10,7 +10,7 @@ import (
 	"github.com/phiryll/btrie"
 )
 
-func deprNewReference() BTrie {
+func deprNewReference() btrie.BTrie[byte] {
 	return &reference{map[int32]byte{}}
 }
 
@@ -109,32 +109,32 @@ func (r *reference) Cursor(bounds *Bounds) iter.Seq[btrie.Pos[byte]] {
 	}
 }
 
-func (r *reference) DeprPut(key, value []byte) []byte {
-	prev, ok := r.Put(key, value[0])
+func (r *reference) DeprPut(key []byte, value byte) byte {
+	prev, ok := r.Put(key, value)
 	if !ok {
-		return nil
+		return 0
 	}
-	return []byte{prev}
+	return prev
 }
 
-func (r *reference) DeprGet(key []byte) []byte {
+func (r *reference) DeprGet(key []byte) byte {
 	value, ok := r.Get(key)
 	if !ok {
-		return nil
+		return 0
 	}
-	return []byte{value}
+	return value
 }
 
-func (r *reference) DeprDelete(key []byte) []byte {
+func (r *reference) DeprDelete(key []byte) byte {
 	value, ok := r.Delete(key)
 	if !ok {
-		return nil
+		return 0
 	}
-	return []byte{value}
+	return value
 }
 
-func (r *reference) DeprRange(begin, end []byte) Cursor {
-	entries := []DeprEntry{}
+func (r *reference) DeprRange(begin, end []byte) btrie.Cursor[byte] {
+	entries := []btrie.Entry[byte]{}
 	for k, v := range r.m {
 		key := refKey(k)
 		if begin != nil && bytes.Compare(key, begin) < 0 {
@@ -143,24 +143,24 @@ func (r *reference) DeprRange(begin, end []byte) Cursor {
 		if end != nil && bytes.Compare(key, end) >= 0 {
 			continue
 		}
-		entries = append(entries, DeprEntry{key, []byte{v}})
+		entries = append(entries, btrie.Entry[byte]{key, v})
 	}
 	sort.Slice(entries, func(i, j int) bool {
 		return bytes.Compare(entries[i].Key, entries[j].Key) < 0
 	})
-	return &deprCursor{entries, 0}
+	return &deprCursor[byte]{entries, 0}
 }
 
-type deprCursor struct {
-	entries []DeprEntry
+type deprCursor[V any] struct {
+	entries []btrie.Entry[V]
 	index   int
 }
 
-func (c *deprCursor) HasNext() bool {
+func (c *deprCursor[V]) HasNext() bool {
 	return c.index < len(c.entries)
 }
 
-func (c *deprCursor) Next() ([]byte, []byte) {
+func (c *deprCursor[V]) Next() ([]byte, V) {
 	entry := c.entries[c.index]
 	c.index++
 	return entry.Key, entry.Value

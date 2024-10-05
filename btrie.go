@@ -2,15 +2,20 @@
 package btrie
 
 // BTrie is ....
-type BTrie interface {
-	DeprPut(key, value []byte) (previous []byte)
-	DeprGet(key []byte) []byte
-	DeprDelete(key []byte) (previous []byte)
-	DeprRange(begin, end []byte) Cursor
+type BTrie[V any] interface {
+	DeprPut(key []byte, value V) (previous V)
+	DeprGet(key []byte) V
+	DeprDelete(key []byte) (previous V)
+	DeprRange(begin, end []byte) Cursor[V]
 }
 
 // Cursor is the type returned by [BTrie.Range].
-type Cursor interface {
+type Cursor[V any] interface {
 	HasNext() bool
-	Next() (key, value []byte)
+	Next() (key []byte, value V)
+}
+
+type Entry[V any] struct {
+	Key   []byte
+	Value V
 }

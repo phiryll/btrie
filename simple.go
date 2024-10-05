@@ -17,28 +17,26 @@ import (
 
 // DeprNewSimple returns a new, absurdly simple, and badly coded BTrie.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
-func DeprNewSimple[V any]() BTrie {
-	return &node[V]{nil, nil, 0}
+func DeprNewSimple[V any]() BTrie[V] {
+	var zero V
+	return &node[V]{zero, nil, 0, false}
 }
 
 // NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 func NewSimple[V any]() OrderedBytesMap[V] {
-	return nil // &node{nil, nil, 0}
+	return nil // &node{...}
 }
 
 type node[V any] struct {
-	children []*node[V]
-	value    []byte // non-nil only if this is a terminal node
-	keyByte  byte
+	value      V // exists only if isTerminal is true
+	children   []*node[V]
+	keyByte    byte
+	isTerminal bool
 }
 
-type deprEntry struct {
-	key, value []byte
-}
-
-type deprCursor struct {
-	entries []deprEntry
+type deprCursor[V any] struct {
+	entries []Entry[V]
 	index   int
 }
 
@@ -49,8 +47,8 @@ func (n *node[V]) String() string {
 }
 
 func (n *node[V]) printNode(s *strings.Builder, indent string) {
-	v := "nil"
-	if n.value != nil {
+	v := "DNE"
+	if n.isTerminal {
 		v = fmt.Sprintf("%v", n.value)
 	}
 	//nolint:revive
@@ -60,22 +58,20 @@ func (n *node[V]) printNode(s *strings.Builder, indent string) {
 	}
 }
 
-func (n *node[V]) DeprPut(key, value []byte) []byte {
+func (n *node[V]) DeprPut(key []byte, value V) V {
 	if len(key) == 0 {
 		panic("key must be non-empty")
-	}
-	if value == nil {
-		panic("value must be non-nil")
 	}
 	// TODO: this does not need to recurse
 	return n.put(key, value)
 }
 
-func (n *node[V]) DeprGet(key []byte) []byte {
+func (n *node[V]) DeprGet(key []byte) V {
 	// TODO: this does not need to recurse
 	index, found := n.search(key[0])
 	if !found {
-		return nil
+		var zero V
+		return zero
 	}
 	if len(key) == 1 {
 		return n.children[index].value
@@ -83,40 +79,41 @@ func (n *node[V]) DeprGet(key []byte) []byte {
 	return n.children[index].DeprGet(key[1:])
 }
 
-func (n *node[V]) DeprDelete(key []byte) []byte {
+func (n *node[V]) DeprDelete(key []byte) V {
 	// TODO: this does not need to recurse
 	_, value := n.deleteKey(key)
 	return value
 }
 
-func (n *node[V]) DeprRange(begin, end []byte) Cursor {
-	var entries []deprEntry
+func (n *node[V]) DeprRange(begin, end []byte) Cursor[V] {
+	var entries []Entry[V]
 	// TODO: make this lazy and non-recursive - DFS
 
 	// this if catches an empty end
 	if len(n.children) == 0 ||
 		(end != nil && bytes.Compare(begin, end) >= 0) {
-		return &deprCursor{entries, 0}
+		return &deprCursor[V]{entries, 0}
 	}
 	if end == nil {
 		n.rangeFrom([]byte{}, begin, &entries)
 	} else {
 		n.rangeBetween([]byte{}, begin, end, &entries)
 	}
-	return &deprCursor{entries, 0}
+	return &deprCursor[V]{entries, 0}
 }
 
-func (c *deprCursor) HasNext() bool {
+func (c *deprCursor[V]) HasNext() bool {
 	return c.index < len(c.entries)
 }
 
-func (c *deprCursor) Next() ([]byte, []byte) {
+func (c *deprCursor[V]) Next() ([]byte, V) {
 	e := c.entries[c.index]
 	c.index++
-	return e.key, e.value
+	return e.Key, e.Value
 }
 
-func (n *node[V]) put(key, value []byte) []byte {
+func (n *node[V]) put(key []byte, value V) V {
+	var zero V
 	index, found := n.search(key[0])
 	if len(key) == 1 {
 		if found {
@@ -125,22 +122,23 @@ func (n *node[V]) put(key, value []byte) []byte {
 			child.value = value
 			return oldValue
 		}
-		n.insert(index, &node[V]{nil, value, key[0]})
-		return nil
+		n.insert(index, &node[V]{value, nil, key[0], true})
+		return zero
 	}
 	if found {
 		return n.children[index].put(key[1:], value)
 	}
-	child := node[V]{nil, nil, key[0]}
+	child := node[V]{zero, nil, key[0], false}
 	n.insert(index, &child)
 	prev := &child
 	for _, b := range key[1:] {
-		next := node[V]{nil, nil, b}
+		next := node[V]{zero, nil, b, false}
 		prev.children = []*node[V]{&next}
 		prev = &next
 	}
 	prev.value = value
-	return nil
+	prev.isTerminal = true
+	return zero
 }
 
 func (n *node[V]) search(byt byte) (int, bool) {
@@ -161,17 +159,19 @@ func (n *node[V]) insert(i int, child *node[V]) {
 }
 
 // returns true iff n should be deleted from its parent.
-func (n *node[V]) deleteKey(key []byte) (bool, []byte) {
+func (n *node[V]) deleteKey(key []byte) (bool, V) {
+	var zero V
 	index, found := n.search(key[0])
 	if !found {
-		return false, nil
+		return false, zero
 	}
 	child := n.children[index]
-	var value []byte
+	var value V
 	var removeChild bool
 	if len(key) == 1 {
 		value = child.value
-		child.value = nil
+		child.value = zero
+		child.isTerminal = false
 		removeChild = len(child.children) == 0
 	} else {
 		removeChild, value = child.deleteKey(key[1:])
@@ -179,7 +179,7 @@ func (n *node[V]) deleteKey(key []byte) (bool, []byte) {
 	if removeChild {
 		n.children = append(n.children[:index], n.children[index+1:]...)
 	}
-	return len(n.children) == 0 && n.value == nil, value
+	return len(n.children) == 0 && !n.isTerminal, value
 }
 
 func with(prefix []byte, b byte) []byte {
@@ -187,7 +187,7 @@ func with(prefix []byte, b byte) []byte {
 }
 
 // begin <= entries < end.
-func (n *node[V]) rangeBetween(prefix, begin, end []byte, entries *[]deprEntry) {
+func (n *node[V]) rangeBetween(prefix, begin, end []byte, entries *[]Entry[V]) {
 	// invariant: end is not empty
 	if len(begin) == 0 {
 		n.rangeTo(prefix, end, entries)
@@ -220,7 +220,7 @@ func (n *node[V]) rangeBetween(prefix, begin, end []byte, entries *[]deprEntry) 
 }
 
 // begin <= entries.
-func (n *node[V]) rangeFrom(prefix, begin []byte, entries *[]deprEntry) {
+func (n *node[V]) rangeFrom(prefix, begin []byte, entries *[]Entry[V]) {
 	if len(begin) == 0 {
 		n.descendants(prefix, entries)
 		return
@@ -237,12 +237,12 @@ func (n *node[V]) rangeFrom(prefix, begin []byte, entries *[]deprEntry) {
 }
 
 // entries < end.
-func (n *node[V]) rangeTo(prefix, end []byte, entries *[]deprEntry) {
+func (n *node[V]) rangeTo(prefix, end []byte, entries *[]Entry[V]) {
 	if len(end) == 0 {
 		return
 	}
-	if n.value != nil {
-		*entries = append(*entries, deprEntry{prefix, n.value})
+	if n.isTerminal {
+		*entries = append(*entries, Entry[V]{prefix, n.value})
 	}
 	index, found := n.search(end[0])
 	for _, child := range n.children[:index] {
@@ -254,9 +254,9 @@ func (n *node[V]) rangeTo(prefix, end []byte, entries *[]deprEntry) {
 	}
 }
 
-func (n *node[V]) descendants(prefix []byte, entries *[]deprEntry) {
-	if n.value != nil {
-		*entries = append(*entries, deprEntry{prefix, n.value})
+func (n *node[V]) descendants(prefix []byte, entries *[]Entry[V]) {
+	if n.isTerminal {
+		*entries = append(*entries, Entry[V]{prefix, n.value})
 	}
 	for _, child := range n.children {
 		child.descendants(with(prefix, child.keyByte), entries)
