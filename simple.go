@@ -57,8 +57,8 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 }
 
 type entry[V any] struct {
-	Key   []byte
 	Value V
+	Key   []byte
 }
 
 func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
@@ -85,7 +85,7 @@ func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 	}
 }
 
-func (n *node[V]) Cursor(bounds *Bounds) iter.Seq[Pos[V]] {
+func (*node[V]) Cursor(_ *Bounds) iter.Seq[Pos[V]] {
 	panic("unimplemented")
 }
 
@@ -111,18 +111,18 @@ func (n *node[V]) put(key []byte, value V) (V, bool) {
 	var zero V
 	index, found := n.search(key[0])
 	if len(key) == 1 {
-		if found {
-			child := n.children[index]
-			if child.isTerminal {
-				oldValue := child.value
-				child.value = value
-				return oldValue, true
-			}
-			child.value = value
-			child.isTerminal = true
+		if !found {
+			n.insert(index, &node[V]{value, nil, key[0], true})
 			return zero, false
 		}
-		n.insert(index, &node[V]{value, nil, key[0], true})
+		child := n.children[index]
+		if child.isTerminal {
+			oldValue := child.value
+			child.value = value
+			return oldValue, true
+		}
+		child.value = value
+		child.isTerminal = true
 		return zero, false
 	}
 	if found {
@@ -244,7 +244,7 @@ func (n *node[V]) rangeTo(prefix, end []byte, entries *[]entry[V]) {
 		return
 	}
 	if n.isTerminal {
-		*entries = append(*entries, entry[V]{prefix, n.value})
+		*entries = append(*entries, entry[V]{n.value, prefix})
 	}
 	index, found := n.search(end[0])
 	for _, child := range n.children[:index] {
@@ -258,7 +258,7 @@ func (n *node[V]) rangeTo(prefix, end []byte, entries *[]entry[V]) {
 
 func (n *node[V]) descendants(prefix []byte, entries *[]entry[V]) {
 	if n.isTerminal {
-		*entries = append(*entries, entry[V]{prefix, n.value})
+		*entries = append(*entries, entry[V]{n.value, prefix})
 	}
 	for _, child := range n.children {
 		child.descendants(with(prefix, child.keyByte), entries)

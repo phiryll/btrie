@@ -24,13 +24,3 @@ Binary tries make an excellent in-memory index for [lexicographically
 byte-ordered data](https://github.com/phiryll/lexy). The principles
 could also possibly be applied to a [data history tracking
 database](https://phiryll.github.io/projects/data-history.html).
-
-## TODO
-
-After the initial implementations, define a common interface. Use this
-to allow different representations at different locations in the trie.
-The goal would be to locally self-optimize the trie for speed or
-space. I'm specifically considering sparse vs. dense data, but there
-may be other possibilities. This is probably not feasible for the
-fully or partially persistent variants since those need to maintain
-all history.
