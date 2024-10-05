@@ -8,5 +8,5 @@ import (
 
 func TestSimple(t *testing.T) {
 	t.Parallel()
-	testBTrie(t, btrie.DeprNewSimple[byte], 290709)
+	testBTrie(t, btrie.NewSimple[byte], 290709)
 }

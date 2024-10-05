@@ -10,10 +10,6 @@ import (
 	"github.com/phiryll/btrie"
 )
 
-func deprNewReference() btrie.BTrie[byte] {
-	return &reference{map[int32]byte{}}
-}
-
 func newReference() btrie.OrderedBytesMap[byte] {
 	return &reference{map[int32]byte{}}
 }

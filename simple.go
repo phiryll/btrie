@@ -16,13 +16,6 @@ import (
 // no way to distinguish the root from an internal node,
 // so top-level functions must handle it differently.
 
-// DeprNewSimple returns a new, absurdly simple, and badly coded BTrie.
-// This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
-func DeprNewSimple[V any]() BTrie[V] {
-	var zero V
-	return &node[V]{zero, nil, 0, false}
-}
-
 // NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 func NewSimple[V any]() OrderedBytesMap[V] {
