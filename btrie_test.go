@@ -9,7 +9,7 @@ import (
 
 func TestSimple(t *testing.T) {
 	t.Parallel()
-	testBTrie(t, btrie.NewSimple[byte], 290709)
+	testOrderedBytesMap(t, btrie.NewSimple[byte], 290709)
 	// TODO: re-enable
 	t.Skip()
 	{

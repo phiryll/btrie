@@ -38,7 +38,7 @@ func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
 
 // Other than edge cases, the most effective tests are essentially fuzz tests.
 // The standard library fuzzing isn't quite sufficient in this case.
-// Instead, these tests repeatedly call all BTrie methods randomly,
+// Instead, these tests repeatedly call all OrderedBytesMap methods randomly,
 // and compare the result to a reference.
 
 // TODO: expand this to cover before/at/after edge cases.
@@ -77,7 +77,7 @@ func randomKey(random *rand.Rand) []byte {
 	}
 }
 
-func testBTrie(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
+func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
 	const opCount = 100000
 	const rangeCount = 100
 
