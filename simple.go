@@ -3,6 +3,7 @@ package btrie
 import (
 	"bytes"
 	"fmt"
+	"iter"
 	"sort"
 	"strings"
 )
@@ -25,7 +26,8 @@ func DeprNewSimple[V any]() BTrie[V] {
 // NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 func NewSimple[V any]() OrderedBytesMap[V] {
-	return nil // &node{...}
+	var zero V
+	return &node[V]{zero, nil, 0, false}
 }
 
 type node[V any] struct {
@@ -35,9 +37,74 @@ type node[V any] struct {
 	isTerminal bool
 }
 
+func (n *node[V]) Put(key []byte, value V) (V, bool) {
+	if len(key) == 0 {
+		panic("key must be non-empty")
+	}
+	// TODO: this does not need to recurse
+	return n.put(key, value)
+}
+
+func (n *node[V]) Get(key []byte) (V, bool) {
+	// TODO: this does not need to recurse
+	index, found := n.search(key[0])
+	if !found {
+		var zero V
+		return zero, false
+	}
+	if len(key) == 1 {
+		return n.children[index].value, true
+	}
+	return n.children[index].Get(key[1:])
+}
+
+func (n *node[V]) Delete(key []byte) (V, bool) {
+	// TODO: this does not need to recurse
+	_, value, ok := n.deleteKey(key)
+	return value, ok
+}
+
+func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
+	if bounds.Reverse {
+		panic("unimplemented")
+	}
+	return func(yield func([]byte, V) bool) {
+		if len(n.children) == 0 {
+			return
+		}
+		// TODO: make this lazy and non-recursive - DFS
+		var entries []Entry[V]
+		// this if catches an empty end
+		if bounds.End == nil {
+			n.rangeFrom([]byte{}, bounds.Begin, &entries)
+		} else {
+			n.rangeBetween([]byte{}, bounds.Begin, bounds.End, &entries)
+		}
+		for _, entry := range entries {
+			if !yield(entry.Key, entry.Value) {
+				return
+			}
+		}
+	}
+}
+
+func (n *node[V]) Cursor(bounds *Bounds) iter.Seq[Pos[V]] {
+	panic("unimplemented")
+}
+
 type deprCursor[V any] struct {
 	entries []Entry[V]
 	index   int
+}
+
+func (c *deprCursor[V]) HasNext() bool {
+	return c.index < len(c.entries)
+}
+
+func (c *deprCursor[V]) Next() ([]byte, V) {
+	e := c.entries[c.index]
+	c.index++
+	return e.Key, e.Value
 }
 
 func (n *node[V]) String() string {
@@ -63,7 +130,8 @@ func (n *node[V]) DeprPut(key []byte, value V) V {
 		panic("key must be non-empty")
 	}
 	// TODO: this does not need to recurse
-	return n.put(key, value)
+	prev, _ := n.put(key, value)
+	return prev
 }
 
 func (n *node[V]) DeprGet(key []byte) V {
@@ -81,7 +149,7 @@ func (n *node[V]) DeprGet(key []byte) V {
 
 func (n *node[V]) DeprDelete(key []byte) V {
 	// TODO: this does not need to recurse
-	_, value := n.deleteKey(key)
+	_, value, _ := n.deleteKey(key)
 	return value
 }
 
@@ -102,28 +170,23 @@ func (n *node[V]) DeprRange(begin, end []byte) Cursor[V] {
 	return &deprCursor[V]{entries, 0}
 }
 
-func (c *deprCursor[V]) HasNext() bool {
-	return c.index < len(c.entries)
-}
-
-func (c *deprCursor[V]) Next() ([]byte, V) {
-	e := c.entries[c.index]
-	c.index++
-	return e.Key, e.Value
-}
-
-func (n *node[V]) put(key []byte, value V) V {
+func (n *node[V]) put(key []byte, value V) (V, bool) {
 	var zero V
 	index, found := n.search(key[0])
 	if len(key) == 1 {
 		if found {
 			child := n.children[index]
-			oldValue := child.value
+			if child.isTerminal {
+				oldValue := child.value
+				child.value = value
+				return oldValue, true
+			}
 			child.value = value
-			return oldValue
+			child.isTerminal = true
+			return zero, false
 		}
 		n.insert(index, &node[V]{value, nil, key[0], true})
-		return zero
+		return zero, false
 	}
 	if found {
 		return n.children[index].put(key[1:], value)
@@ -138,7 +201,7 @@ func (n *node[V]) put(key []byte, value V) V {
 	}
 	prev.value = value
 	prev.isTerminal = true
-	return zero
+	return zero, false
 }
 
 func (n *node[V]) search(byt byte) (int, bool) {
@@ -159,27 +222,29 @@ func (n *node[V]) insert(i int, child *node[V]) {
 }
 
 // returns true iff n should be deleted from its parent.
-func (n *node[V]) deleteKey(key []byte) (bool, V) {
+func (n *node[V]) deleteKey(key []byte) (bool, V, bool) {
 	var zero V
 	index, found := n.search(key[0])
 	if !found {
-		return false, zero
+		return false, zero, false
 	}
 	child := n.children[index]
-	var value V
 	var removeChild bool
+	var prev V
+	var ok bool
 	if len(key) == 1 {
-		value = child.value
+		prev = child.value
 		child.value = zero
 		child.isTerminal = false
+		ok = true
 		removeChild = len(child.children) == 0
 	} else {
-		removeChild, value = child.deleteKey(key[1:])
+		removeChild, prev, ok = child.deleteKey(key[1:])
 	}
 	if removeChild {
 		n.children = append(n.children[:index], n.children[index+1:]...)
 	}
-	return len(n.children) == 0 && !n.isTerminal, value
+	return len(n.children) == 0 && !n.isTerminal, prev, ok
 }
 
 func with(prefix []byte, b byte) []byte {
