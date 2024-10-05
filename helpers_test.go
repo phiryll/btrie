@@ -2,6 +2,7 @@ package btrie_test
 
 import (
 	"bytes"
+	"iter"
 	"math/rand"
 	"testing"
 
@@ -13,22 +14,24 @@ import (
 // There are no top-level tests here, but the bulk of the testing code is.
 
 type (
-	BTrie  = btrie.BTrie
-	Cursor = btrie.Cursor
+	Bounds = btrie.Bounds
 
-	Entry struct {
-		Key, Value []byte
+	entry[V any] struct {
+		Key   []byte
+		Value V
 	}
 )
 
-func collect(c Cursor) []Entry {
-	if refCursor, ok := c.(*cursor); ok {
-		return refCursor.entries
-	}
-	entries := []Entry{}
-	for c.HasNext() {
-		k, v := c.Next()
-		entries = append(entries, Entry{k, v})
+var (
+	From = btrie.From
+
+	all = From(nil).To(nil)
+)
+
+func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
+	entries := []entry[V]{}
+	for k, v := range itr {
+		entries = append(entries, entry[V]{k, v})
 	}
 	return entries
 }
@@ -39,21 +42,28 @@ func collect(c Cursor) []Entry {
 // and compare the result to a reference.
 
 // TODO: expand this to cover before/at/after edge cases.
-func testShortKey(t *testing.T, f func() BTrie) {
+func testShortKey(t *testing.T, f func() btrie.OrderedBytesMap[byte]) {
 	bt := f()
-	bt.Put([]byte{5}, []byte{0})
+	// bt.Put([]byte{5}, 0)
+	bt.Put([]byte{5}, 0)
 	assert.Equal(t,
-		[]Entry{},
-		collect(bt.Range([]byte{5, 0}, []byte{6})))
+		[]entry[byte]{},
+		collect(bt.Range(From([]byte{5, 0}).To([]byte{6}))))
 	assert.Equal(t,
-		[]Entry{{[]byte{5}, []byte{0}}},
-		collect(bt.Range([]byte{4}, []byte{5, 0})))
+		[]entry[byte]{{[]byte{5}, 0}},
+		collect(bt.Range(From([]byte{4}).To([]byte{5, 0}))))
 }
 
 func randomBytes(n int, random *rand.Rand) []byte {
 	b := make([]byte, n)
 	_, _ = random.Read(b)
 	return b
+}
+
+func randomByte(random *rand.Rand) byte {
+	b := []byte{0}
+	_, _ = random.Read(b)
+	return b[0]
 }
 
 func randomKey(random *rand.Rand) []byte {
@@ -67,7 +77,7 @@ func randomKey(random *rand.Rand) []byte {
 	}
 }
 
-func testBTrie(t *testing.T, f func() BTrie, seed int64) {
+func testBTrie(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
 	const opCount = 100000
 	const rangeCount = 100
 
@@ -75,40 +85,45 @@ func testBTrie(t *testing.T, f func() BTrie, seed int64) {
 
 	bt := f()
 
-	assert.Empty(t, collect(bt.Range(nil, nil)))
+	assert.Empty(t, collect(bt.Range(all)))
 	random := rand.New(rand.NewSource(seed))
 	ref := newReference()
 
 	for range opCount {
-		entry := Entry{randomKey(random), randomBytes(1, random)}
+		entry := entry[byte]{randomKey(random), randomByte(random)}
 		switch randOp := random.Float32(); {
-		case randOp < 0.5:
-			expected := ref.Put(entry.Key, entry.Value)
-			actual := bt.Put(entry.Key, entry.Value)
+		case randOp < 2.0:
+			expected, expectedOk := ref.Put(entry.Key, entry.Value)
+			actual, actualOk := bt.Put(entry.Key, entry.Value)
+			assert.Equal(t, expectedOk, actualOk)
 			assert.Equal(t, expected, actual)
 		case randOp < 0.6:
-			expected := ref.Delete(entry.Key)
-			actual := bt.Delete(entry.Key)
+			expected, expectedOk := ref.Delete(entry.Key)
+			actual, actualOk := bt.Delete(entry.Key)
+			assert.Equal(t, expectedOk, actualOk)
 			assert.Equal(t, expected, actual)
 		default:
-			expected := ref.Get(entry.Key)
-			actual := bt.Get(entry.Key)
+			expected, expectedOk := ref.Get(entry.Key)
+			actual, actualOk := bt.Get(entry.Key)
+			assert.Equal(t, expectedOk, actualOk)
 			assert.Equal(t, expected, actual)
 		}
 	}
-	assert.Equal(t, collect(ref.Range(nil, nil)), collect(bt.Range(nil, nil)))
+
+	assert.Equal(t, collect(ref.Range(all)), collect(bt.Range(all)))
 
 	for range rangeCount {
 		begin := randomKey(random)
 		end := randomKey(random)
+		// TODO: test reverse direction as well
 		if bytes.Equal(begin, end) {
-			assert.Empty(t, collect(bt.Range(begin, end)))
 			continue
 		}
 		if bytes.Compare(begin, end) > 0 {
 			begin, end = end, begin
 		}
-		assert.Equal(t, collect(ref.Range(begin, end)), collect(bt.Range(begin, end)),
-			"[%X, %X)", begin, end)
+		bounds := From(begin).To(end)
+		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
+			"%s", bounds)
 	}
 }
