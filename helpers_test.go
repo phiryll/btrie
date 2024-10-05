@@ -15,6 +15,11 @@ import (
 
 type (
 	Bounds = btrie.Bounds
+
+	entry[V any] struct {
+		Key   []byte
+		Value V
+	}
 )
 
 var (
@@ -23,10 +28,10 @@ var (
 	all = From(nil).To(nil)
 )
 
-func collect[V any](itr iter.Seq2[[]byte, V]) []btrie.Entry[V] {
-	entries := []btrie.Entry[V]{}
+func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
+	entries := []entry[V]{}
 	for k, v := range itr {
-		entries = append(entries, btrie.Entry[V]{k, v})
+		entries = append(entries, entry[V]{k, v})
 	}
 	return entries
 }
@@ -42,10 +47,10 @@ func testShortKey(t *testing.T, f func() btrie.OrderedBytesMap[byte]) {
 	// bt.Put([]byte{5}, 0)
 	bt.Put([]byte{5}, 0)
 	assert.Equal(t,
-		[]btrie.Entry[byte]{},
+		[]entry[byte]{},
 		collect(bt.Range(From([]byte{5, 0}).To([]byte{6}))))
 	assert.Equal(t,
-		[]btrie.Entry[byte]{{[]byte{5}, 0}},
+		[]entry[byte]{{[]byte{5}, 0}},
 		collect(bt.Range(From([]byte{4}).To([]byte{5, 0}))))
 }
 
@@ -85,7 +90,7 @@ func testBTrie(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
 	ref := newReference()
 
 	for range opCount {
-		entry := btrie.Entry[byte]{randomKey(random), randomByte(random)}
+		entry := entry[byte]{randomKey(random), randomByte(random)}
 		switch randOp := random.Float32(); {
 		case randOp < 2.0:
 			expected, expectedOk := ref.Put(entry.Key, entry.Value)
