@@ -16,19 +16,18 @@ type (
 	BTrie  = btrie.BTrie
 	Cursor = btrie.Cursor
 
-	Entry struct {
+	Bounds = btrie.Bounds
+
+	DeprEntry struct {
 		Key, Value []byte
 	}
 )
 
-func collect(c Cursor) []Entry {
-	if refCursor, ok := c.(*cursor); ok {
-		return refCursor.entries
-	}
-	entries := []Entry{}
+func collect(c Cursor) []DeprEntry {
+	entries := []DeprEntry{}
 	for c.HasNext() {
 		k, v := c.Next()
-		entries = append(entries, Entry{k, v})
+		entries = append(entries, DeprEntry{k, v})
 	}
 	return entries
 }
@@ -41,13 +40,13 @@ func collect(c Cursor) []Entry {
 // TODO: expand this to cover before/at/after edge cases.
 func testShortKey(t *testing.T, f func() BTrie) {
 	bt := f()
-	bt.Put([]byte{5}, []byte{0})
+	bt.DeprPut([]byte{5}, []byte{0})
 	assert.Equal(t,
-		[]Entry{},
-		collect(bt.Range([]byte{5, 0}, []byte{6})))
+		[]DeprEntry{},
+		collect(bt.DeprRange([]byte{5, 0}, []byte{6})))
 	assert.Equal(t,
-		[]Entry{{[]byte{5}, []byte{0}}},
-		collect(bt.Range([]byte{4}, []byte{5, 0})))
+		[]DeprEntry{{[]byte{5}, []byte{0}}},
+		collect(bt.DeprRange([]byte{4}, []byte{5, 0})))
 }
 
 func randomBytes(n int, random *rand.Rand) []byte {
@@ -75,40 +74,40 @@ func testBTrie(t *testing.T, f func() BTrie, seed int64) {
 
 	bt := f()
 
-	assert.Empty(t, collect(bt.Range(nil, nil)))
+	assert.Empty(t, collect(bt.DeprRange(nil, nil)))
 	random := rand.New(rand.NewSource(seed))
-	ref := newReference()
+	ref := deprNewReference()
 
 	for range opCount {
-		entry := Entry{randomKey(random), randomBytes(1, random)}
+		entry := DeprEntry{randomKey(random), randomBytes(1, random)}
 		switch randOp := random.Float32(); {
 		case randOp < 0.5:
-			expected := ref.Put(entry.Key, entry.Value)
-			actual := bt.Put(entry.Key, entry.Value)
+			expected := ref.DeprPut(entry.Key, entry.Value)
+			actual := bt.DeprPut(entry.Key, entry.Value)
 			assert.Equal(t, expected, actual)
 		case randOp < 0.6:
-			expected := ref.Delete(entry.Key)
-			actual := bt.Delete(entry.Key)
+			expected := ref.DeprDelete(entry.Key)
+			actual := bt.DeprDelete(entry.Key)
 			assert.Equal(t, expected, actual)
 		default:
-			expected := ref.Get(entry.Key)
-			actual := bt.Get(entry.Key)
+			expected := ref.DeprGet(entry.Key)
+			actual := bt.DeprGet(entry.Key)
 			assert.Equal(t, expected, actual)
 		}
 	}
-	assert.Equal(t, collect(ref.Range(nil, nil)), collect(bt.Range(nil, nil)))
+	assert.Equal(t, collect(ref.DeprRange(nil, nil)), collect(bt.DeprRange(nil, nil)))
 
 	for range rangeCount {
 		begin := randomKey(random)
 		end := randomKey(random)
 		if bytes.Equal(begin, end) {
-			assert.Empty(t, collect(bt.Range(begin, end)))
+			assert.Empty(t, collect(bt.DeprRange(begin, end)))
 			continue
 		}
 		if bytes.Compare(begin, end) > 0 {
 			begin, end = end, begin
 		}
-		assert.Equal(t, collect(ref.Range(begin, end)), collect(bt.Range(begin, end)),
+		assert.Equal(t, collect(ref.DeprRange(begin, end)), collect(bt.DeprRange(begin, end)),
 			"[%X, %X)", begin, end)
 	}
 }

@@ -54,7 +54,7 @@ func (n *node) printNode(s *strings.Builder, indent string) {
 	}
 }
 
-func (n *node) Put(key, value []byte) []byte {
+func (n *node) DeprPut(key, value []byte) []byte {
 	if len(key) == 0 {
 		panic("key must be non-empty")
 	}
@@ -65,7 +65,7 @@ func (n *node) Put(key, value []byte) []byte {
 	return n.put(key, value)
 }
 
-func (n *node) Get(key []byte) []byte {
+func (n *node) DeprGet(key []byte) []byte {
 	// TODO: this does not need to recurse
 	index, found := n.search(key[0])
 	if !found {
@@ -74,16 +74,16 @@ func (n *node) Get(key []byte) []byte {
 	if len(key) == 1 {
 		return n.children[index].value
 	}
-	return n.children[index].Get(key[1:])
+	return n.children[index].DeprGet(key[1:])
 }
 
-func (n *node) Delete(key []byte) []byte {
+func (n *node) DeprDelete(key []byte) []byte {
 	// TODO: this does not need to recurse
 	_, value := n.deleteKey(key)
 	return value
 }
 
-func (n *node) Range(begin, end []byte) Cursor {
+func (n *node) DeprRange(begin, end []byte) Cursor {
 	var entries []entry
 	// TODO: make this lazy and non-recursive - DFS
 

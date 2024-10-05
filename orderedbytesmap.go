@@ -92,22 +92,12 @@ func (b *Bounds) DownTo(key []byte) *Bounds {
 func (b *Bounds) Contains(key []byte) bool {
 	if b.Reverse {
 		// end < key <= begin
-		if b.End != nil && bytes.Compare(key, b.End) <= 0 {
-			return false
-		}
-		if b.Begin != nil && bytes.Compare(key, b.Begin) > 0 {
-			return false
-		}
-	} else {
-		// begin <= key < end
-		if b.Begin != nil && bytes.Compare(key, b.Begin) < 0 {
-			return false
-		}
-		if b.End != nil && bytes.Compare(key, b.End) >= 0 {
-			return false
-		}
+		return (b.End == nil || bytes.Compare(b.End, key) < 0) &&
+			(b.Begin == nil || bytes.Compare(key, b.Begin) <= 0)
 	}
-	return true
+	// begin <= key < end
+	return (b.Begin == nil || bytes.Compare(b.Begin, key) <= 0) &&
+		(b.End == nil || bytes.Compare(key, b.End) < 0)
 }
 
 // A Pos represents a mutable position in the sequence returned by [OrderedBytesMap.Cursor].

@@ -3,10 +3,10 @@ package btrie
 
 // BTrie is ....
 type BTrie interface {
-	Put(key, value []byte) (previous []byte)
-	Get(key []byte) []byte
-	Delete(key []byte) (previous []byte)
-	Range(begin, end []byte) Cursor
+	DeprPut(key, value []byte) (previous []byte)
+	DeprGet(key []byte) []byte
+	DeprDelete(key []byte) (previous []byte)
+	DeprRange(begin, end []byte) Cursor
 }
 
 // Cursor is the type returned by [BTrie.Range].

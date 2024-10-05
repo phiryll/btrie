@@ -3,10 +3,18 @@ package btrie_test
 import (
 	"bytes"
 	"fmt"
+	"iter"
+	"slices"
 	"sort"
+
+	"github.com/phiryll/btrie"
 )
 
-func newReference() BTrie {
+func deprNewReference() BTrie {
+	return &reference{map[int32]byte{}}
+}
+
+func newReference() btrie.OrderedBytesMap[byte] {
 	return &reference{map[int32]byte{}}
 }
 
@@ -44,33 +52,89 @@ func refKey(index int32) []byte {
 	}
 }
 
-func (r *reference) Put(key, value []byte) []byte {
+func (r *reference) Put(key []byte, value byte) (byte, bool) {
 	index := refIndex(key)
-	b, ok := r.m[index]
-	if value == nil {
-		delete(r.m, index)
-	} else {
-		r.m[index] = value[0]
-	}
+	prev, ok := r.m[index]
+	r.m[index] = value
 	if ok {
-		return []byte{b}
+		return prev, true
 	}
-	return nil
+	return 0, false
 }
 
-func (r *reference) Get(key []byte) []byte {
-	if b, ok := r.m[refIndex(key)]; ok {
-		return []byte{b}
+func (r *reference) Get(key []byte) (byte, bool) {
+	value, ok := r.m[refIndex(key)]
+	return value, ok
+}
+
+func (r *reference) Delete(key []byte) (byte, bool) {
+	index := refIndex(key)
+	value, ok := r.m[index]
+	delete(r.m, index)
+	return value, ok
+}
+
+func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
+	type refEntry struct {
+		Key   []byte
+		Value byte
 	}
-	return nil
+	entries := []refEntry{}
+	for k, v := range r.m {
+		key := refKey(k)
+		if !bounds.Contains(key) {
+			continue
+		}
+		entries = append(entries, refEntry{key, v})
+	}
+	slices.SortFunc(entries, func(a, b refEntry) int {
+		return bytes.Compare(a.Key, b.Key)
+	})
+	return func(yield func([]byte, byte) bool) {
+		for _, entry := range entries {
+			if !yield(entry.Key, entry.Value) {
+				return
+			}
+		}
+	}
 }
 
-func (r *reference) Delete(key []byte) []byte {
-	return r.Put(key, nil)
+func (r *reference) Cursor(bounds *Bounds) iter.Seq[btrie.Pos[byte]] {
+	return func(yield func(btrie.Pos[byte]) bool) {
+		for k := range r.Range(bounds) {
+			if !yield(btrie.DefaultPos(r, k)) {
+				return
+			}
+		}
+	}
 }
 
-func (r *reference) Range(begin, end []byte) Cursor {
-	entries := []Entry{}
+func (r *reference) DeprPut(key, value []byte) []byte {
+	prev, ok := r.Put(key, value[0])
+	if !ok {
+		return nil
+	}
+	return []byte{prev}
+}
+
+func (r *reference) DeprGet(key []byte) []byte {
+	value, ok := r.Get(key)
+	if !ok {
+		return nil
+	}
+	return []byte{value}
+}
+
+func (r *reference) DeprDelete(key []byte) []byte {
+	value, ok := r.Delete(key)
+	if !ok {
+		return nil
+	}
+	return []byte{value}
+}
+
+func (r *reference) DeprRange(begin, end []byte) Cursor {
+	entries := []DeprEntry{}
 	for k, v := range r.m {
 		key := refKey(k)
 		if begin != nil && bytes.Compare(key, begin) < 0 {
@@ -79,24 +143,24 @@ func (r *reference) Range(begin, end []byte) Cursor {
 		if end != nil && bytes.Compare(key, end) >= 0 {
 			continue
 		}
-		entries = append(entries, Entry{key, []byte{v}})
+		entries = append(entries, DeprEntry{key, []byte{v}})
 	}
 	sort.Slice(entries, func(i, j int) bool {
 		return bytes.Compare(entries[i].Key, entries[j].Key) < 0
 	})
-	return &cursor{entries, 0}
+	return &deprCursor{entries, 0}
 }
 
-type cursor struct {
-	entries []Entry
+type deprCursor struct {
+	entries []DeprEntry
 	index   int
 }
 
-func (c *cursor) HasNext() bool {
+func (c *deprCursor) HasNext() bool {
 	return c.index < len(c.entries)
 }
 
-func (c *cursor) Next() ([]byte, []byte) {
+func (c *deprCursor) Next() ([]byte, []byte) {
 	entry := c.entries[c.index]
 	c.index++
 	return entry.Key, entry.Value
