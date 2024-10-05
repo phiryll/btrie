@@ -1,7 +1,6 @@
 package btrie
 
 import (
-	"bytes"
 	"fmt"
 	"iter"
 	"sort"
@@ -85,21 +84,6 @@ func (n *node[V]) Cursor(bounds *Bounds) iter.Seq[Pos[V]] {
 	panic("unimplemented")
 }
 
-type deprCursor[V any] struct {
-	entries []Entry[V]
-	index   int
-}
-
-func (c *deprCursor[V]) HasNext() bool {
-	return c.index < len(c.entries)
-}
-
-func (c *deprCursor[V]) Next() ([]byte, V) {
-	e := c.entries[c.index]
-	c.index++
-	return e.Key, e.Value
-}
-
 func (n *node[V]) String() string {
 	var s strings.Builder
 	n.printNode(&s, "")
@@ -116,51 +100,6 @@ func (n *node[V]) printNode(s *strings.Builder, indent string) {
 	for _, child := range n.children {
 		child.printNode(s, indent+"  ")
 	}
-}
-
-func (n *node[V]) DeprPut(key []byte, value V) V {
-	if len(key) == 0 {
-		panic("key must be non-empty")
-	}
-	// TODO: this does not need to recurse
-	prev, _ := n.put(key, value)
-	return prev
-}
-
-func (n *node[V]) DeprGet(key []byte) V {
-	// TODO: this does not need to recurse
-	index, found := n.search(key[0])
-	if !found {
-		var zero V
-		return zero
-	}
-	if len(key) == 1 {
-		return n.children[index].value
-	}
-	return n.children[index].DeprGet(key[1:])
-}
-
-func (n *node[V]) DeprDelete(key []byte) V {
-	// TODO: this does not need to recurse
-	_, value, _ := n.deleteKey(key)
-	return value
-}
-
-func (n *node[V]) DeprRange(begin, end []byte) Cursor[V] {
-	var entries []Entry[V]
-	// TODO: make this lazy and non-recursive - DFS
-
-	// this if catches an empty end
-	if len(n.children) == 0 ||
-		(end != nil && bytes.Compare(begin, end) >= 0) {
-		return &deprCursor[V]{entries, 0}
-	}
-	if end == nil {
-		n.rangeFrom([]byte{}, begin, &entries)
-	} else {
-		n.rangeBetween([]byte{}, begin, end, &entries)
-	}
-	return &deprCursor[V]{entries, 0}
 }
 
 func (n *node[V]) put(key []byte, value V) (V, bool) {

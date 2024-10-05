@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"slices"
-	"sort"
 
 	"github.com/phiryll/btrie"
 )
@@ -103,61 +102,4 @@ func (r *reference) Cursor(bounds *Bounds) iter.Seq[btrie.Pos[byte]] {
 			}
 		}
 	}
-}
-
-func (r *reference) DeprPut(key []byte, value byte) byte {
-	prev, ok := r.Put(key, value)
-	if !ok {
-		return 0
-	}
-	return prev
-}
-
-func (r *reference) DeprGet(key []byte) byte {
-	value, ok := r.Get(key)
-	if !ok {
-		return 0
-	}
-	return value
-}
-
-func (r *reference) DeprDelete(key []byte) byte {
-	value, ok := r.Delete(key)
-	if !ok {
-		return 0
-	}
-	return value
-}
-
-func (r *reference) DeprRange(begin, end []byte) btrie.Cursor[byte] {
-	entries := []btrie.Entry[byte]{}
-	for k, v := range r.m {
-		key := refKey(k)
-		if begin != nil && bytes.Compare(key, begin) < 0 {
-			continue
-		}
-		if end != nil && bytes.Compare(key, end) >= 0 {
-			continue
-		}
-		entries = append(entries, btrie.Entry[byte]{key, v})
-	}
-	sort.Slice(entries, func(i, j int) bool {
-		return bytes.Compare(entries[i].Key, entries[j].Key) < 0
-	})
-	return &deprCursor[byte]{entries, 0}
-}
-
-type deprCursor[V any] struct {
-	entries []btrie.Entry[V]
-	index   int
-}
-
-func (c *deprCursor[V]) HasNext() bool {
-	return c.index < len(c.entries)
-}
-
-func (c *deprCursor[V]) Next() ([]byte, V) {
-	entry := c.entries[c.index]
-	c.index++
-	return entry.Key, entry.Value
 }
