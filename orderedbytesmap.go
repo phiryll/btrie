@@ -90,17 +90,29 @@ func (b *Bounds) DownTo(key []byte) *Bounds {
 	return b
 }
 
-// Contains returns whether key is within b.
-// TODO: make this more like a compare function, returning before/within/after.
-func (b *Bounds) Contains(key []byte) bool {
+// Compare returns where key is in relation to b, taking b.Reverse into account.
+// If b.Reverse is false, the result will be -1 if key < b.Begin, 0 if begin <= key < end, and +1 if end <= key.
+// If b.Reverse is true, the result will be -1 if key > b.Begin, 0 if begin >= key > end, and +1 if end >= key.
+// In other words, 0 if within the bounds, -1 if beyond b.Begin, and +1 if beyond b.End.
+func (b *Bounds) Compare(key []byte) int {
 	if b.Reverse {
+		if b.Begin != nil && bytes.Compare(key, b.Begin) > 0 {
+			return -1
+		}
+		if b.End != nil && bytes.Compare(b.End, key) >= 0 {
+			return +1
+		}
 		// end < key <= begin
-		return (b.End == nil || bytes.Compare(b.End, key) < 0) &&
-			(b.Begin == nil || bytes.Compare(key, b.Begin) <= 0)
+		return 0
+	}
+	if b.Begin != nil && bytes.Compare(key, b.Begin) < 0 {
+		return -1
+	}
+	if b.End != nil && bytes.Compare(b.End, key) <= 0 {
+		return +1
 	}
 	// begin <= key < end
-	return (b.Begin == nil || bytes.Compare(b.Begin, key) <= 0) &&
-		(b.End == nil || bytes.Compare(key, b.End) < 0)
+	return 0
 }
 
 // A Pos represents a mutable position in the sequence returned by [OrderedBytesMap.Cursor].
