@@ -40,11 +40,20 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 	return value, ok
 }
 
+type refEntry struct {
+	Key   []byte
+	Value byte
+}
+
+func refForward(a, b refEntry) int {
+	return bytes.Compare(a.Key, b.Key)
+}
+
+func refReverse(a, b refEntry) int {
+	return bytes.Compare(b.Key, a.Key)
+}
+
 func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
-	type refEntry struct {
-		Key   []byte
-		Value byte
-	}
 	entries := []refEntry{}
 	for k, v := range r.m {
 		key := []byte(k)
@@ -53,12 +62,11 @@ func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 		}
 		entries = append(entries, refEntry{key, v})
 	}
-	slices.SortFunc(entries, func(a, b refEntry) int {
-		if bounds.Reverse {
-			a, b = b, a
-		}
-		return bytes.Compare(a.Key, b.Key)
-	})
+	cmp := refForward
+	if bounds.Reverse {
+		cmp = refReverse
+	}
+	slices.SortFunc(entries, cmp)
 	return func(yield func([]byte, byte) bool) {
 		for _, entry := range entries {
 			if !yield(entry.Key, entry.Value) {
