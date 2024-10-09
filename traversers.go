@@ -46,7 +46,3 @@ func preOrderRecurse[T any](s *stack[T], adj func(T) iter.Seq[T], yield func([]T
 	}
 	return false
 }
-
-func emptyAdj[T any](_ T) iter.Seq[T] {
-	return EmptySeq
-}

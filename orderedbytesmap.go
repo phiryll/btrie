@@ -108,12 +108,6 @@ func (b *Bounds) Compare(key []byte) int {
 	return 0
 }
 
-// EmptySeq is an empty [iter.Seq].
-func EmptySeq[T any](_ func(T) bool) {}
-
-// EmptySeq2 is an empty [iter.Seq2].
-func EmptySeq2[K, V any](_ func(K, V) bool) {}
-
 // TODO: After the initial implementations, define a common interface (maybe the same?).
 // Use this to allow different representations at different locations in the trie.
 // The goal would be to locally self-optimize the trie for speed or space.

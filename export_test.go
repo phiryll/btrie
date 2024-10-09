@@ -6,5 +6,4 @@ package btrie
 
 var (
 	TestingPreOrder = preOrder[int]
-	TestingEmptyAdj = emptyAdj[int]
 )

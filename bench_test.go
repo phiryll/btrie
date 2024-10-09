@@ -13,7 +13,7 @@ func BenchmarkPreOrder(b *testing.B) {
 		adj  func(int) iter.Seq[int]
 	}{
 		// The number in parentheses is the number of paths in the traversal.
-		{"empty (1)", btrie.TestingEmptyAdj},
+		{"empty (1)", emptyAdjInt},
 		{"limit 0 (4)", adjInt(0)},
 		{"limit 2^4 (40)", adjInt(1 << 4)},
 		{"limit 2^8 (364)", adjInt(1 << 8)},

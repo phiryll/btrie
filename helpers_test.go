@@ -24,9 +24,14 @@ type (
 
 var (
 	From = btrie.From
-
-	all = From(nil).To(nil)
+	all  = From(nil).To(nil)
 )
+
+func emptySeqInt(_ func(int) bool) {}
+
+func emptyAdjInt(_ int) iter.Seq[int] {
+	return emptySeqInt
+}
 
 func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
 	entries := []entry[V]{}

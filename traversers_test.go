@@ -17,7 +17,7 @@ func adjInt(limit int) func(int) iter.Seq[int] {
 	}
 	return func(parent int) iter.Seq[int] {
 		if parent > limit {
-			return btrie.EmptySeq
+			return emptySeqInt
 		}
 		return func(yield func(int) bool) {
 			for child := 4*parent + 1; child < 4*parent+4; child++ {
@@ -71,9 +71,9 @@ func preOrderPaths(root int, adj func(int) iter.Seq[int]) [][]int {
 
 func TestPreOrder(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, [][]int{{0}}, preOrderPaths(0, btrie.TestingEmptyAdj))
+	assert.Equal(t, [][]int{{0}}, preOrderPaths(0, emptyAdjInt))
 	assert.Equal(t, [][]int{{0}, {0, 1}, {0, 2}, {0, 3}}, preOrderPaths(0, adjInt(0)))
 	assert.Equal(t, expectedPaths, preOrderPaths(0, adjInt(10)))
-	assert.Equal(t, [][]int{{42}}, preOrderPaths(42, btrie.TestingEmptyAdj))
+	assert.Equal(t, [][]int{{42}}, preOrderPaths(42, emptyAdjInt))
 	assert.Equal(t, [][]int{{42}, {42, 169}, {42, 170}, {42, 171}}, preOrderPaths(42, adjInt(50)))
 }
