@@ -4,4 +4,7 @@ package btrie
 // The identifiers are in the btrie package, but the filename ends in _test.go,
 // preventing their inclusion in the public API.
 
-var TestingPreOrder = preOrder[int]
+var (
+	TestingPreOrder = preOrder[int]
+	TestingEmptyAdj = emptyAdj[int]
+)
