@@ -9,7 +9,7 @@ import (
 // However, a stack[byte] can be rearranged to save memory.
 
 // TODO: return a sequence of things with both a path and a pruning method.
-// But only if a typical obm implementation would need that to more quickly get to Bounds.Begin.
+// But only if a typical impl would need that to more quickly get to Bounds.Begin.
 
 // stack is a simple immutable singly-linked list used by preOrder.
 type stack[T any] struct {

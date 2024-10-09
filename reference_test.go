@@ -54,6 +54,9 @@ func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 		entries = append(entries, refEntry{key, v})
 	}
 	slices.SortFunc(entries, func(a, b refEntry) int {
+		if bounds.Reverse {
+			a, b = b, a
+		}
 		return bytes.Compare(a.Key, b.Key)
 	})
 	return func(yield func([]byte, byte) bool) {
