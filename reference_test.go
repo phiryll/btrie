@@ -64,13 +64,3 @@ func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 		}
 	}
 }
-
-func (r *reference) Cursor(bounds *Bounds) iter.Seq[btrie.Pos[byte]] {
-	return func(yield func(btrie.Pos[byte]) bool) {
-		for k := range r.Range(bounds) {
-			if !yield(btrie.DefaultPos(r, k)) {
-				return
-			}
-		}
-	}
-}

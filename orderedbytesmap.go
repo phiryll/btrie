@@ -6,8 +6,6 @@ import (
 	"iter"
 )
 
-// TODO: Range and Cursor should return a sequence of things with a pruning method.
-
 // OrderedBytesMap is essentially an ordered map[[]byte]V.
 // Keys must be non-nil.
 // A nil key returned by any method generally means "does not exist".
@@ -29,14 +27,9 @@ type OrderedBytesMap[V any] interface {
 	// Range returns a sequence of key/value pairs over the given bounds.
 	// Implementations should consider making a defensive copy of bounds using [Bounds.Clone].
 	Range(bounds *Bounds) iter.Seq2[[]byte, V]
-
-	// Cursor returns a sequence of Pos values over the given bounds.
-	// Implementations should consider making a defensive copy of bounds using [Bounds.Clone].
-	// Cursor will panic if this OrderedBytesMap does not support mutation.
-	Cursor(bounds *Bounds) iter.Seq[Pos[V]]
 }
 
-// Bounds is the argument type for [OrderedBytesMap.Range] and [OrderedBytesMap.Cursor].
+// Bounds is the argument type for [OrderedBytesMap.Range].
 // A nil value for [Bounds.Begin] or [Bounds.End] represents +/-Inf;
 // which one depends on the value of [Bounds.Reverse].
 // Note that an empty bounds value is not nil; -Inf < []byte{} < []byte{0}.
@@ -113,49 +106,6 @@ func (b *Bounds) Compare(key []byte) int {
 	}
 	// begin <= key < end
 	return 0
-}
-
-// A Pos represents a mutable position in the sequence returned by [OrderedBytesMap.Cursor].
-type Pos[V any] interface {
-	// Key returns the key at this position.
-	Key() []byte
-
-	// Value returns the value at this position.
-	Value() V
-
-	// Set sets the value at this position.
-	Set(value V)
-
-	// Delete removes the key/value pair at this position.
-	Delete()
-}
-
-// DefaultPos is a default Pos implementation which delegates to the containing OrderedBytesMap.
-// Do not use this implementation if Set or Delete might corrupt the Cursor which created it.
-func DefaultPos[V any](bMap OrderedBytesMap[V], key []byte) Pos[V] {
-	return &position[V]{bMap, key}
-}
-
-type position[V any] struct {
-	bMap OrderedBytesMap[V]
-	key  []byte
-}
-
-func (p *position[V]) Key() []byte {
-	return p.key
-}
-
-func (p *position[V]) Value() V {
-	value, _ := p.bMap.Get(p.key)
-	return value
-}
-
-func (p *position[V]) Set(value V) {
-	p.bMap.Put(p.key, value)
-}
-
-func (p *position[V]) Delete() {
-	p.bMap.Delete(p.key)
 }
 
 // EmptySeq is an empty [iter.Seq].

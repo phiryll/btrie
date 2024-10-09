@@ -62,6 +62,7 @@ type entry[V any] struct {
 }
 
 func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
+	bounds = bounds.Clone()
 	if bounds.Reverse {
 		panic("unimplemented")
 	}
@@ -83,10 +84,6 @@ func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 			}
 		}
 	}
-}
-
-func (*node[V]) Cursor(_ *Bounds) iter.Seq[Pos[V]] {
-	panic("unimplemented")
 }
 
 func (n *node[V]) String() string {
