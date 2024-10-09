@@ -6,6 +6,8 @@ import (
 	"iter"
 )
 
+// TODO: Range and Cursor should return a sequence of things with a pruning method.
+
 // OrderedBytesMap is essentially an ordered map[[]byte]V.
 // Keys must be non-nil.
 // A nil key returned by any method generally means "does not exist".
@@ -13,22 +15,22 @@ import (
 // Implementations must clearly document if any methods accept or return references to its internal storage.
 // All OrderedBytesMap implementations in this package are tries.
 type OrderedBytesMap[V any] interface {
-	// Put sets the value for key, returning the previous value.
+	// Put sets the value for key, returning the previous value and whether or not the previous value did exist.
 	// Put will panic if this OrderedBytesMap does not support mutation.
 	Put(key []byte, value V) (previous V, ok bool)
 
-	// Get returns the value for key.
+	// Get returns the value for key and whether or not it exists.
 	Get(key []byte) (value V, ok bool)
 
-	// Delete removes the value for key, returning the previous value.
+	// Delete removes the value for key, returning the previous value and whether or not the previous value did exist.
 	// Delete will panic if this OrderedBytesMap does not support mutation.
 	Delete(key []byte) (previous V, ok bool)
 
-	// Range does stuff.
+	// Range returns a sequence of key/value pairs over the given bounds.
 	// Implementations should consider making a defensive copy of bounds using [Bounds.Clone].
 	Range(bounds *Bounds) iter.Seq2[[]byte, V]
 
-	// Cursor does stuff.
+	// Cursor returns a sequence of Pos values over the given bounds.
 	// Implementations should consider making a defensive copy of bounds using [Bounds.Clone].
 	// Cursor will panic if this OrderedBytesMap does not support mutation.
 	Cursor(bounds *Bounds) iter.Seq[Pos[V]]
@@ -89,6 +91,7 @@ func (b *Bounds) DownTo(key []byte) *Bounds {
 }
 
 // Contains returns whether key is within b.
+// TODO: make this more like a compare function, returning before/within/after.
 func (b *Bounds) Contains(key []byte) bool {
 	if b.Reverse {
 		// end < key <= begin
@@ -156,7 +159,7 @@ func EmptySeq2[K, V any](_ func(K, V) bool) {}
 // This is probably not feasible for the fully or partially persistent variants
 // since those need to maintain all history.
 
-// Note: iteraters need to clean up before returning
+// Note: iter.Pull iteraters need to clean up before returning
 // BIG Note: Document iter.Seq/Seq2 if single use. Multiple use would look like:
 //   it := bMap.Range(From(begin).To(end))
 //   for k, v := range it {

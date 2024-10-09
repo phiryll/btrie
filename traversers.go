@@ -8,6 +8,8 @@ import (
 // but I'm not sure that gains anything.
 // However, a stack[byte] can be rearranged to save memory.
 
+// TODO: return a sequence of things with both a path and a pruning method.
+
 // stack is a simple immutable singly-linked list used by preOrder.
 type stack[T any] struct {
 	value T

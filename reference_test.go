@@ -13,9 +13,11 @@ func newReference() btrie.OrderedBytesMap[byte] {
 	return &reference{map[int32]byte{}}
 }
 
+// TODO: expand to 4 bytes (truncated)
+
 // reference implements the OrderedBytesMap[byte] interface, but it is not a trie.
 // Keys must be 1-3 bytes, and values are exactly 1 byte.
-// This serves as an expected value to compare against a OrderedBytesMap implementation while testing.
+// This serves as an expected value to compare against an OrderedBytesMap implementation while testing.
 type reference struct {
 	// the high byte is 0, 1, or 2 if the key is 1, 2, or 3 bytes
 	m map[int32]byte

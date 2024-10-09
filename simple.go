@@ -9,7 +9,7 @@ import (
 
 // A simple implementation, all pointers.
 
-// sub-packages?, because I kind of want to reuse struct names like "root".
+// sub-packages?, because it's helpful to reuse struct names like "root".
 // maybe later, at the second implementation.
 
 // no way to distinguish the root from an internal node,
@@ -23,7 +23,7 @@ func NewSimple[V any]() OrderedBytesMap[V] {
 }
 
 type node[V any] struct {
-	value      V // exists only if isTerminal is true
+	value      V // valid only if isTerminal is true
 	children   []*node[V]
 	keyByte    byte
 	isTerminal bool
