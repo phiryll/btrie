@@ -44,7 +44,6 @@ func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
 // TODO: expand this to cover before/at/after edge cases.
 func testShortKey(t *testing.T, f func() btrie.OrderedBytesMap[byte]) {
 	bt := f()
-	// bt.Put([]byte{5}, 0)
 	bt.Put([]byte{5}, 0)
 	assert.Equal(t,
 		[]entry[byte]{},

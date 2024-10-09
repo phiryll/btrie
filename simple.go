@@ -3,6 +3,7 @@ package btrie
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -17,6 +18,7 @@ import (
 
 // NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
+// TODO: allow empty keys.
 func NewSimple[V any]() OrderedBytesMap[V] {
 	var zero V
 	return &node[V]{zero, nil, 0, false}
@@ -56,30 +58,45 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 	return value, ok
 }
 
-type entry[V any] struct {
-	Value V
-	Key   []byte
+func childIter[V any](n *node[V]) iter.Seq[*node[V]] {
+	return slices.Values(n.children)
+}
+
+func reverseChildIter[V any](n *node[V]) iter.Seq[*node[V]] {
+	return func(yield func(*node[V]) bool) {
+		for i := len(n.children) - 1; i >= 0; i-- {
+			if !yield(n.children[i]) {
+				return
+			}
+		}
+	}
 }
 
 func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
+	adj := childIter[V]
 	if bounds.Reverse {
-		panic("unimplemented")
+		adj = reverseChildIter[V]
 	}
 	return func(yield func([]byte, V) bool) {
-		if len(n.children) == 0 {
-			return
-		}
-		// TODO: make this lazy and non-recursive - DFS
-		var entries []entry[V]
-		// this if catches an empty end
-		if bounds.End == nil {
-			n.rangeFrom([]byte{}, bounds.Begin, &entries)
-		} else {
-			n.rangeBetween([]byte{}, bounds.Begin, bounds.End, &entries)
-		}
-		for _, e := range entries {
-			if !yield(e.Key, e.Value) {
+		// path is a []*node[V], with path[0] being the root
+		for path := range preOrder(n, adj) {
+			var key []byte
+			for _, n := range path[1:] {
+				key = append(key, n.keyByte)
+			}
+			cmp := bounds.Compare(key)
+			if cmp < 0 {
+				continue
+			}
+			if cmp > 0 {
+				return
+			}
+			end := path[len(path)-1]
+			if !end.isTerminal {
+				continue
+			}
+			if !yield(key, end.value) {
 				return
 			}
 		}
@@ -179,85 +196,4 @@ func (n *node[V]) deleteKey(key []byte) (bool, V, bool) {
 		n.children = append(n.children[:index], n.children[index+1:]...)
 	}
 	return len(n.children) == 0 && !n.isTerminal, prev, ok
-}
-
-func with(prefix []byte, b byte) []byte {
-	return append(append([]byte{}, prefix...), b)
-}
-
-// begin <= entries < end.
-func (n *node[V]) rangeBetween(prefix, begin, end []byte, entries *[]entry[V]) {
-	// invariant: end is not empty
-	if len(begin) == 0 {
-		n.rangeTo(prefix, end, entries)
-		return
-	}
-	beginIndex, beginFound := n.search(begin[0])
-	if begin[0] == end[0] {
-		// len(end) > 1, because otherwise begin >= end
-		if beginFound {
-			child := n.children[beginIndex]
-			child.rangeBetween(with(prefix, child.keyByte), begin[1:], end[1:], entries)
-		}
-		// the entire search range is not present
-		return
-	}
-	// begin[0] < end[0]
-	if beginFound {
-		child := n.children[beginIndex]
-		child.rangeFrom(with(prefix, child.keyByte), begin[1:], entries)
-		beginIndex++
-	}
-	endIndex, endFound := n.search(end[0])
-	for _, child := range n.children[beginIndex:endIndex] {
-		child.descendants(with(prefix, child.keyByte), entries)
-	}
-	if endFound {
-		child := n.children[endIndex]
-		child.rangeTo(with(prefix, child.keyByte), end[1:], entries)
-	}
-}
-
-// begin <= entries.
-func (n *node[V]) rangeFrom(prefix, begin []byte, entries *[]entry[V]) {
-	if len(begin) == 0 {
-		n.descendants(prefix, entries)
-		return
-	}
-	index, found := n.search(begin[0])
-	if found {
-		child := n.children[index]
-		child.rangeFrom(with(prefix, child.keyByte), begin[1:], entries)
-		index++
-	}
-	for _, child := range n.children[index:] {
-		child.descendants(with(prefix, child.keyByte), entries)
-	}
-}
-
-// entries < end.
-func (n *node[V]) rangeTo(prefix, end []byte, entries *[]entry[V]) {
-	if len(end) == 0 {
-		return
-	}
-	if n.isTerminal {
-		*entries = append(*entries, entry[V]{n.value, prefix})
-	}
-	index, found := n.search(end[0])
-	for _, child := range n.children[:index] {
-		child.descendants(with(prefix, child.keyByte), entries)
-	}
-	if found {
-		child := n.children[index]
-		child.rangeTo(with(prefix, child.keyByte), end[1:], entries)
-	}
-}
-
-func (n *node[V]) descendants(prefix []byte, entries *[]entry[V]) {
-	if n.isTerminal {
-		*entries = append(*entries, entry[V]{n.value, prefix})
-	}
-	for _, child := range n.children {
-		child.descendants(with(prefix, child.keyByte), entries)
-	}
 }
