@@ -2,8 +2,10 @@ package btrie_test
 
 import (
 	"bytes"
+	"fmt"
 	"iter"
 	"slices"
+	"strings"
 
 	"github.com/phiryll/btrie"
 )
@@ -38,6 +40,16 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 	value, ok := r.m[index]
 	delete(r.m, index)
 	return value, ok
+}
+
+func (r *reference) String() string {
+	var s strings.Builder
+	s.WriteString("{")
+	for k, v := range r.Range(From(nil).To(nil)) {
+		s.WriteString(fmt.Sprintf("%X:%v, ", []byte(k), v))
+	}
+	s.WriteString("}")
+	return s.String()
 }
 
 type refEntry struct {

@@ -107,17 +107,22 @@ func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 
 func (n *node[V]) String() string {
 	var s strings.Builder
-	n.printNode(&s, "")
+	if n.isTerminal {
+		s.WriteString(fmt.Sprintf("[]: %v\n", n.value))
+	} else {
+		s.WriteString("[]\n")
+	}
+	for _, child := range n.children {
+		child.printNode(&s, "  ")
+	}
 	return s.String()
 }
 
 func (n *node[V]) printNode(s *strings.Builder, indent string) {
 	if n.isTerminal {
-		//nolint:revive
-		fmt.Fprintf(s, "%s%X: %v\n", indent, n.keyByte, n.value)
+		s.WriteString(fmt.Sprintf("%s%X: %v\n", indent, n.keyByte, n.value))
 	} else {
-		//nolint:revive
-		fmt.Fprintf(s, "%s%X\n", indent, n.keyByte)
+		s.WriteString(fmt.Sprintf("%s%X\n", indent, n.keyByte))
 	}
 	for _, child := range n.children {
 		child.printNode(s, indent+"  ")
