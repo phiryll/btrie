@@ -96,7 +96,7 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 	for range opCount {
 		entry := entry[byte]{randomKey(random), randomByte(random)}
 		switch randOp := random.Float32(); {
-		case randOp < 2.0:
+		case randOp < 0.5:
 			expected, expectedOk := ref.Put(entry.Key, entry.Value)
 			actual, actualOk := bt.Put(entry.Key, entry.Value)
 			assert.Equal(t, expectedOk, actualOk)
