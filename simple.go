@@ -58,14 +58,16 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 	return value, ok
 }
 
-func childIter[V any](n *node[V]) iter.Seq[*node[V]] {
-	return slices.Values(n.children)
+func childIter[V any](path []*node[V]) iter.Seq[*node[V]] {
+	last := path[len(path)-1]
+	return slices.Values(last.children)
 }
 
-func reverseChildIter[V any](n *node[V]) iter.Seq[*node[V]] {
+func reverseChildIter[V any](path []*node[V]) iter.Seq[*node[V]] {
 	return func(yield func(*node[V]) bool) {
-		for i := len(n.children) - 1; i >= 0; i-- {
-			if !yield(n.children[i]) {
+		last := path[len(path)-1]
+		for i := len(last.children) - 1; i >= 0; i-- {
+			if !yield(last.children[i]) {
 				return
 			}
 		}
@@ -92,11 +94,11 @@ func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 			if cmp > 0 {
 				return
 			}
-			end := path[len(path)-1]
-			if !end.isTerminal {
+			last := path[len(path)-1]
+			if !last.isTerminal {
 				continue
 			}
-			if !yield(key, end.value) {
+			if !yield(key, last.value) {
 				return
 			}
 		}

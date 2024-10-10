@@ -12,16 +12,17 @@ import (
 // adjInt returns a simple adjacency function for testing pre-order traversals.
 // If k <= limit, children(k) == [4*k+1, 4*k+2, 4*k+3].
 // If k > limit, children(k) == [].
-func adjInt(limit int) func(int) iter.Seq[int] {
+func adjInt(limit int) func([]int) iter.Seq[int] {
 	if limit < 0 {
 		panic("limit must be non-negative")
 	}
-	return func(parent int) iter.Seq[int] {
-		if parent > limit {
+	return func(path []int) iter.Seq[int] {
+		last := path[len(path)-1]
+		if last > limit {
 			return emptySeqInt
 		}
 		return func(yield func(int) bool) {
-			for child := 4*parent + 1; child < 4*parent+4; child++ {
+			for child := 4*last + 1; child < 4*last+4; child++ {
 				if !yield(child) {
 					return
 				}
@@ -62,7 +63,7 @@ var expectedPaths = [][]int{
 	{0, 3, 15},
 }
 
-func preOrderPaths(root int, adj func(int) iter.Seq[int]) [][]int {
+func preOrderPaths(root int, adj func([]int) iter.Seq[int]) [][]int {
 	paths := [][]int{}
 	for path := range btrie.TestingPreOrder(root, adj) {
 		paths = append(paths, slices.Clone(path))

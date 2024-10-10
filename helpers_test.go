@@ -29,7 +29,7 @@ var (
 
 func emptySeqInt(_ func(int) bool) {}
 
-func emptyAdjInt(_ int) iter.Seq[int] {
+func emptyAdjInt(_ []int) iter.Seq[int] {
 	return emptySeqInt
 }
 
