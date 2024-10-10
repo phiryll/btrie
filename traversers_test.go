@@ -2,6 +2,7 @@ package btrie_test
 
 import (
 	"iter"
+	"slices"
 	"testing"
 
 	"github.com/phiryll/btrie"
@@ -64,7 +65,7 @@ var expectedPaths = [][]int{
 func preOrderPaths(root int, adj func(int) iter.Seq[int]) [][]int {
 	paths := [][]int{}
 	for path := range btrie.TestingPreOrder(root, adj) {
-		paths = append(paths, path)
+		paths = append(paths, slices.Clone(path))
 	}
 	return paths
 }
