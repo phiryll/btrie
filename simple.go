@@ -112,12 +112,13 @@ func (n *node[V]) String() string {
 }
 
 func (n *node[V]) printNode(s *strings.Builder, indent string) {
-	v := "DNE"
 	if n.isTerminal {
-		v = fmt.Sprintf("%v", n.value)
+		//nolint:revive
+		fmt.Fprintf(s, "%s%X: %v\n", indent, n.keyByte, n.value)
+	} else {
+		//nolint:revive
+		fmt.Fprintf(s, "%s%X\n", indent, n.keyByte)
 	}
-	//nolint:revive
-	fmt.Fprintf(s, "%s%d: %s\n", indent, n.keyByte, v)
 	for _, child := range n.children {
 		child.printNode(s, indent+"  ")
 	}
