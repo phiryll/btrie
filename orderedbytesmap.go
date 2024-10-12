@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"iter"
+	"math"
 )
 
 // OrderedBytesMap is essentially an ordered map[[]byte]V.
@@ -117,6 +118,8 @@ func (b *Bounds) Compare(key []byte) int {
 // If ok is false, no children should be recursed into.
 //
 // For example, with partialKey {5, 8} and bounds [{5, 8, 4, 255} to {5, 8, 7}], return (4, 6, true).
+//
+//nolint:nonamedreturns
 func (b *Bounds) childBounds(partialKey []byte) (start, stop byte, ok bool) {
 	if b.Reverse {
 		return b.reverseChildBounds(partialKey)
@@ -124,9 +127,9 @@ func (b *Bounds) childBounds(partialKey []byte) (start, stop byte, ok bool) {
 	return b.forwardChildBounds(partialKey)
 }
 
-func (b *Bounds) forwardChildBounds(partialKey []byte) (byte, byte, bool) {
-	start := byte(0x00)
-	stop := byte(0xFF)
+//nolint:nonamedreturns
+func (b *Bounds) forwardChildBounds(partialKey []byte) (start, stop byte, ok bool) {
+	start, stop = 0, math.MaxUint8
 	keySize := len(partialKey)
 	if b.Begin != nil {
 		beginPrefix := b.Begin
@@ -172,9 +175,9 @@ func (b *Bounds) forwardChildBounds(partialKey []byte) (byte, byte, bool) {
 	return start, stop, true
 }
 
-func (b *Bounds) reverseChildBounds(partialKey []byte) (byte, byte, bool) {
-	start := byte(0xFF)
-	stop := byte(0x00)
+//nolint:nonamedreturns
+func (b *Bounds) reverseChildBounds(partialKey []byte) (start, stop byte, ok bool) {
+	start, stop = math.MaxUint8, 0
 	keySize := len(partialKey)
 	if b.Begin != nil {
 		beginPrefix := b.Begin
@@ -214,10 +217,6 @@ func (b *Bounds) reverseChildBounds(partialKey []byte) (byte, byte, bool) {
 }
 
 func emptySeq[T any](_ func(T) bool) {}
-
-func emptyAdj[T any](_ []T) iter.Seq[T] {
-	return emptySeq
-}
 
 // TODO: After the initial implementations, define a common interface (maybe the same?).
 // Use this to allow different representations at different locations in the trie.

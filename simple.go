@@ -221,14 +221,15 @@ func (n *node[V]) String() string {
 	return s.String()
 }
 
+//nolint:revive
 func (n *node[V]) printNode(s *strings.Builder, indent string) {
 	if indent == "" {
 		s.WriteString("[]")
 	} else {
-		s.WriteString(fmt.Sprintf("%s%X", indent, n.keyByte))
+		fmt.Fprintf(s, "%s%X", indent, n.keyByte)
 	}
 	if n.isTerminal {
-		s.WriteString(fmt.Sprintf(": %v\n", n.value))
+		fmt.Fprintf(s, ": %v\n", n.value)
 	} else {
 		s.WriteString("\n")
 	}

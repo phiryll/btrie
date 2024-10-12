@@ -74,14 +74,19 @@ func randomKey(random *rand.Rand) []byte {
 func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
 	const opCount = 100000
 	const rangeCount = 100
-
 	bt := f()
-
 	assert.Empty(t, collect(bt.Range(all)))
 	random := rand.New(rand.NewSource(seed))
 	ref := newReference()
 
-	for range opCount {
+	testOps(t, ref, bt, opCount, random)
+	t.Logf("Ref:\n%s\nActual:\n%s", ref, bt)
+	assert.Equal(t, collect(ref.Range(all)), collect(bt.Range(all)))
+	testRange(t, ref, bt, rangeCount, random)
+}
+
+func testOps(t *testing.T, ref, bt btrie.OrderedBytesMap[byte], count int, random *rand.Rand) {
+	for range count {
 		key := randomKey(random)
 		value := randomByte(random)
 		switch randOp := random.Float32(); {
@@ -105,11 +110,10 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 			assert.Equal(t, expected, actual, "Get %X\n", key)
 		}
 	}
+}
 
-	t.Logf("Ref:\n%s\nActual:\n%s", ref, bt)
-	assert.Equal(t, collect(ref.Range(all)), collect(bt.Range(all)))
-
-	for range rangeCount {
+func testRange(t *testing.T, ref, bt btrie.OrderedBytesMap[byte], count int, random *rand.Rand) {
+	for range count {
 		begin := randomKey(random)
 		end := randomKey(random)
 		if bytes.Equal(begin, end) {

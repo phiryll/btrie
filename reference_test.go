@@ -42,11 +42,12 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 	return value, ok
 }
 
+//nolint:revive
 func (r *reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	for k, v := range r.Range(From(nil).To(nil)) {
-		s.WriteString(fmt.Sprintf("%X:%v, ", []byte(k), v))
+		fmt.Fprintf(&s, "%X:%v, ", k, v)
 	}
 	s.WriteString("}")
 	return s.String()

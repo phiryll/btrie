@@ -38,11 +38,11 @@ func TestFail2(t *testing.T) {
 
 	// forgot to check isTerminal
 	actual, actualOk := bt.Get([]byte{0xB3})
-	assert.Equal(t, false, actualOk)
+	assert.False(t, actualOk)
 	assert.Equal(t, byte(0), actual)
 
 	actual, actualOk = bt.Get([]byte{0xB3, 0x9C})
-	assert.Equal(t, true, actualOk)
+	assert.True(t, actualOk)
 	assert.Equal(t, byte(184), actual)
 }
 
@@ -52,12 +52,12 @@ func TestFail3(t *testing.T) {
 	bt.Put([]byte{0xB3, 0x9C}, 184)
 
 	actual, actualOk := bt.Delete([]byte{0xB3})
-	assert.Equal(t, false, actualOk)
+	assert.False(t, actualOk)
 	assert.Equal(t, byte(0), actual)
 
 	// Make sure the subtree wasn't deleted.
 	actual, actualOk = bt.Get([]byte{0xB3, 0x9C})
-	assert.Equal(t, true, actualOk)
+	assert.True(t, actualOk)
 	assert.Equal(t, byte(184), actual)
 }
 
