@@ -74,11 +74,11 @@ func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 		}
 		entries = append(entries, refEntry{key, v})
 	}
-	cmp := refForward
 	if bounds.Reverse {
-		cmp = refReverse
+		slices.SortFunc(entries, refReverse)
+	} else {
+		slices.SortFunc(entries, refForward)
 	}
-	slices.SortFunc(entries, cmp)
 	return func(yield func([]byte, byte) bool) {
 		for _, entry := range entries {
 			if !yield(entry.Key, entry.Value) {
