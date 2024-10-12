@@ -46,18 +46,6 @@ func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
 // Instead, these tests repeatedly call all OrderedBytesMap methods randomly,
 // and compare the result to a reference.
 
-// TODO: expand this to cover before/at/after edge cases.
-func testShortKey(t *testing.T, f func() btrie.OrderedBytesMap[byte]) {
-	bt := f()
-	bt.Put([]byte{5}, 0)
-	assert.Equal(t,
-		[]entry[byte]{},
-		collect(bt.Range(From([]byte{5, 0}).To([]byte{6}))))
-	assert.Equal(t,
-		[]entry[byte]{{[]byte{5}, 0}},
-		collect(bt.Range(From([]byte{4}).To([]byte{5, 0}))))
-}
-
 func randomBytes(n int, random *rand.Rand) []byte {
 	b := make([]byte, n)
 	_, _ = random.Read(b)

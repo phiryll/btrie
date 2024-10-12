@@ -19,7 +19,14 @@ func TestReference(t *testing.T) {
 
 func TestSimpleShortKey(t *testing.T) {
 	t.Parallel()
-	testShortKey(t, btrie.NewSimple[byte])
+	bt := btrie.NewSimple[byte]()
+	bt.Put([]byte{5}, 0)
+	assert.Equal(t,
+		[]entry[byte]{},
+		collect(bt.Range(From([]byte{5, 0}).To([]byte{6}))))
+	assert.Equal(t,
+		[]entry[byte]{{[]byte{5}, 0}},
+		collect(bt.Range(From([]byte{4}).To([]byte{5, 0}))))
 }
 
 func TestSimpleGet1(t *testing.T) {
