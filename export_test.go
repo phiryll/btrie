@@ -5,7 +5,8 @@ package btrie
 // preventing their inclusion in the public API.
 
 var (
-	TestingPreOrder = preOrder[int]
+	TestingPreOrder  = preOrder[int]
+	TestingPostOrder = postOrder[int]
 )
 
 type (
