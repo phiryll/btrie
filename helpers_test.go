@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: this is now really all fuzz tests, make them real and delete this file.
+
 // This file contains things that help in writing tests.
 // There are no top-level tests here, but the bulk of the testing code is.
 
@@ -80,26 +82,27 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 	ref := newReference()
 
 	for range opCount {
-		entry := entry[byte]{randomKey(random), randomByte(random)}
+		key := randomKey(random)
+		value := randomByte(random)
 		switch randOp := random.Float32(); {
 		case randOp < 0.5:
-			t.Logf("Put %X:%v\n", entry.Key, entry.Value)
-			expected, expectedOk := ref.Put(entry.Key, entry.Value)
-			actual, actualOk := bt.Put(entry.Key, entry.Value)
-			assert.Equal(t, expectedOk, actualOk, "Put %X:%v\n", entry.Key, entry.Value)
-			assert.Equal(t, expected, actual, "Put %X:%v\n", entry.Key, entry.Value)
+			t.Logf("Put %X:%v\n", key, value)
+			expected, expectedOk := ref.Put(key, value)
+			actual, actualOk := bt.Put(key, value)
+			assert.Equal(t, expectedOk, actualOk, "Put %X:%v\n", key, value)
+			assert.Equal(t, expected, actual, "Put %X:%v\n", key, value)
 		case randOp < 0.6:
-			t.Logf("Delete %X\n", entry.Key)
-			expected, expectedOk := ref.Delete(entry.Key)
-			actual, actualOk := bt.Delete(entry.Key)
-			assert.Equal(t, expectedOk, actualOk, "Delete %X\n", entry.Key)
-			assert.Equal(t, expected, actual, "Delete %X\n", entry.Key)
+			t.Logf("Delete %X\n", key)
+			expected, expectedOk := ref.Delete(key)
+			actual, actualOk := bt.Delete(key)
+			assert.Equal(t, expectedOk, actualOk, "Delete %X\n", key)
+			assert.Equal(t, expected, actual, "Delete %X\n", key)
 		default:
-			t.Logf("Get %X\n", entry.Key)
-			expected, expectedOk := ref.Get(entry.Key)
-			actual, actualOk := bt.Get(entry.Key)
-			assert.Equal(t, expectedOk, actualOk, "Get %X\n%s", entry.Key, bt)
-			assert.Equal(t, expected, actual, "Get %X\n", entry.Key)
+			t.Logf("Get %X\n", key)
+			expected, expectedOk := ref.Get(key)
+			actual, actualOk := bt.Get(key)
+			assert.Equal(t, expectedOk, actualOk, "Get %X\n%s", key, bt)
+			assert.Equal(t, expected, actual, "Get %X\n", key)
 		}
 	}
 
@@ -117,6 +120,22 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 		}
 		bounds := From(begin).To(end)
 		t.Logf("Forward Range: %s\n", bounds)
+		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
+			"%s", bounds)
+		bounds = From(end).DownTo(begin)
+		t.Logf("Reverse Range: %s\n", bounds)
+		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
+			"%s", bounds)
+		bounds = From(nil).To(begin)
+		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
+			"%s", bounds)
+		bounds = From(begin).To(nil)
+		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
+			"%s", bounds)
+		bounds = From(nil).DownTo(begin)
+		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
+			"%s", bounds)
+		bounds = From(begin).DownTo(nil)
 		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
 			"%s", bounds)
 	}
