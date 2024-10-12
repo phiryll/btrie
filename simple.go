@@ -3,6 +3,7 @@ package btrie
 import (
 	"fmt"
 	"iter"
+	"slices"
 	"strings"
 )
 
@@ -13,7 +14,6 @@ import (
 
 // NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
-// TODO: allow empty keys.
 func NewSimple[V any]() OrderedBytesMap[V] {
 	var zero V
 	return &node[V]{zero, nil, 0, false}
@@ -27,97 +27,90 @@ type node[V any] struct {
 }
 
 func (n *node[V]) Put(key []byte, value V) (V, bool) {
-	if len(key) == 0 {
-		panic("key must be non-empty")
+	if key == nil {
+		panic("key must be non-nil")
 	}
-	// TODO: this does not need to recurse
-	return n.put(key, value)
-}
-
-func (n *node[V]) put(key []byte, value V) (V, bool) {
 	var zero V
-	index, found := n.search(key[0])
-	if len(key) == 1 {
+	for i, keyByte := range key {
+		index, found := n.search(keyByte)
 		if !found {
-			n.insert(index, &node[V]{value, nil, key[0], true})
+			k := len(key) - 1
+			child := &node[V]{value, nil, key[k], true}
+			for k--; k >= i; k-- {
+				child = &node[V]{zero, []*node[V]{child}, key[k], false}
+			}
+			n.insert(index, child)
 			return zero, false
 		}
-		child := n.children[index]
-		if child.isTerminal {
-			oldValue := child.value
-			child.value = value
-			return oldValue, true
-		}
-		child.value = value
-		child.isTerminal = true
-		return zero, false
+		n = n.children[index]
 	}
-	if found {
-		return n.children[index].put(key[1:], value)
+	// n = found key, replace value
+	prev := zero
+	var ok bool
+	if n.isTerminal {
+		prev = n.value
+		ok = true
 	}
-	child := node[V]{zero, nil, key[0], false}
-	n.insert(index, &child)
-	prev := &child
-	for _, b := range key[1:] {
-		next := node[V]{zero, nil, b, false}
-		prev.children = []*node[V]{&next}
-		prev = &next
-	}
-	prev.value = value
-	prev.isTerminal = true
-	return zero, false
+	n.value = value
+	n.isTerminal = true
+	return prev, ok
 }
 
 func (n *node[V]) Get(key []byte) (V, bool) {
-	// TODO: this does not need to recurse
+	if key == nil {
+		panic("key must be non-nil")
+	}
 	var zero V
-	index, found := n.search(key[0])
-	if !found {
-		return zero, false
-	}
-	child := n.children[index]
-	if len(key) == 1 {
-		if child.isTerminal {
-			return child.value, true
+	for _, keyByte := range key {
+		index, found := n.search(keyByte)
+		if !found {
+			return zero, false
 		}
-		return zero, false
+		n = n.children[index]
 	}
-	return child.Get(key[1:])
+	// n = found key
+	if n.isTerminal {
+		return n.value, true
+	}
+	return zero, false
 }
 
 func (n *node[V]) Delete(key []byte) (V, bool) {
-	// TODO: this does not need to recurse
-	_, value, ok := n.deleteKey(key)
-	return value, ok
-}
-
-// Returns first arg true iff n should be deleted from its parent.
-// Last arg is whether the returned value exists.
-func (n *node[V]) deleteKey(key []byte) (bool, V, bool) {
+	if key == nil {
+		panic("key must be non-nil")
+	}
 	var zero V
-	index, found := n.search(key[0])
-	if !found {
-		return false, zero, false
+	type step struct {
+		n     *node[V]
+		index int // index in n.children where the next keyByte is
 	}
-	child := n.children[index]
-	var removeChild bool
-	var prev V
-	var ok bool
-	if len(key) == 1 {
-		if child.isTerminal {
-			ok = true
-			prev = child.value
-			child.value = zero
-			child.isTerminal = false
+	path := []step{}
+	for _, keyByte := range key {
+		index, found := n.search(keyByte)
+		if !found {
+			return zero, false
 		}
-		removeChild = len(child.children) == 0
-	} else {
-		removeChild, prev, ok = child.deleteKey(key[1:])
+		path = append(path, step{n, index})
+		n = n.children[index]
 	}
-	if removeChild {
+	// n = found key, path goes from root to n's parent
+	if !n.isTerminal {
+		return zero, false
+	}
+	prev := n.value
+	n.value = zero
+	n.isTerminal = false
+	// Remove nodes from the tail of path if possible.
+	for _, parent := range slices.Backward(path) {
+		// if we can't remove n from parent, we're done
+		if n.isTerminal || len(n.children) > 0 {
+			break
+		}
+		n = parent.n
+		index := parent.index
 		n.children = append(n.children[:index], n.children[index+1:]...)
 	}
-	return len(n.children) == 0 && !n.isTerminal, prev, ok
+	return prev, true
 }
 
 func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
