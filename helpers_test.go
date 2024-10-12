@@ -41,6 +41,14 @@ func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
 	return entries
 }
 
+func cmpEntryForward[V any](a, b entry[V]) int {
+	return bytes.Compare(a.Key, b.Key)
+}
+
+func cmpEntryReverse[V any](a, b entry[V]) int {
+	return bytes.Compare(b.Key, a.Key)
+}
+
 // Other than edge cases, the most effective tests are essentially fuzz tests.
 // The standard library fuzzing isn't quite sufficient in this case.
 // Instead, these tests repeatedly call all OrderedBytesMap methods randomly,
