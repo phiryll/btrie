@@ -3,7 +3,6 @@ package btrie
 import (
 	"fmt"
 	"iter"
-	"sort"
 	"strings"
 )
 
@@ -144,10 +143,7 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 				return
 			}
 			last := path[len(path)-1]
-			if !last.isTerminal {
-				continue
-			}
-			if !yield(key, last.value) {
+			if last.isTerminal && !yield(key, last.value) {
 				return
 			}
 		}
@@ -167,15 +163,15 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 		}
 		last := path[len(path)-1]
 		return func(yield func(*node[V]) bool) {
-			for _, child := range last.children {
-				keyByte := child.keyByte
+			for i := range len(last.children) {
+				keyByte := last.children[i].keyByte
 				if keyByte < start {
 					continue
 				}
 				if keyByte > stop {
 					return
 				}
-				if !yield(child) {
+				if !yield(last.children[i]) {
 					return
 				}
 			}
@@ -236,18 +232,21 @@ func (n *node[V]) printNode(s *strings.Builder, indent string) {
 }
 
 func (n *node[V]) search(byt byte) (int, bool) {
-	index := sort.Search(len(n.children), func(i int) bool {
-		return byt <= n.children[i].keyByte
-	})
-	if index < len(n.children) && byt == n.children[index].keyByte {
-		return index, true
+	// This is weirdly slightly faster than sort.Search.
+	for i := range len(n.children) {
+		keyByte := n.children[i].keyByte
+		if byt == keyByte {
+			return i, true
+		}
+		if byt < keyByte {
+			return i, false
+		}
 	}
-	return index, false
+	return len(n.children), false
 }
 
 func (n *node[V]) insert(i int, child *node[V]) {
-	var temp node[V]
-	n.children = append(n.children, &temp)
+	n.children = append(n.children, child)
 	copy(n.children[i+1:], n.children[i:])
 	n.children[i] = child
 }
