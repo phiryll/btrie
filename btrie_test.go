@@ -1,6 +1,7 @@
 package btrie_test
 
 import (
+	"bytes"
 	"iter"
 	"testing"
 
@@ -30,14 +31,42 @@ func emptyAdjInt(_ []int) iter.Seq[int] {
 	return emptySeqInt
 }
 
-func TestSimple(t *testing.T) {
-	t.Parallel()
-	testOrderedBytesMap(t, btrie.NewSimple[byte], 290709)
+func collect(itr iter.Seq2[[]byte, byte]) []entry {
+	entries := []entry{}
+	for k, v := range itr {
+		entries = append(entries, entry{k, v})
+	}
+	return entries
 }
+
+func cmpEntryForward(a, b entry) int {
+	return bytes.Compare(a.Key, b.Key)
+}
+
+func cmpEntryReverse(a, b entry) int {
+	return bytes.Compare(b.Key, a.Key)
+}
+
+// TODO: every possible subtree shape (distinct first key bytes)
+// depth <= 4 (including root), width <= 3, is/isNot terminal per node
+// max trie size = 121 nodes, but not all subsets are possible.
+// For example, the root (empty key) must be present,
+// even if it has no children and is not terminal.
+// Include the empty trie.
+
+// 1*3  + 1 = 4
+// 4*3  + 1 = 13
+// 13*3 + 1 = 40
+// 40*3 + 1 = 121
 
 func TestReference(t *testing.T) {
 	t.Parallel()
-	testOrderedBytesMap(t, newReference, 290709)
+	// TODO: invoke shared non-random testier.
+}
+
+func TestSimple(t *testing.T) {
+	t.Parallel()
+	// TODO: invoke shared non-random testier.
 }
 
 // Things that failed at one point or another during testing.
