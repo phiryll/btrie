@@ -3,6 +3,7 @@ package btrie_test
 import (
 	"bytes"
 	"iter"
+	"math/bits"
 	"math/rand"
 	"testing"
 
@@ -58,14 +59,8 @@ func randomByte(random *rand.Rand) byte {
 }
 
 func randomKey(random *rand.Rand) []byte {
-	switch randLen := random.Float32(); {
-	case randLen < 0.01:
-		return randomBytes(1, random)
-	case randLen < 0.5:
-		return randomBytes(2, random)
-	default:
-		return randomBytes(3, random)
-	}
+	randLen := bits.Len(uint(random.Intn(1 << 8)))
+	return randomBytes(randLen, random)
 }
 
 func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
@@ -126,11 +121,9 @@ func testRange(t *testing.T, ref, bt btrie.OrderedBytesMap[byte], count int, ran
 			begin, end = end, begin
 		}
 		bounds := From(begin).To(end)
-		t.Logf("Forward Range: %s\n", bounds)
 		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
 			"%s", bounds)
 		bounds = From(end).DownTo(begin)
-		t.Logf("Reverse Range: %s\n", bounds)
 		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
 			"%s", bounds)
 		bounds = From(nil).To(begin)
