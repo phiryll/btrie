@@ -18,6 +18,26 @@ func TestReference(t *testing.T) {
 	testOrderedBytesMap(t, newReference, 290709)
 }
 
+func TestSimpleShortKey(t *testing.T) {
+	t.Parallel()
+	testShortKey(t, btrie.NewSimple[byte])
+}
+
+func TestSimpleGet1(t *testing.T) {
+	t.Parallel()
+	bt := btrie.NewSimple[byte]()
+	bt.Put([]byte{0xB3, 0x9C}, 184)
+
+	// forgot to check isTerminal
+	actual, actualOk := bt.Get([]byte{0xB3})
+	assert.Equal(t, false, actualOk)
+	assert.Equal(t, byte(0), actual)
+
+	actual, actualOk = bt.Get([]byte{0xB3, 0x9C})
+	assert.Equal(t, true, actualOk)
+	assert.Equal(t, byte(184), actual)
+}
+
 // failing reverse range case found during testing
 func TestSimpleRangeFail(t *testing.T) {
 	t.Parallel()

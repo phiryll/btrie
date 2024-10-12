@@ -41,15 +41,19 @@ func (n *node[V]) Put(key []byte, value V) (V, bool) {
 
 func (n *node[V]) Get(key []byte) (V, bool) {
 	// TODO: this does not need to recurse
+	var zero V
 	index, found := n.search(key[0])
 	if !found {
-		var zero V
 		return zero, false
 	}
+	child := n.children[index]
 	if len(key) == 1 {
-		return n.children[index].value, true
+		if child.isTerminal {
+			return child.value, true
+		}
+		return zero, false
 	}
-	return n.children[index].Get(key[1:])
+	return child.Get(key[1:])
 }
 
 func (n *node[V]) Delete(key []byte) (V, bool) {
