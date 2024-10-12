@@ -84,10 +84,13 @@ func (b *Bounds) DownTo(key []byte) *Bounds {
 }
 
 // Compare returns where key is in relation to b, taking b.Reverse into account.
-// If b.Reverse is false, the result will be -1 if key < b.Begin, 0 if begin <= key < end, and +1 if end <= key.
-// If b.Reverse is true, the result will be -1 if key > b.Begin, 0 if begin >= key > end, and +1 if end >= key.
-// In other words, 0 if within the bounds, -1 if beyond b.Begin, and +1 if beyond b.End.
+// Compare returns 0 if within the bounds, -1 if beyond b.Begin, and +1 if beyond b.End.
+// Compare will panic if key is nil.
+// -Inf < {} < {0}.
 func (b *Bounds) Compare(key []byte) int {
+	if key == nil {
+		panic("key cannot be nil")
+	}
 	if b.Reverse {
 		if b.Begin != nil && bytes.Compare(key, b.Begin) > 0 {
 			return -1
