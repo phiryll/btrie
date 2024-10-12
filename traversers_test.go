@@ -63,7 +63,7 @@ var expectedPaths = [][]int{
 	{0, 3, 15},
 }
 
-func preOrderPaths(root int, adj func([]int) iter.Seq[int]) [][]int {
+func preOrderPaths(root int, adj btrie.TestingAdjFunction) [][]int {
 	paths := [][]int{}
 	for path := range btrie.TestingPreOrder(root, adj) {
 		paths = append(paths, slices.Clone(path))

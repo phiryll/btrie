@@ -7,3 +7,7 @@ package btrie
 var (
 	TestingPreOrder = preOrder[int]
 )
+
+type (
+	TestingAdjFunction = adjFunction[int]
+)

@@ -1,7 +1,6 @@
 package btrie_test
 
 import (
-	"iter"
 	"testing"
 
 	"github.com/phiryll/btrie"
@@ -10,7 +9,7 @@ import (
 func BenchmarkPreOrder(b *testing.B) {
 	for _, tt := range []struct {
 		name string
-		adj  func([]int) iter.Seq[int]
+		adj  btrie.TestingAdjFunction
 	}{
 		// The number in parentheses is the number of paths in the traversal.
 		{"empty (1)", emptyAdjInt},
