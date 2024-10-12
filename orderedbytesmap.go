@@ -24,7 +24,7 @@ type OrderedBytesMap[V any] interface {
 
 	// Range returns a sequence of key/value pairs over the given bounds.
 	// Implementations should consider making a defensive copy of bounds using [Bounds.Clone].
-	Range(bounds *Bounds) iter.Seq2[[]byte, V]
+	Range(bounds Bounds) iter.Seq2[[]byte, V]
 }
 
 func emptySeq[T any](_ func(T) bool) {}

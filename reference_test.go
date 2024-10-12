@@ -66,7 +66,7 @@ func refReverse(a, b refEntry) int {
 	return bytes.Compare(b.Key, a.Key)
 }
 
-func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
+func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
 	entries := []refEntry{}
 	for k, v := range r.m {
 		key := []byte(k)
@@ -75,7 +75,7 @@ func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 		}
 		entries = append(entries, refEntry{key, v})
 	}
-	if bounds.Reverse {
+	if bounds.IsReverse() {
 		slices.SortFunc(entries, refReverse)
 	} else {
 		slices.SortFunc(entries, refForward)

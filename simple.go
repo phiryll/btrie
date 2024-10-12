@@ -124,10 +124,10 @@ func (n *node[V]) deleteKey(key []byte) (bool, V, bool) {
 	return len(n.children) == 0 && !n.isTerminal, prev, ok
 }
 
-func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
+func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
 	var pathItr iter.Seq[[]*node[V]]
-	if bounds.Reverse {
+	if bounds.IsReverse() {
 		pathItr = postOrder(n, reverseChildAdj[V](bounds))
 	} else {
 		pathItr = preOrder(n, forwardChildAdj[V](bounds))
@@ -158,18 +158,19 @@ func (n *node[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 }
 
 // Sometimes a child is not within the bounds, but one of its descendants is.
-func forwardChildAdj[V any](bounds *Bounds) adjFunction[*node[V]] {
+func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 	return func(path []*node[V]) iter.Seq[*node[V]] {
 		key := []byte{}
 		for _, n := range path[1:] {
 			key = append(key, n.keyByte)
 		}
-		last := path[len(path)-1]
 		start, stop, ok := bounds.childBounds(key)
 		if !ok {
 			return emptySeq
 		}
+		last := path[len(path)-1]
 		return func(yield func(*node[V]) bool) {
+			// TODO: use search()
 			for _, child := range last.children {
 				keyByte := child.keyByte
 				if keyByte < start {
@@ -187,7 +188,7 @@ func forwardChildAdj[V any](bounds *Bounds) adjFunction[*node[V]] {
 }
 
 // Sometimes a child is not within the bounds, but one of its descendants is.
-func reverseChildAdj[V any](bounds *Bounds) adjFunction[*node[V]] {
+func reverseChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 	return func(path []*node[V]) iter.Seq[*node[V]] {
 		key := []byte{}
 		for _, n := range path[1:] {
@@ -199,6 +200,7 @@ func reverseChildAdj[V any](bounds *Bounds) adjFunction[*node[V]] {
 		}
 		last := path[len(path)-1]
 		return func(yield func(*node[V]) bool) {
+			// TODO: use search()
 			for i := len(last.children) - 1; i >= 0; i-- {
 				keyByte := last.children[i].keyByte
 				if keyByte > start {
