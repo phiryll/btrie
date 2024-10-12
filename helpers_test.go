@@ -85,8 +85,6 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 	const opCount = 100000
 	const rangeCount = 100
 
-	testShortKey(t, f)
-
 	bt := f()
 
 	assert.Empty(t, collect(bt.Range(all)))

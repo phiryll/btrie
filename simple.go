@@ -184,7 +184,8 @@ func (n *node[V]) insert(i int, child *node[V]) {
 	n.children[i] = child
 }
 
-// returns true iff n should be deleted from its parent.
+// Returns first arg true iff n should be deleted from its parent.
+// Last arg is ok.
 func (n *node[V]) deleteKey(key []byte) (bool, V, bool) {
 	var zero V
 	index, found := n.search(key[0])
@@ -196,10 +197,12 @@ func (n *node[V]) deleteKey(key []byte) (bool, V, bool) {
 	var prev V
 	var ok bool
 	if len(key) == 1 {
-		prev = child.value
-		child.value = zero
-		child.isTerminal = false
-		ok = true
+		if child.isTerminal {
+			ok = true
+			prev = child.value
+			child.value = zero
+			child.isTerminal = false
+		}
 		removeChild = len(child.children) == 0
 	} else {
 		removeChild, prev, ok = child.deleteKey(key[1:])

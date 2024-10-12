@@ -9,7 +9,6 @@ import (
 
 func TestSimple(t *testing.T) {
 	t.Parallel()
-	t.Skip("TODO")
 	testOrderedBytesMap(t, btrie.NewSimple[byte], 290709)
 }
 
@@ -38,8 +37,23 @@ func TestSimpleGet1(t *testing.T) {
 	assert.Equal(t, byte(184), actual)
 }
 
+func TestSimpleDelete1(t *testing.T) {
+	t.Parallel()
+	bt := btrie.NewSimple[byte]()
+	bt.Put([]byte{0xB3, 0x9C}, 184)
+
+	actual, actualOk := bt.Delete([]byte{0xB3})
+	assert.Equal(t, false, actualOk)
+	assert.Equal(t, byte(0), actual)
+
+	// Make sure the subtree wasn't deleted.
+	actual, actualOk = bt.Get([]byte{0xB3, 0x9C})
+	assert.Equal(t, true, actualOk)
+	assert.Equal(t, byte(184), actual)
+}
+
 // failing reverse range case found during testing
-func TestSimpleRangeFail(t *testing.T) {
+func TestSimpleRangeFail1(t *testing.T) {
 	t.Parallel()
 	t.Skip("TODO")
 	bt := btrie.NewSimple[byte]()
