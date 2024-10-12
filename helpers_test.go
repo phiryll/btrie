@@ -24,10 +24,7 @@ type (
 	}
 )
 
-var (
-	From = btrie.From
-	all  = From(nil).To(nil)
-)
+var From = btrie.From
 
 func emptySeqInt(_ func(int) bool) {}
 
@@ -75,13 +72,19 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 	const opCount = 100000
 	const rangeCount = 100
 	bt := f()
+	all := From(nil).To(nil)
+	reverseAll := From(nil).DownTo(nil)
+
 	assert.Empty(t, collect(bt.Range(all)))
+	assert.Empty(t, collect(bt.Range(reverseAll)))
 	random := rand.New(rand.NewSource(seed))
 	ref := newReference()
 
 	testOps(t, ref, bt, opCount, random)
 	t.Logf("Ref:\n%s\nActual:\n%s", ref, bt)
+
 	assert.Equal(t, collect(ref.Range(all)), collect(bt.Range(all)))
+	assert.Equal(t, collect(ref.Range(reverseAll)), collect(bt.Range(reverseAll)))
 	testRange(t, ref, bt, rangeCount, random)
 }
 
