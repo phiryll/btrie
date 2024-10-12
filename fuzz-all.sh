@@ -5,7 +5,6 @@
 
 set -e
 
-# minutes
 fuzzTime=${1:-10}
 
 files=$(ggrep -r --include='**_test.go' --files-with-matches 'func Fuzz' .)
