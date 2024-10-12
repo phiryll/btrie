@@ -12,9 +12,6 @@ import (
 // sub-packages?, because it's helpful to reuse struct names like "root".
 // maybe later, at the second implementation.
 
-// no way to distinguish the root from an internal node,
-// so top-level functions must handle it differently.
-
 // NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 // TODO: allow empty keys.
@@ -170,7 +167,6 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 		}
 		last := path[len(path)-1]
 		return func(yield func(*node[V]) bool) {
-			// TODO: use search()
 			for _, child := range last.children {
 				keyByte := child.keyByte
 				if keyByte < start {
@@ -200,7 +196,6 @@ func reverseChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 		}
 		last := path[len(path)-1]
 		return func(yield func(*node[V]) bool) {
-			// TODO: use search()
 			for i := len(last.children) - 1; i >= 0; i-- {
 				keyByte := last.children[i].keyByte
 				if keyByte > start {
