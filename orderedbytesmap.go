@@ -111,6 +111,114 @@ func (b *Bounds) Compare(key []byte) int {
 	return 0
 }
 
+// childBounds returns the start and stop key bytes, inclusive,
+// for the children of partialKey that a traversal should recurse into.
+// If b.Reverse is false or true, returns start <= stop or start >= stop respectively.
+// If ok is false, no children should be recursed into.
+//
+// For example, with partialKey {5, 8} and bounds [{5, 8, 4, 255} to {5, 8, 7}], return (4, 6, true).
+func (b *Bounds) childBounds(partialKey []byte) (start, stop byte, ok bool) {
+	if b.Reverse {
+		return b.reverseChildBounds(partialKey)
+	}
+	return b.forwardChildBounds(partialKey)
+}
+
+func (b *Bounds) forwardChildBounds(partialKey []byte) (byte, byte, bool) {
+	start := byte(0x00)
+	stop := byte(0xFF)
+	keySize := len(partialKey)
+	if b.Begin != nil {
+		beginPrefix := b.Begin
+		if len(beginPrefix) > keySize {
+			beginPrefix = beginPrefix[:keySize]
+		}
+		switch bytes.Compare(partialKey, beginPrefix) {
+		case -1:
+			return 0, 0, false
+		case +1:
+			// start = 0
+		default:
+			if len(b.Begin) > keySize {
+				start = b.Begin[keySize]
+			}
+			// else start = 0
+		}
+	}
+	if b.End != nil {
+		endPrefix := b.End
+		if len(endPrefix) > keySize {
+			endPrefix = endPrefix[:keySize]
+		}
+		switch bytes.Compare(partialKey, endPrefix) {
+		case -1:
+			// stop = 0xFF
+		case +1:
+			return 0, 0, false
+		default:
+			if len(b.End) == keySize {
+				return 0, 0, false
+			}
+			stop = b.End[keySize]
+			// stop is inclusive, b.End is not
+			if len(b.End) == keySize+1 {
+				if stop == 0 {
+					return 0, 0, false
+				}
+				stop--
+			}
+		}
+	}
+	return start, stop, true
+}
+
+func (b *Bounds) reverseChildBounds(partialKey []byte) (byte, byte, bool) {
+	start := byte(0xFF)
+	stop := byte(0x00)
+	keySize := len(partialKey)
+	if b.Begin != nil {
+		beginPrefix := b.Begin
+		if len(beginPrefix) > keySize {
+			beginPrefix = beginPrefix[:keySize]
+		}
+		switch bytes.Compare(partialKey, beginPrefix) {
+		case -1:
+			// start = 0xFF
+		case +1:
+			return 0, 0, false
+		default:
+			if len(b.Begin) == keySize {
+				return 0, 0, false
+			}
+			start = b.Begin[keySize]
+		}
+	}
+	if b.End != nil {
+		endPrefix := b.End
+		if len(endPrefix) > keySize {
+			endPrefix = endPrefix[:keySize]
+		}
+		switch bytes.Compare(partialKey, endPrefix) {
+		case -1:
+			return 0, 0, false
+		case +1:
+			// stop = 0
+		default:
+			if len(b.End) > keySize {
+				stop = b.End[keySize]
+			}
+			// else stop = 0
+		}
+	}
+	return start, stop, true
+}
+
+func emptySeq[T any](_ func(T) bool) {}
+
+func emptyAdj[T any](_ []T) iter.Seq[T] {
+	return emptySeq
+}
+
 // TODO: After the initial implementations, define a common interface (maybe the same?).
 // Use this to allow different representations at different locations in the trie.
 // The goal would be to locally self-optimize the trie for speed or space.
@@ -118,7 +226,6 @@ func (b *Bounds) Compare(key []byte) int {
 // This is probably not feasible for the fully or partially persistent variants
 // since those need to maintain all history.
 
-// Note: iter.Pull iteraters need to clean up before returning
 // BIG Note: Document iter.Seq/Seq2 if single use. Multiple use would look like:
 //   it := bMap.Range(From(begin).To(end))
 //   for k, v := range it {
