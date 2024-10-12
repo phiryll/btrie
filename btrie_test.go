@@ -1,20 +1,72 @@
 package btrie_test
 
 import (
+	"bytes"
+	"iter"
 	"testing"
 
 	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimple(t *testing.T) {
-	t.Parallel()
-	testOrderedBytesMap(t, btrie.NewSimple[byte], 290709)
+type (
+	Obm    = btrie.OrderedBytesMap[byte]
+	Bounds = btrie.Bounds
+
+	entry struct {
+		Key   []byte
+		Value byte
+	}
+)
+
+var (
+	From       = btrie.From
+	all        = From(nil).To(nil)
+	reverseAll = From(nil).DownTo(nil)
+)
+
+func emptySeqInt(_ func(int) bool) {}
+
+func emptyAdjInt(_ []int) iter.Seq[int] {
+	return emptySeqInt
 }
+
+func collect(itr iter.Seq2[[]byte, byte]) []entry {
+	entries := []entry{}
+	for k, v := range itr {
+		entries = append(entries, entry{k, v})
+	}
+	return entries
+}
+
+func cmpEntryForward(a, b entry) int {
+	return bytes.Compare(a.Key, b.Key)
+}
+
+func cmpEntryReverse(a, b entry) int {
+	return bytes.Compare(b.Key, a.Key)
+}
+
+// TODO: every possible subtree shape (distinct first key bytes)
+// depth <= 4 (including root), width <= 3, is/isNot terminal per node
+// max trie size = 121 nodes, but not all subsets are possible.
+// For example, the root (empty key) must be present,
+// even if it has no children and is not terminal.
+// Include the empty trie.
+
+// 1*3  + 1 = 4
+// 4*3  + 1 = 13
+// 13*3 + 1 = 40
+// 40*3 + 1 = 121
 
 func TestReference(t *testing.T) {
 	t.Parallel()
-	testOrderedBytesMap(t, newReference, 290709)
+	// TODO: invoke shared non-random testier.
+}
+
+func TestSimple(t *testing.T) {
+	t.Parallel()
+	// TODO: invoke shared non-random testier.
 }
 
 // Things that failed at one point or another during testing.
@@ -24,10 +76,10 @@ func TestFail1(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{5}, 0)
 	assert.Equal(t,
-		[]entry[byte]{},
+		[]entry{},
 		collect(bt.Range(From([]byte{5, 0}).To([]byte{6}))))
 	assert.Equal(t,
-		[]entry[byte]{{[]byte{5}, 0}},
+		[]entry{{[]byte{5}, 0}},
 		collect(bt.Range(From([]byte{4}).To([]byte{5, 0}))))
 }
 
@@ -66,7 +118,7 @@ func TestFail4(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{0x50, 0xEF}, 45)
 	assert.Equal(t,
-		[]entry[byte]{},
+		[]entry{},
 		collect(bt.Range(From([]byte{0x50}).DownTo([]byte{0x15}))))
 }
 
@@ -75,7 +127,7 @@ func TestFail5(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{0x50, 0xEF}, 45)
 	assert.Equal(t,
-		[]entry[byte]{{Key: []byte{0x50, 0xEF}, Value: 45}},
+		[]entry{{Key: []byte{0x50, 0xEF}, Value: 45}},
 		collect(bt.Range(From([]byte{0xFD}).DownTo([]byte{0x3D}))))
 }
 
@@ -84,7 +136,7 @@ func TestFail6(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{0x50, 0xEF}, 45)
 	assert.Equal(t,
-		[]entry[byte]{{Key: []byte{0x50, 0xEF}, Value: 45}},
+		[]entry{{Key: []byte{0x50, 0xEF}, Value: 45}},
 		collect(bt.Range(From([]byte{0x51}).DownTo([]byte{0x50}))))
 }
 
@@ -96,5 +148,5 @@ func TestFail7(t *testing.T) {
 	bt.Put([]byte{3}, 0)
 	bt.Put([]byte{4}, 0)
 	bounds := From([]byte{1}).To([]byte{2})
-	assert.Equal(t, []entry[byte]{}, collect(bt.Range(bounds)))
+	assert.Equal(t, []entry{}, collect(bt.Range(bounds)))
 }

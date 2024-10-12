@@ -1,16 +1,13 @@
 package btrie_test
 
 import (
-	"bytes"
 	"fmt"
 	"iter"
 	"slices"
 	"strings"
-
-	"github.com/phiryll/btrie"
 )
 
-func newReference() btrie.OrderedBytesMap[byte] {
+func newReference() Obm {
 	return &reference{map[string]byte{}}
 }
 
@@ -53,32 +50,19 @@ func (r *reference) String() string {
 	return s.String()
 }
 
-type refEntry struct {
-	Key   []byte
-	Value byte
-}
-
-func refForward(a, b refEntry) int {
-	return bytes.Compare(a.Key, b.Key)
-}
-
-func refReverse(a, b refEntry) int {
-	return bytes.Compare(b.Key, a.Key)
-}
-
 func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
-	entries := []refEntry{}
+	entries := []entry{}
 	for k, v := range r.m {
 		key := []byte(k)
 		if bounds.Compare(key) != 0 {
 			continue
 		}
-		entries = append(entries, refEntry{key, v})
+		entries = append(entries, entry{key, v})
 	}
 	if bounds.IsReverse() {
-		slices.SortFunc(entries, refReverse)
+		slices.SortFunc(entries, cmpEntryReverse)
 	} else {
-		slices.SortFunc(entries, refForward)
+		slices.SortFunc(entries, cmpEntryForward)
 	}
 	return func(yield func([]byte, byte) bool) {
 		for _, entry := range entries {
