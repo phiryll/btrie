@@ -83,29 +83,32 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 		entry := entry[byte]{randomKey(random), randomByte(random)}
 		switch randOp := random.Float32(); {
 		case randOp < 0.5:
+			t.Logf("Put %X:%v\n", entry.Key, entry.Value)
 			expected, expectedOk := ref.Put(entry.Key, entry.Value)
 			actual, actualOk := bt.Put(entry.Key, entry.Value)
-			assert.Equal(t, expectedOk, actualOk)
-			assert.Equal(t, expected, actual)
+			assert.Equal(t, expectedOk, actualOk, "Put %X:%v\n", entry.Key, entry.Value)
+			assert.Equal(t, expected, actual, "Put %X:%v\n", entry.Key, entry.Value)
 		case randOp < 0.6:
+			t.Logf("Delete %X\n", entry.Key)
 			expected, expectedOk := ref.Delete(entry.Key)
 			actual, actualOk := bt.Delete(entry.Key)
-			assert.Equal(t, expectedOk, actualOk)
-			assert.Equal(t, expected, actual)
+			assert.Equal(t, expectedOk, actualOk, "Delete %X\n", entry.Key)
+			assert.Equal(t, expected, actual, "Delete %X\n", entry.Key)
 		default:
+			t.Logf("Get %X\n", entry.Key)
 			expected, expectedOk := ref.Get(entry.Key)
 			actual, actualOk := bt.Get(entry.Key)
-			assert.Equal(t, expectedOk, actualOk)
-			assert.Equal(t, expected, actual)
+			assert.Equal(t, expectedOk, actualOk, "Get %X\n%s", entry.Key, bt)
+			assert.Equal(t, expected, actual, "Get %X\n", entry.Key)
 		}
 	}
 
+	t.Logf("Ref:\n%s\nActual:\n%s", ref, bt)
 	assert.Equal(t, collect(ref.Range(all)), collect(bt.Range(all)))
 
 	for range rangeCount {
 		begin := randomKey(random)
 		end := randomKey(random)
-		// TODO: test reverse direction as well
 		if bytes.Equal(begin, end) {
 			continue
 		}
@@ -113,6 +116,7 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 			begin, end = end, begin
 		}
 		bounds := From(begin).To(end)
+		t.Logf("Forward Range: %s\n", bounds)
 		assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
 			"%s", bounds)
 	}
