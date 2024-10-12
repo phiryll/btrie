@@ -223,17 +223,14 @@ func (n *node[V]) String() string {
 
 func (n *node[V]) printNode(s *strings.Builder, indent string) {
 	if indent == "" {
-		if n.isTerminal {
-			s.WriteString(fmt.Sprintf("[]: %v\n", n.value))
-		} else {
-			s.WriteString("[]\n")
-		}
+		s.WriteString("[]")
 	} else {
-		if n.isTerminal {
-			s.WriteString(fmt.Sprintf("%s%X: %v\n", indent, n.keyByte, n.value))
-		} else {
-			s.WriteString(fmt.Sprintf("%s%X\n", indent, n.keyByte))
-		}
+		s.WriteString(fmt.Sprintf("%s%X", indent, n.keyByte))
+	}
+	if n.isTerminal {
+		s.WriteString(fmt.Sprintf(": %v\n", n.value))
+	} else {
+		s.WriteString("\n")
 	}
 	for _, child := range n.children {
 		child.printNode(s, indent+"  ")
