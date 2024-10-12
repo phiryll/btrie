@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,36 +15,19 @@ import (
 // This file contains things that help in writing tests.
 // There are no top-level tests here, but the bulk of the testing code is.
 
-type (
-	Bounds = btrie.Bounds
-
-	entry[V any] struct {
-		Key   []byte
-		Value V
-	}
-)
-
-var From = btrie.From
-
-func emptySeqInt(_ func(int) bool) {}
-
-func emptyAdjInt(_ []int) iter.Seq[int] {
-	return emptySeqInt
-}
-
-func collect[V any](itr iter.Seq2[[]byte, V]) []entry[V] {
-	entries := []entry[V]{}
+func collect(itr iter.Seq2[[]byte, byte]) []entry {
+	entries := []entry{}
 	for k, v := range itr {
-		entries = append(entries, entry[V]{k, v})
+		entries = append(entries, entry{k, v})
 	}
 	return entries
 }
 
-func cmpEntryForward[V any](a, b entry[V]) int {
+func cmpEntryForward(a, b entry) int {
 	return bytes.Compare(a.Key, b.Key)
 }
 
-func cmpEntryReverse[V any](a, b entry[V]) int {
+func cmpEntryReverse(a, b entry) int {
 	return bytes.Compare(b.Key, a.Key)
 }
 
@@ -71,12 +53,10 @@ func randomKey(random *rand.Rand) []byte {
 	return randomBytes(randLen, random)
 }
 
-func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], seed int64) {
+func testOrderedBytesMap(t *testing.T, f func() Obm, seed int64) {
 	const opCount = 100000
 	const rangeCount = 100
 	bt := f()
-	all := From(nil).To(nil)
-	reverseAll := From(nil).DownTo(nil)
 
 	assert.Empty(t, collect(bt.Range(all)))
 	assert.Empty(t, collect(bt.Range(reverseAll)))
@@ -91,7 +71,7 @@ func testOrderedBytesMap(t *testing.T, f func() btrie.OrderedBytesMap[byte], see
 	testRange(t, ref, bt, rangeCount, random)
 }
 
-func testOps(t *testing.T, ref, bt btrie.OrderedBytesMap[byte], count int, random *rand.Rand) {
+func testOps(t *testing.T, ref, bt Obm, count int, random *rand.Rand) {
 	for range count {
 		key := randomKey(random)
 		value := randomByte(random)
@@ -118,7 +98,7 @@ func testOps(t *testing.T, ref, bt btrie.OrderedBytesMap[byte], count int, rando
 	}
 }
 
-func testRange(t *testing.T, ref, bt btrie.OrderedBytesMap[byte], count int, random *rand.Rand) {
+func testRange(t *testing.T, ref, bt Obm, count int, random *rand.Rand) {
 	for range count {
 		begin := randomKey(random)
 		end := randomKey(random)

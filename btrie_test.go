@@ -1,11 +1,34 @@
 package btrie_test
 
 import (
+	"iter"
 	"testing"
 
 	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
+
+type (
+	Obm    = btrie.OrderedBytesMap[byte]
+	Bounds = btrie.Bounds
+
+	entry struct {
+		Key   []byte
+		Value byte
+	}
+)
+
+var (
+	From       = btrie.From
+	all        = From(nil).To(nil)
+	reverseAll = From(nil).DownTo(nil)
+)
+
+func emptySeqInt(_ func(int) bool) {}
+
+func emptyAdjInt(_ []int) iter.Seq[int] {
+	return emptySeqInt
+}
 
 func TestSimple(t *testing.T) {
 	t.Parallel()
@@ -24,10 +47,10 @@ func TestFail1(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{5}, 0)
 	assert.Equal(t,
-		[]entry[byte]{},
+		[]entry{},
 		collect(bt.Range(From([]byte{5, 0}).To([]byte{6}))))
 	assert.Equal(t,
-		[]entry[byte]{{[]byte{5}, 0}},
+		[]entry{{[]byte{5}, 0}},
 		collect(bt.Range(From([]byte{4}).To([]byte{5, 0}))))
 }
 
@@ -66,7 +89,7 @@ func TestFail4(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{0x50, 0xEF}, 45)
 	assert.Equal(t,
-		[]entry[byte]{},
+		[]entry{},
 		collect(bt.Range(From([]byte{0x50}).DownTo([]byte{0x15}))))
 }
 
@@ -75,7 +98,7 @@ func TestFail5(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{0x50, 0xEF}, 45)
 	assert.Equal(t,
-		[]entry[byte]{{Key: []byte{0x50, 0xEF}, Value: 45}},
+		[]entry{{Key: []byte{0x50, 0xEF}, Value: 45}},
 		collect(bt.Range(From([]byte{0xFD}).DownTo([]byte{0x3D}))))
 }
 
@@ -84,7 +107,7 @@ func TestFail6(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{0x50, 0xEF}, 45)
 	assert.Equal(t,
-		[]entry[byte]{{Key: []byte{0x50, 0xEF}, Value: 45}},
+		[]entry{{Key: []byte{0x50, 0xEF}, Value: 45}},
 		collect(bt.Range(From([]byte{0x51}).DownTo([]byte{0x50}))))
 }
 
@@ -96,5 +119,5 @@ func TestFail7(t *testing.T) {
 	bt.Put([]byte{3}, 0)
 	bt.Put([]byte{4}, 0)
 	bounds := From([]byte{1}).To([]byte{2})
-	assert.Equal(t, []entry[byte]{}, collect(bt.Range(bounds)))
+	assert.Equal(t, []entry{}, collect(bt.Range(bounds)))
 }

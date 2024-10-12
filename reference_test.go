@@ -5,11 +5,9 @@ import (
 	"iter"
 	"slices"
 	"strings"
-
-	"github.com/phiryll/btrie"
 )
 
-func newReference() btrie.OrderedBytesMap[byte] {
+func newReference() Obm {
 	return &reference{map[string]byte{}}
 }
 
@@ -53,13 +51,13 @@ func (r *reference) String() string {
 }
 
 func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
-	entries := []entry[byte]{}
+	entries := []entry{}
 	for k, v := range r.m {
 		key := []byte(k)
 		if bounds.Compare(key) != 0 {
 			continue
 		}
-		entries = append(entries, entry[byte]{key, v})
+		entries = append(entries, entry{key, v})
 	}
 	if bounds.IsReverse() {
 		slices.SortFunc(entries, cmpEntryReverse)
