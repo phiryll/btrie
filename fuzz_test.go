@@ -72,8 +72,7 @@ func getBaseline(factory func() Obm) (ref, bt Obm) {
 func TestBaseline(t *testing.T) {
 	t.Parallel()
 	ref, bt := getBaseline(btrie.NewSimple[byte])
-	assert.Equal(t, collect(ref.Range(all)), collect(bt.Range(all)))
-	assert.Equal(t, collect(ref.Range(reverseAll)), collect(bt.Range(reverseAll)))
+	assertEqualRanges(t, ref, bt, From(nil).To(nil))
 }
 
 func fuzzGet(f *testing.F, factory func() Obm) {
@@ -132,14 +131,10 @@ func fuzzRange(f *testing.F, factory func() Obm) {
 		}
 		for _, bounds := range []Bounds{
 			From(begin).To(end),
-			From(end).DownTo(begin),
 			From(nil).To(begin),
 			From(begin).To(nil),
-			From(nil).DownTo(begin),
-			From(begin).DownTo(nil),
 		} {
-			assert.Equal(t, collect(ref.Range(bounds)), collect(bt.Range(bounds)),
-				"%s", bounds)
+			assertEqualRanges(t, ref, bt, bounds)
 		}
 	})
 }

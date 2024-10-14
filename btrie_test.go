@@ -20,9 +20,7 @@ type (
 )
 
 var (
-	From       = btrie.From
-	all        = From(nil).To(nil)
-	reverseAll = From(nil).DownTo(nil)
+	From = btrie.From
 )
 
 func emptySeqInt(_ func(int) bool) {}
@@ -45,6 +43,20 @@ func cmpEntryForward(a, b entry) int {
 
 func cmpEntryReverse(a, b entry) int {
 	return bytes.Compare(b.Key, a.Key)
+}
+
+// Tests both forward and reverse bounds.
+func assertEqualRanges(t *testing.T, expected, actual Obm, bounds Bounds) {
+	assert.Equal(t, collect(expected.Range(bounds)), collect(actual.Range(bounds)),
+		"%s", bounds)
+	var reverse Bounds
+	if bounds.IsReverse() {
+		reverse = From(bounds.End()).To(bounds.Begin())
+	} else {
+		reverse = From(bounds.End()).DownTo(bounds.Begin())
+	}
+	assert.Equal(t, collect(expected.Range(reverse)), collect(actual.Range(reverse)),
+		"%s", bounds)
 }
 
 // TODO: every possible subtree shape (distinct first key bytes)
@@ -147,6 +159,7 @@ func TestFail7(t *testing.T) {
 	bt := btrie.NewSimple[byte]()
 	bt.Put([]byte{3}, 0)
 	bt.Put([]byte{4}, 0)
-	bounds := From([]byte{1}).To([]byte{2})
-	assert.Equal(t, []entry{}, collect(bt.Range(bounds)))
+	assert.Equal(t,
+		[]entry{},
+		collect(bt.Range(From([]byte{1}).To([]byte{2}))))
 }
