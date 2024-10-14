@@ -66,7 +66,7 @@ func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
 	}
 	return func(yield func([]byte, byte) bool) {
 		for _, entry := range entries {
-			if !yield(entry.Key, entry.Value) {
+			if !yield(entry.key, entry.value) {
 				return
 			}
 		}
