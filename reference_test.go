@@ -53,7 +53,7 @@ func (r *reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	for k, v := range r.Range(From(nil).To(nil)) {
-		fmt.Fprintf(&s, "%X:%v, ", k, v)
+		fmt.Fprintf(&s, "%s:%v, ", keyName(k), v)
 	}
 	s.WriteString("}")
 	return s.String()

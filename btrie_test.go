@@ -29,7 +29,9 @@ type (
 const zero = byte(0)
 
 var (
-	From = btrie.From
+	From        = btrie.From
+	keyName     = btrie.TestingKeyName
+	childBounds = btrie.TestingChildBounds
 
 	// Things that failed for some implementation during development.
 	testFailures = []func(*testing.T, func() Obm){
@@ -106,16 +108,6 @@ var (
 
 	testBounds = buildTestBounds()
 )
-
-func keyName(key []byte) string {
-	if key == nil {
-		return "nil"
-	}
-	if len(key) == 0 {
-		return "empty"
-	}
-	return fmt.Sprintf("%X", key)
-}
 
 // Returns a sequence of all possible subsequences of presentKeys and their complements.
 func trieTestCases() iter.Seq[trieTestCase] {

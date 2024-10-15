@@ -1,7 +1,10 @@
 // Package btrie defines interfaces for and provides multiple implementations of a binary trie.
 package btrie
 
-import "iter"
+import (
+	"fmt"
+	"iter"
+)
 
 // OrderedBytesMap is essentially an ordered map[[]byte]V.
 // Keys must be non-nil.
@@ -26,3 +29,13 @@ type OrderedBytesMap[V any] interface {
 }
 
 func emptySeq[T any](_ func(T) bool) {}
+
+func keyName(key []byte) string {
+	if key == nil {
+		return "nil"
+	}
+	if len(key) == 0 {
+		return "empty"
+	}
+	return fmt.Sprintf("%X", key)
+}
