@@ -2,7 +2,6 @@ package btrie_test
 
 import (
 	"bytes"
-	"fmt"
 	"math/bits"
 	"math/rand"
 	"testing"
@@ -53,104 +52,104 @@ func putEntries(obm Obm, n int, seed int64) {
 	}
 }
 
-// TODO: Different initial states, like empty, a single entry, 0, FF, ...
-
 // Returns new instances of the same OBMs every time.
 // This is so the fuzzing engine gets predictable repeat behavior.
 //
 //nolint:nonamedreturns
-func getBaseline(factory func() Obm) (ref, bt Obm) {
+func getBaseline(factory func() Obm) (ref, trie Obm) {
 	const putCount = 10000
 	const seed = 483738
 	ref = newReference()
-	bt = factory()
+	trie = factory()
 	putEntries(ref, putCount, seed)
-	putEntries(bt, putCount, seed)
-	return ref, bt
+	putEntries(trie, putCount, seed)
+	return ref, trie
 }
 
 func TestBaseline(t *testing.T) {
 	t.Parallel()
-	ref, bt := getBaseline(btrie.NewSimple[byte])
-	assertEqualRanges(t, ref, bt, From(nil).To(nil))
+	ref, trie := getBaseline(btrie.NewSimple[byte])
+	bounds := From(nil).To(nil)
+	assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
+		"%s", bounds)
+	bounds = From(nil).DownTo(nil)
+	assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
+		"%s", bounds)
 }
 
 func fuzzGet(f *testing.F, factory func() Obm) {
+	ref, trie := getBaseline(factory)
 	f.Fuzz(func(t *testing.T, key []byte) {
 		key = trimKey(key)
-		opString := fmt.Sprintf("Get %X\n", key)
-		ref, bt := getBaseline(factory)
+		actual, actualOk := trie.Get(key)
 		expected, expectedOk := ref.Get(key)
-		actual, actualOk := bt.Get(key)
-		assert.Equal(t, expectedOk, actualOk, opString)
-		assert.Equal(t, expected, actual, opString)
+		assert.Equal(t, expectedOk, actualOk, "Get %X\n", key)
+		assert.Equal(t, expected, actual, "Get %X\n", key)
 	})
 }
 
 func fuzzPut(f *testing.F, factory func() Obm) {
 	f.Fuzz(func(t *testing.T, key []byte, value byte) {
 		key = trimKey(key)
-		opString := fmt.Sprintf("Put %X:%d\n", key, value)
-		ref, bt := getBaseline(factory)
+		ref, trie := getBaseline(factory)
+		actual, actualOk := trie.Put(key, value)
 		expected, expectedOk := ref.Put(key, value)
-		actual, actualOk := bt.Put(key, value)
-		assert.Equal(t, expectedOk, actualOk, opString)
-		assert.Equal(t, expected, actual, opString)
-		actual, ok := bt.Get(key)
-		assert.True(t, ok, opString)
-		assert.Equal(t, value, actual, opString)
+		assert.Equal(t, expectedOk, actualOk, "Put %X:%d\n", key, value)
+		assert.Equal(t, expected, actual, "Put %X:%d\n", key, value)
+		actual, ok := trie.Get(key)
+		assert.True(t, ok, "Put %X:%d\n", key, value)
+		assert.Equal(t, value, actual, "Put %X:%d\n", key, value)
 	})
 }
 
 func fuzzDelete(f *testing.F, factory func() Obm) {
 	f.Fuzz(func(t *testing.T, key []byte) {
 		key = trimKey(key)
-		opString := fmt.Sprintf("Delete %X\n", key)
-		ref, bt := getBaseline(factory)
+		ref, trie := getBaseline(factory)
+		actual, actualOk := trie.Delete(key)
 		expected, expectedOk := ref.Delete(key)
-		actual, actualOk := bt.Delete(key)
-		assert.Equal(t, expectedOk, actualOk, opString)
-		assert.Equal(t, expected, actual, opString)
-		actual, ok := bt.Get(key)
-		assert.False(t, ok, opString)
-		assert.Equal(t, byte(0), actual, opString)
+		assert.Equal(t, expectedOk, actualOk, "Delete %X\n", key)
+		assert.Equal(t, expected, actual, "Delete %X\n", key)
+		actual, ok := trie.Get(key)
+		assert.False(t, ok, "Delete %X\n", key)
+		assert.Equal(t, byte(0), actual, "Delete %X\n", key)
 	})
 }
 
 func fuzzRange(f *testing.F, factory func() Obm) {
+	ref, trie := getBaseline(factory)
 	f.Fuzz(func(t *testing.T, begin, end []byte) {
 		begin = trimKey(begin)
 		end = trimKey(end)
-		ref, bt := getBaseline(factory)
 		cmp := bytes.Compare(begin, end)
 		if cmp == 0 {
-			return
-		}
-		if cmp > 0 {
+			end = append(end, 0)
+		} else if cmp > 0 {
 			begin, end = end, begin
 		}
 		for _, bounds := range []Bounds{
 			From(begin).To(end),
-			From(nil).To(begin),
-			From(begin).To(nil),
+			From(end).DownTo(begin),
 		} {
-			assertEqualRanges(t, ref, bt, bounds)
+			actual := collect(trie.Range(bounds))
+			expected := collect(ref.Range(bounds))
+			assert.Equal(t, expected, actual, "%s", bounds)
 		}
 	})
 }
 
-func FuzzSimpleGet(f *testing.F) {
+func FuzzGetSimple(f *testing.F) {
 	fuzzGet(f, btrie.NewSimple[byte])
 }
 
-func FuzzSimplePut(f *testing.F) {
+func FuzzPutSimple(f *testing.F) {
 	fuzzPut(f, btrie.NewSimple[byte])
 }
 
-func FuzzSimpleDelete(f *testing.F) {
+func FuzzDeleteSimple(f *testing.F) {
 	fuzzDelete(f, btrie.NewSimple[byte])
 }
 
-func FuzzSimpleRange(f *testing.F) {
+func FuzzRangeSimple(f *testing.F) {
 	fuzzRange(f, btrie.NewSimple[byte])
 }
