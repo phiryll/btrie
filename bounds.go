@@ -60,17 +60,23 @@ type (
 	reverse baseBounds
 )
 
-func (b forward) Begin() []byte  { return b.begin }
-func (b forward) End() []byte    { return b.end }
-func (forward) IsReverse() bool  { return false }
-func (b forward) Clone() Bounds  { return forward{bytes.Clone(b.begin), bytes.Clone(b.end)} }
-func (b forward) String() string { return fmt.Sprintf("[%X to %X]", b.begin, b.end) }
+func (b forward) Begin() []byte { return b.begin }
+func (b forward) End() []byte   { return b.end }
+func (forward) IsReverse() bool { return false }
+func (b forward) Clone() Bounds { return forward{bytes.Clone(b.begin), bytes.Clone(b.end)} }
 
-func (b reverse) Begin() []byte  { return b.begin }
-func (b reverse) End() []byte    { return b.end }
-func (reverse) IsReverse() bool  { return true }
-func (b reverse) Clone() Bounds  { return reverse{bytes.Clone(b.begin), bytes.Clone(b.end)} }
-func (b reverse) String() string { return fmt.Sprintf("[%X down to %X]", b.begin, b.end) }
+func (b reverse) Begin() []byte { return b.begin }
+func (b reverse) End() []byte   { return b.end }
+func (reverse) IsReverse() bool { return true }
+func (b reverse) Clone() Bounds { return reverse{bytes.Clone(b.begin), bytes.Clone(b.end)} }
+
+func (b forward) String() string {
+	return fmt.Sprintf("[%s to %s]", keyName(b.begin), keyName(b.end))
+}
+
+func (b reverse) String() string {
+	return fmt.Sprintf("[%s down to %s]", keyName(b.begin), keyName(b.end))
+}
 
 type beginKey []byte
 

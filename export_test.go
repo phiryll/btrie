@@ -5,8 +5,10 @@ package btrie
 // preventing their inclusion in the public API.
 
 var (
-	TestingPreOrder  = preOrder[int]
-	TestingPostOrder = postOrder[int]
+	TestingKeyName     = keyName
+	TestingPreOrder    = preOrder[int]
+	TestingPostOrder   = postOrder[int]
+	TestingChildBounds = Bounds.childBounds
 )
 
 type (

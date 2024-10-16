@@ -18,6 +18,9 @@ type reference struct {
 }
 
 func (r *reference) Put(key []byte, value byte) (byte, bool) {
+	if key == nil {
+		panic("key must be non-nil")
+	}
 	index := string(key)
 	prev, ok := r.m[index]
 	r.m[index] = value
@@ -28,11 +31,17 @@ func (r *reference) Put(key []byte, value byte) (byte, bool) {
 }
 
 func (r *reference) Get(key []byte) (byte, bool) {
+	if key == nil {
+		panic("key must be non-nil")
+	}
 	value, ok := r.m[string(key)]
 	return value, ok
 }
 
 func (r *reference) Delete(key []byte) (byte, bool) {
+	if key == nil {
+		panic("key must be non-nil")
+	}
 	index := string(key)
 	value, ok := r.m[index]
 	delete(r.m, index)
@@ -44,7 +53,7 @@ func (r *reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	for k, v := range r.Range(From(nil).To(nil)) {
-		fmt.Fprintf(&s, "%X:%v, ", k, v)
+		fmt.Fprintf(&s, "%s:%v, ", keyName(k), v)
 	}
 	s.WriteString("}")
 	return s.String()
@@ -66,7 +75,7 @@ func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
 	}
 	return func(yield func([]byte, byte) bool) {
 		for _, entry := range entries {
-			if !yield(entry.Key, entry.Value) {
+			if !yield(entry.key, entry.value) {
 				return
 			}
 		}
