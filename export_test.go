@@ -13,4 +13,5 @@ var (
 
 type (
 	TestingAdjFunction = adjFunction[int]
+	TestingTraverser   = traverser[int]
 )

@@ -8,6 +8,10 @@ import (
 // Adjacency functions should be idempotent.
 type adjFunction[T any] func([]T) iter.Seq[T]
 
+// A traverser returns a sequence of paths given a root node and an adjacency function.
+// Traversers should be idempotent.
+type traverser[T any] func(T, adjFunction[T]) iter.Seq[[]T]
+
 // The returned sequence references a volatile internal slice,
 // clone it if you need it after a step in the iteration.
 func preOrder[T any](root T, adj adjFunction[T]) iter.Seq[[]T] {
