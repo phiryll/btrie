@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -487,7 +488,7 @@ func TestChildBounds(t *testing.T) {
 		t.Run(tt.bounds.String(), func(t *testing.T) {
 			t.Parallel()
 			for _, exp := range tt.expected {
-				start, stop, ok := childBounds(tt.bounds, exp.key)
+				start, stop, ok := btrie.TestingChildBounds(tt.bounds, exp.key)
 				assert.Equal(t, exp.start, start, "%s", keyName(exp.key))
 				assert.Equal(t, exp.stop, stop, "%s", keyName(exp.key))
 				assert.Equal(t, exp.ok, ok, "%s", keyName(exp.key))

@@ -29,9 +29,8 @@ type (
 const zero = byte(0)
 
 var (
-	From        = btrie.From
-	keyName     = btrie.TestingKeyName
-	childBounds = btrie.TestingChildBounds
+	From    = btrie.From
+	keyName = btrie.TestingKeyName
 
 	// Things that failed for some implementation during development.
 	testFailures = []func(*testing.T, func() Obm){
@@ -105,8 +104,6 @@ var (
 		{0xC5, 0x43, 0},
 		nil, // +Inf
 	}
-
-	testBounds = buildTestBounds()
 )
 
 // Returns a sequence of all possible subsequences of presentKeys and their complements.
@@ -274,7 +271,7 @@ func testTrieTestCase(t *testing.T, factory func() Obm, tt *trieTestCase) {
 		for i, key := range tt.present {
 			ref.Put(key, byte(i))
 		}
-		for _, bounds := range testBounds {
+		for _, bounds := range buildTestBounds() {
 			assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 				"%s", bounds)
 		}
