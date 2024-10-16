@@ -20,11 +20,14 @@ import (
 //	From(begin).To(end)      // IsReverse() is false
 //	From(begin).DownTo(end)  // IsReverse() is true
 type Bounds interface {
+	// Begin returns the [From] argument used to construct this Bounds.
 	Begin() []byte
+
+	// End returns the [BoundsBuilder.To] or [BoundsBuilder.DownTo] argument used to construct this Bounds.
 	End() []byte
 
-	// IsReverse returns false if this Bounds was created by [beginKey.To],
-	// and true if it was created by [beginKey.DownTo].
+	// IsReverse returns false if this Bounds was created by [BoundsBuilder.To],
+	// and true if it was created by [BoundsBuilder.DownTo].
 	IsReverse() bool
 
 	// Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.

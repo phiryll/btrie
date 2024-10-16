@@ -4,6 +4,8 @@ import (
 	"iter"
 )
 
+// An adjacency function from paths to nodes adjacent to the path's end.
+// Adjacency functions should be idempotent.
 type adjFunction[T any] func([]T) iter.Seq[T]
 
 // The returned sequence references a volatile internal slice,
