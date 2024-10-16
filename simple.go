@@ -39,7 +39,9 @@ func (n *node[V]) Put(key []byte, value V) (V, bool) {
 			for k--; k >= i; k-- {
 				child = &node[V]{zero, []*node[V]{child}, key[k], false}
 			}
-			n.insert(index, child)
+			n.children = append(n.children, child)
+			copy(n.children[index+1:], n.children[index:])
+			n.children[index] = child
 			return zero, false
 		}
 		n = n.children[index]
@@ -236,10 +238,4 @@ func (n *node[V]) search(byt byte) (int, bool) {
 		}
 	}
 	return len(n.children), false
-}
-
-func (n *node[V]) insert(i int, child *node[V]) {
-	n.children = append(n.children, child)
-	copy(n.children[i+1:], n.children[i:])
-	n.children[i] = child
 }
