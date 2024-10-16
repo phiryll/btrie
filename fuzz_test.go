@@ -83,8 +83,8 @@ func fuzzGet(f *testing.F, factory func() Obm) {
 		key = trimKey(key)
 		actual, actualOk := trie.Get(key)
 		expected, expectedOk := ref.Get(key)
-		assert.Equal(t, expectedOk, actualOk, "Get %X", key)
-		assert.Equal(t, expected, actual, "Get %X", key)
+		assert.Equal(t, expectedOk, actualOk, "Get %s", keyName(key))
+		assert.Equal(t, expected, actual, "Get %s", keyName(key))
 	})
 }
 
@@ -94,11 +94,11 @@ func fuzzPut(f *testing.F, factory func() Obm) {
 		ref, trie := getBaseline(factory)
 		actual, actualOk := trie.Put(key, value)
 		expected, expectedOk := ref.Put(key, value)
-		assert.Equal(t, expectedOk, actualOk, "Put %X:%d", key, value)
-		assert.Equal(t, expected, actual, "Put %X:%d", key, value)
+		assert.Equal(t, expectedOk, actualOk, "Put %s:%d", keyName(key), value)
+		assert.Equal(t, expected, actual, "Put %s:%d", keyName(key), value)
 		actual, ok := trie.Get(key)
-		assert.True(t, ok, "Put %X:%d", key, value)
-		assert.Equal(t, value, actual, "Put %X:%d", key, value)
+		assert.True(t, ok, "Put %s:%d", keyName(key), value)
+		assert.Equal(t, value, actual, "Put %s:%d", keyName(key), value)
 	})
 }
 
@@ -108,11 +108,11 @@ func fuzzDelete(f *testing.F, factory func() Obm) {
 		ref, trie := getBaseline(factory)
 		actual, actualOk := trie.Delete(key)
 		expected, expectedOk := ref.Delete(key)
-		assert.Equal(t, expectedOk, actualOk, "Delete %X", key)
-		assert.Equal(t, expected, actual, "Delete %X", key)
+		assert.Equal(t, expectedOk, actualOk, "Delete %s", keyName(key))
+		assert.Equal(t, expected, actual, "Delete %s", keyName(key))
 		actual, ok := trie.Get(key)
-		assert.False(t, ok, "Delete %X", key)
-		assert.Equal(t, byte(0), actual, "Delete %X", key)
+		assert.False(t, ok, "Delete %s", keyName(key))
+		assert.Equal(t, byte(0), actual, "Delete %s", keyName(key))
 	})
 }
 

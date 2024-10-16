@@ -233,40 +233,40 @@ func testTrieTestCase(t *testing.T, factory func() Obm, tt *trieTestCase) {
 			value := byte(i)
 
 			actual, ok := trie.Get(key)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 
 			actual, ok = trie.Delete(key)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 
 			actual, ok = trie.Put(key, value)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 
 			actual, ok = trie.Get(key)
-			assert.True(t, ok, "%X", key)
-			assert.Equal(t, value, actual, "%X", key)
+			assert.True(t, ok, "%s", keyName(key))
+			assert.Equal(t, value, actual, "%s", keyName(key))
 		}
 
 		// Make sure keys that should be absent are.
 		for _, key := range tt.complement {
 			actual, ok := trie.Get(key)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 
 			actual, ok = trie.Delete(key)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 		}
 		for _, key := range absentKeys {
 			actual, ok := trie.Get(key)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 
 			actual, ok = trie.Delete(key)
-			assert.False(t, ok, "%X", key)
-			assert.Equal(t, zero, actual, "%X", key)
+			assert.False(t, ok, "%s", keyName(key))
+			assert.Equal(t, zero, actual, "%s", keyName(key))
 		}
 
 		// Test Range.
