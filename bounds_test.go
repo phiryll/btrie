@@ -191,7 +191,7 @@ func TestBoundsCompare(t *testing.T) {
 	}
 }
 
-//nolint:funlen
+//nolint:funlen,maintidx
 func TestChildBounds(t *testing.T) {
 	t.Parallel()
 	type expectedChildBounds struct {
