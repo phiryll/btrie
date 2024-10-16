@@ -123,7 +123,7 @@ func trieTestCases() iter.Seq[trieTestCase] {
 				}
 				mask <<= 1
 			}
-			if !yield(trieTestCase{fmt.Sprintf("%0*b", size, i), present, complement}) {
+			if !yield(trieTestCase{fmt.Sprintf("sub-trie: %0*b", size, i), present, complement}) {
 				return
 			}
 		}
@@ -329,7 +329,7 @@ func testFail3(t *testing.T, factory func() Obm) {
 }
 
 func testFail4(t *testing.T, factory func() Obm) {
-	t.Run("fail4", func(t *testing.T) {
+	t.Run("fail 4", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
 		trie.Put([]byte{0x50, 0xEF}, 45)
@@ -340,7 +340,7 @@ func testFail4(t *testing.T, factory func() Obm) {
 }
 
 func testFail5(t *testing.T, factory func() Obm) {
-	t.Run("fail5", func(t *testing.T) {
+	t.Run("fail 5", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
 		trie.Put([]byte{0x50, 0xEF}, 45)
@@ -384,6 +384,11 @@ func testOrderedBytesMap(t *testing.T, factory func() Obm) {
 	for tt := range trieTestCases() {
 		testTrieTestCase(t, factory, &tt)
 	}
+}
+
+func TestReference(t *testing.T) {
+	t.Parallel()
+	testOrderedBytesMap(t, newReference)
 }
 
 func TestSimple(t *testing.T) {
