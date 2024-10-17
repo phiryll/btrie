@@ -104,7 +104,7 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 	n.isTerminal = false
 	// Remove nodes from the tail of path if possible.
 	for _, parent := range slices.Backward(path) {
-		// if we can't remove n from parent, we're done
+		// if n can't be removed from parent, the loop is done
 		if n.isTerminal || len(n.children) > 0 {
 			break
 		}
