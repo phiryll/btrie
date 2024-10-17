@@ -71,6 +71,9 @@ func TestBoundsComparePanics(t *testing.T) {
 	assert.Panics(t, func() {
 		From(nil).To(nil).Compare(nil)
 	})
+	assert.Panics(t, func() {
+		From(nil).DownTo(nil).Compare(nil)
+	})
 }
 
 //nolint:funlen

@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const fuzzKeyLength = 4
+
 // Fuzz testing is very parallel, and tries aren't generally thread-safe.
 // rand.Rand instances are also not thread-safe.
 
@@ -26,18 +28,26 @@ func randomByte(random *rand.Rand) byte {
 	return b[0]
 }
 
-func randomKeyLength(random *rand.Rand) int {
-	return bits.Len(uint(random.Intn(1 << 8)))
+// Returns a random key length with distribution:
+//
+//	50% of maxLength
+//	25% of maxLength-1
+//	...
+//	2 of length 2
+//	1 of length 1
+//	1 of length 0
+func randomKeyLength(maxLength int, random *rand.Rand) int {
+	return bits.Len(uint(random.Intn(1 << maxLength)))
 }
 
-func randomKey(random *rand.Rand) []byte {
-	return randomBytes(randomKeyLength(random), random)
+func randomKey(maxLength int, random *rand.Rand) []byte {
+	return randomBytes(randomKeyLength(maxLength, random), random)
 }
 
 func trimKey(key []byte) []byte {
 	// Independent random source for this, don't actually want repeatable.
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	keyLen := randomKeyLength(random)
+	keyLen := randomKeyLength(fuzzKeyLength, random)
 	if len(key) < keyLen {
 		return key
 	}
@@ -48,7 +58,8 @@ func trimKey(key []byte) []byte {
 func putEntries(obm Obm, n int, seed int64) {
 	random := rand.New(rand.NewSource(seed))
 	for range n {
-		obm.Put(randomKey(random), randomByte(random))
+		key := randomKey(fuzzKeyLength, random)
+		obm.Put(key, randomByte(random))
 	}
 }
 
