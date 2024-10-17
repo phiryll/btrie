@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Fuzz testing is very parallel, and tries aren't thread-safe yet.
+// Fuzz testing is very parallel, and tries aren't generally thread-safe.
 // rand.Rand instances are also not thread-safe.
 
 func randomBytes(n int, random *rand.Rand) []byte {
@@ -56,7 +56,7 @@ func putEntries(obm Obm, n int, seed int64) {
 // This is so the fuzzing engine gets predictable repeat behavior.
 //
 //nolint:nonamedreturns
-func getBaseline(factory func() Obm) (ref, trie Obm) {
+func getFuzzBaseline(factory func() Obm) (ref, trie Obm) {
 	const putCount = 10000
 	const seed = 483738
 	ref = newReference()
@@ -68,7 +68,7 @@ func getBaseline(factory func() Obm) (ref, trie Obm) {
 
 func TestBaseline(t *testing.T) {
 	t.Parallel()
-	ref, trie := getBaseline(btrie.NewSimple[byte])
+	ref, trie := getFuzzBaseline(btrie.NewSimple[byte])
 	bounds := From(nil).To(nil)
 	assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 		"%s", bounds)
@@ -78,7 +78,7 @@ func TestBaseline(t *testing.T) {
 }
 
 func fuzzGet(f *testing.F, factory func() Obm) {
-	ref, trie := getBaseline(factory)
+	ref, trie := getFuzzBaseline(factory)
 	f.Fuzz(func(t *testing.T, key []byte) {
 		key = trimKey(key)
 		actual, actualOk := trie.Get(key)
@@ -91,7 +91,7 @@ func fuzzGet(f *testing.F, factory func() Obm) {
 func fuzzPut(f *testing.F, factory func() Obm) {
 	f.Fuzz(func(t *testing.T, key []byte, value byte) {
 		key = trimKey(key)
-		ref, trie := getBaseline(factory)
+		ref, trie := getFuzzBaseline(factory)
 		actual, actualOk := trie.Put(key, value)
 		expected, expectedOk := ref.Put(key, value)
 		assert.Equal(t, expectedOk, actualOk, "Put %s:%d", keyName(key), value)
@@ -105,7 +105,7 @@ func fuzzPut(f *testing.F, factory func() Obm) {
 func fuzzDelete(f *testing.F, factory func() Obm) {
 	f.Fuzz(func(t *testing.T, key []byte) {
 		key = trimKey(key)
-		ref, trie := getBaseline(factory)
+		ref, trie := getFuzzBaseline(factory)
 		actual, actualOk := trie.Delete(key)
 		expected, expectedOk := ref.Delete(key)
 		assert.Equal(t, expectedOk, actualOk, "Delete %s", keyName(key))
@@ -117,7 +117,7 @@ func fuzzDelete(f *testing.F, factory func() Obm) {
 }
 
 func fuzzRange(f *testing.F, factory func() Obm) {
-	ref, trie := getBaseline(factory)
+	ref, trie := getFuzzBaseline(factory)
 	f.Fuzz(func(t *testing.T, begin, end []byte) {
 		begin = trimKey(begin)
 		end = trimKey(end)
