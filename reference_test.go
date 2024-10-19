@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-func newReference() Obm {
+func newReference() TestBTrie {
 	return &reference{map[string]byte{}}
 }
 
-// reference implements the OrderedBytesMap[byte] interface, but it is not a trie.
-// This serves as an expected value to compare against an OrderedBytesMap implementation while testing.
+// reference implements the TestBTrie interface, but it is not a trie.
+// This serves as an expected value to compare against a BTrie[byte] implementation while testing.
 type reference struct {
 	m map[string]byte
 }

@@ -12,9 +12,9 @@ import (
 // sub-packages?, because it's helpful to reuse struct names like "root".
 // maybe later, at the second implementation.
 
-// NewPointerTrie returns a new, absurdly simple, and badly coded OrderedBytesMap.
+// NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
-func NewPointerTrie[V any]() OrderedBytesMap[V] {
+func NewPointerTrie[V any]() BTrie[V] {
 	var zero V
 	return &node[V]{zero, nil, 0, false}
 }

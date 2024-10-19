@@ -11,8 +11,8 @@ import (
 )
 
 type (
-	Obm    = btrie.OrderedBytesMap[byte]
-	Bounds = btrie.Bounds
+	TestBTrie = btrie.BTrie[byte]
+	Bounds    = btrie.Bounds
 
 	entry struct {
 		key   []byte
@@ -33,7 +33,7 @@ var (
 	keyName = btrie.TestingKeyName
 
 	// Things that failed for some implementation during development.
-	testFailures = []func(*testing.T, func() Obm){
+	testFailures = []func(*testing.T, func() TestBTrie){
 		testFail1,
 		testFail2,
 		testFail3,
@@ -164,7 +164,7 @@ func collect(itr iter.Seq2[[]byte, byte]) []entry {
 	return entries
 }
 
-func testOneKey(t *testing.T, factory func() Obm, key []byte) {
+func testOneKey(t *testing.T, factory func() TestBTrie, key []byte) {
 	t.Run("key: "+keyName(key), func(t *testing.T) {
 		trie := factory()
 
@@ -221,7 +221,7 @@ func testOneKey(t *testing.T, factory func() Obm, key []byte) {
 	})
 }
 
-func testTrieTestCase(t *testing.T, factory func() Obm, tt *trieTestCase) {
+func testTrieTestCase(t *testing.T, factory func() TestBTrie, tt *trieTestCase) {
 	t.Run(tt.name, func(t *testing.T) {
 		trie := factory()
 
@@ -280,7 +280,7 @@ func testTrieTestCase(t *testing.T, factory func() Obm, tt *trieTestCase) {
 
 // Things that failed at one point or another during testing.
 
-func testFail1(t *testing.T, factory func() Obm) {
+func testFail1(t *testing.T, factory func() TestBTrie) {
 	t.Run("fail 1", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -294,7 +294,7 @@ func testFail1(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testFail2(t *testing.T, factory func() Obm) {
+func testFail2(t *testing.T, factory func() TestBTrie) {
 	t.Run("fail 2", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -311,7 +311,7 @@ func testFail2(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testFail3(t *testing.T, factory func() Obm) {
+func testFail3(t *testing.T, factory func() TestBTrie) {
 	t.Run("fail 3", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -328,7 +328,7 @@ func testFail3(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testFail4(t *testing.T, factory func() Obm) {
+func testFail4(t *testing.T, factory func() TestBTrie) {
 	t.Run("fail 4", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -339,7 +339,7 @@ func testFail4(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testFail5(t *testing.T, factory func() Obm) {
+func testFail5(t *testing.T, factory func() TestBTrie) {
 	t.Run("fail 5", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -350,7 +350,7 @@ func testFail5(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testFail6(t *testing.T, factory func() Obm) {
+func testFail6(t *testing.T, factory func() TestBTrie) {
 	t.Run("fail 6", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -361,7 +361,7 @@ func testFail6(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testFail7(t *testing.T, factory func() Obm) {
+func testFail7(t *testing.T, factory func() TestBTrie) {
 	// Failure is due to continuing iteration past false yield().
 	// Failure requires the second Put.
 	t.Run("fail 7", func(t *testing.T) {
@@ -375,7 +375,7 @@ func testFail7(t *testing.T, factory func() Obm) {
 	})
 }
 
-func testOrderedBytesMap(t *testing.T, factory func() Obm) {
+func testBTrie(t *testing.T, factory func() TestBTrie) {
 	for _, failure := range testFailures {
 		failure(t, factory)
 	}
@@ -388,10 +388,10 @@ func testOrderedBytesMap(t *testing.T, factory func() Obm) {
 
 func TestReference(t *testing.T) {
 	t.Parallel()
-	testOrderedBytesMap(t, newReference)
+	testBTrie(t, newReference)
 }
 
 func TestPointerTrie(t *testing.T) {
 	t.Parallel()
-	testOrderedBytesMap(t, btrie.NewPointerTrie[byte])
+	testBTrie(t, btrie.NewPointerTrie[byte])
 }

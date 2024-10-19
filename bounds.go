@@ -9,7 +9,7 @@ import (
 // The original Bounds was a struct with exported members and a Reverse field.
 // This ends up being simpler internally because the forward/reverse differences are significant.
 
-// Bounds is the argument type for [OrderedBytesMap.Range].
+// Bounds is the argument type for [BTrie.Range].
 // A nil value for [Bounds.Begin] or [Bounds.End] represents +/-Inf;
 // which one depends on the value of [Bounds.IsReverse].
 // Note that an empty begin/end value is not nil; -Inf < []byte{} < []byte{0}.

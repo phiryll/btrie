@@ -22,7 +22,7 @@ const (
 type (
 	trieDef struct {
 		name    string
-		factory func() Obm
+		factory func() TestBTrie
 	}
 
 	trieConfig struct {
@@ -122,7 +122,7 @@ func TestTrieConfigs(t *testing.T) {
 
 // Returns (trie, presentKeys)
 // Any key longer than c.keySize is absent.
-func (c trieConfig) createTrie(factory func() Obm) (Obm, [][]byte) {
+func (c trieConfig) createTrie(factory func() TestBTrie) (TestBTrie, [][]byte) {
 	count := 0
 	trie := factory()
 	var present [][]byte

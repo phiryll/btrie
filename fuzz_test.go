@@ -54,20 +54,20 @@ func trimKey(key []byte) []byte {
 	return key[:keyLen]
 }
 
-// Puts n random entries in obm.
-func putEntries(obm Obm, n int, seed int64) {
+// Puts n random entries in trie.
+func putEntries(trie TestBTrie, n int, seed int64) {
 	random := rand.New(rand.NewSource(seed))
 	for range n {
 		key := randomKey(fuzzKeyLength, random)
-		obm.Put(key, randomByte(random))
+		trie.Put(key, randomByte(random))
 	}
 }
 
-// Returns new instances of the same OBMs every time.
+// Returns new instances of the same TestBTries every time.
 // This is so the fuzzing engine gets predictable repeat behavior.
 //
 //nolint:nonamedreturns
-func getFuzzBaseline(factory func() Obm) (ref, trie Obm) {
+func getFuzzBaseline(factory func() TestBTrie) (ref, trie TestBTrie) {
 	const putCount = 10000
 	const seed = 483738
 	ref = newReference()
@@ -88,7 +88,7 @@ func TestBaseline(t *testing.T) {
 		"%s", bounds)
 }
 
-func fuzzGet(f *testing.F, factory func() Obm) {
+func fuzzGet(f *testing.F, factory func() TestBTrie) {
 	ref, trie := getFuzzBaseline(factory)
 	f.Fuzz(func(t *testing.T, key []byte) {
 		key = trimKey(key)
@@ -99,7 +99,7 @@ func fuzzGet(f *testing.F, factory func() Obm) {
 	})
 }
 
-func fuzzPut(f *testing.F, factory func() Obm) {
+func fuzzPut(f *testing.F, factory func() TestBTrie) {
 	f.Fuzz(func(t *testing.T, key []byte, value byte) {
 		key = trimKey(key)
 		ref, trie := getFuzzBaseline(factory)
@@ -113,7 +113,7 @@ func fuzzPut(f *testing.F, factory func() Obm) {
 	})
 }
 
-func fuzzDelete(f *testing.F, factory func() Obm) {
+func fuzzDelete(f *testing.F, factory func() TestBTrie) {
 	f.Fuzz(func(t *testing.T, key []byte) {
 		key = trimKey(key)
 		ref, trie := getFuzzBaseline(factory)
@@ -127,7 +127,7 @@ func fuzzDelete(f *testing.F, factory func() Obm) {
 	})
 }
 
-func fuzzRange(f *testing.F, factory func() Obm) {
+func fuzzRange(f *testing.F, factory func() TestBTrie) {
 	ref, trie := getFuzzBaseline(factory)
 	f.Fuzz(func(t *testing.T, begin, end []byte) {
 		begin = trimKey(begin)
