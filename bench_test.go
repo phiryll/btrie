@@ -41,7 +41,7 @@ type (
 var (
 	trieDefs = []trieDef{
 		{"reference", newReference},
-		{"simple", btrie.NewSimple[byte]},
+		{"pointer-trie", btrie.NewPointerTrie[byte]},
 	}
 
 	trieConfigs = createTrieConfigs()

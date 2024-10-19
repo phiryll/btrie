@@ -391,7 +391,7 @@ func TestReference(t *testing.T) {
 	testOrderedBytesMap(t, newReference)
 }
 
-func TestSimple(t *testing.T) {
+func TestPointerTrie(t *testing.T) {
 	t.Parallel()
-	testOrderedBytesMap(t, btrie.NewSimple[byte])
+	testOrderedBytesMap(t, btrie.NewPointerTrie[byte])
 }

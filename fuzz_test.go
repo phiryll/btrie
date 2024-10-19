@@ -79,7 +79,7 @@ func getFuzzBaseline(factory func() Obm) (ref, trie Obm) {
 
 func TestBaseline(t *testing.T) {
 	t.Parallel()
-	ref, trie := getFuzzBaseline(btrie.NewSimple[byte])
+	ref, trie := getFuzzBaseline(btrie.NewPointerTrie[byte])
 	bounds := From(nil).To(nil)
 	assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 		"%s", bounds)
@@ -149,18 +149,18 @@ func fuzzRange(f *testing.F, factory func() Obm) {
 	})
 }
 
-func FuzzGetSimple(f *testing.F) {
-	fuzzGet(f, btrie.NewSimple[byte])
+func FuzzGetPointerTrie(f *testing.F) {
+	fuzzGet(f, btrie.NewPointerTrie[byte])
 }
 
-func FuzzPutSimple(f *testing.F) {
-	fuzzPut(f, btrie.NewSimple[byte])
+func FuzzPutPointerTrie(f *testing.F) {
+	fuzzPut(f, btrie.NewPointerTrie[byte])
 }
 
-func FuzzDeleteSimple(f *testing.F) {
-	fuzzDelete(f, btrie.NewSimple[byte])
+func FuzzDeletePointerTrie(f *testing.F) {
+	fuzzDelete(f, btrie.NewPointerTrie[byte])
 }
 
-func FuzzRangeSimple(f *testing.F) {
-	fuzzRange(f, btrie.NewSimple[byte])
+func FuzzRangePointerTrie(f *testing.F) {
+	fuzzRange(f, btrie.NewPointerTrie[byte])
 }
