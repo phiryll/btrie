@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,6 +70,9 @@ func TestBoundsComparePanics(t *testing.T) {
 	t.Parallel()
 	assert.Panics(t, func() {
 		From(nil).To(nil).Compare(nil)
+	})
+	assert.Panics(t, func() {
+		From(nil).DownTo(nil).Compare(nil)
 	})
 }
 
@@ -487,7 +491,7 @@ func TestChildBounds(t *testing.T) {
 		t.Run(tt.bounds.String(), func(t *testing.T) {
 			t.Parallel()
 			for _, exp := range tt.expected {
-				start, stop, ok := childBounds(tt.bounds, exp.key)
+				start, stop, ok := btrie.TestingChildBounds(tt.bounds, exp.key)
 				assert.Equal(t, exp.start, start, "%s", keyName(exp.key))
 				assert.Equal(t, exp.stop, stop, "%s", keyName(exp.key))
 				assert.Equal(t, exp.ok, ok, "%s", keyName(exp.key))

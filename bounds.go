@@ -20,11 +20,14 @@ import (
 //	From(begin).To(end)      // IsReverse() is false
 //	From(begin).DownTo(end)  // IsReverse() is true
 type Bounds interface {
+	// Begin returns the [From] argument used to construct this Bounds.
 	Begin() []byte
+
+	// End returns the [BoundsBuilder.To] or [BoundsBuilder.DownTo] argument used to construct this Bounds.
 	End() []byte
 
-	// IsReverse returns false if this Bounds was created by [beginKey.To],
-	// and true if it was created by [beginKey.DownTo].
+	// IsReverse returns false if this Bounds was created by [BoundsBuilder.To],
+	// and true if it was created by [BoundsBuilder.DownTo].
 	IsReverse() bool
 
 	// Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
@@ -164,29 +167,27 @@ func (b reverse) childBounds(partialKey []byte) (start, stop byte, ok bool) {
 	return start, stop, true
 }
 
-// Compares partialKey to bound[:len(partialKey)], or all of bound if partialKey is longer.
-func comparePrefix(partialKey, bound []byte) int {
-	if len(bound) > len(partialKey) {
-		return bytes.Compare(partialKey, bound[:len(partialKey)])
-	}
-	return bytes.Compare(partialKey, bound)
-}
-
 // Return the lower key byte (start for forward, and stop for reverse).
 func lower(bound, partialKey []byte) (byte, bool) {
 	if bound == nil {
 		return 0, true
 	}
-	switch comparePrefix(partialKey, bound) {
+	keySize := len(partialKey)
+	diffSize := len(bound) - keySize
+	boundPrefix := bound
+	if diffSize > 0 {
+		boundPrefix = bound[:keySize]
+	}
+	switch bytes.Compare(partialKey, boundPrefix) {
 	case -1:
 		return 0, false
 	case +1:
 		return 0, true
 	default:
-		if len(bound) == len(partialKey) {
+		if diffSize == 0 {
 			return 0, true
 		}
-		return bound[len(partialKey)], true
+		return bound[keySize], true
 	}
 }
 
@@ -195,15 +196,21 @@ func upper(bound, partialKey []byte) (byte, bool) {
 	if bound == nil {
 		return math.MaxUint8, true
 	}
-	switch comparePrefix(partialKey, bound) {
+	keySize := len(partialKey)
+	diffSize := len(bound) - keySize
+	boundPrefix := bound
+	if diffSize > 0 {
+		boundPrefix = bound[:keySize]
+	}
+	switch bytes.Compare(partialKey, boundPrefix) {
 	case -1:
 		return math.MaxUint8, true
 	case +1:
 		return 0, false
 	default:
-		if len(bound) == len(partialKey) {
+		if diffSize == 0 {
 			return 0, false
 		}
-		return bound[len(partialKey)], true
+		return bound[keySize], true
 	}
 }

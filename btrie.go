@@ -10,21 +10,24 @@ import (
 // Keys must be non-nil.
 // Implementations must clearly document any additional constraints on keys and values.
 // Implementations must clearly document if any methods accept or return references to its internal storage.
+// Implementations must clearly document if the iterator returned by Range is single-use.
 // All OrderedBytesMap implementations in this package are tries.
 type OrderedBytesMap[V any] interface {
-	// Put sets the value for key, returning the previous value and whether or not the previous value did exist.
+	// Put sets the value for key, returning the previous value and whether or not the previous value existed.
 	// Put will panic if this OrderedBytesMap does not support mutation.
 	Put(key []byte, value V) (previous V, ok bool)
 
 	// Get returns the value for key and whether or not it exists.
 	Get(key []byte) (value V, ok bool)
 
-	// Delete removes the value for key, returning the previous value and whether or not the previous value did exist.
+	// Delete removes the value for key, returning the previous value and whether or not the previous value existed.
 	// Delete will panic if this OrderedBytesMap does not support mutation.
 	Delete(key []byte) (previous V, ok bool)
 
 	// Range returns a sequence of key/value pairs over the given bounds.
-	// Implementations should consider making a defensive copy of bounds using [Bounds.Clone].
+	// Implementations should make a defensive copy of bounds using [Bounds.Clone] if necessary.
+	// Most OrderedBytesMap implementations should not be mutated while a Range iteration is in progress.
+	// Implementations should document if they can be safely mutated during iteration.
 	Range(bounds Bounds) iter.Seq2[[]byte, V]
 }
 

@@ -114,17 +114,17 @@ func postOrderPaths(root int, adj btrie.TestingAdjFunction) [][]int {
 func TestPreOrder(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, [][]int{{0}}, preOrderPaths(0, emptyAdjInt))
-	assert.Equal(t, [][]int{{0}, {0, 1}, {0, 2}, {0, 3}}, preOrderPaths(0, adjInt(0)))
-	assert.Equal(t, expectedPreOrderPaths, preOrderPaths(0, adjInt(10)))
 	assert.Equal(t, [][]int{{42}}, preOrderPaths(42, emptyAdjInt))
+	assert.Equal(t, [][]int{{0}, {0, 1}, {0, 2}, {0, 3}}, preOrderPaths(0, adjInt(0)))
 	assert.Equal(t, [][]int{{42}, {42, 169}, {42, 170}, {42, 171}}, preOrderPaths(42, adjInt(50)))
+	assert.Equal(t, expectedPreOrderPaths, preOrderPaths(0, adjInt(10)))
 }
 
 func TestPostOrder(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, [][]int{{0}}, postOrderPaths(0, emptyAdjInt))
-	assert.Equal(t, [][]int{{0, 1}, {0, 2}, {0, 3}, {0}}, postOrderPaths(0, adjInt(0)))
-	assert.Equal(t, expectedPostOrderPaths, postOrderPaths(0, adjInt(10)))
 	assert.Equal(t, [][]int{{42}}, postOrderPaths(42, emptyAdjInt))
+	assert.Equal(t, [][]int{{0, 1}, {0, 2}, {0, 3}, {0}}, postOrderPaths(0, adjInt(0)))
 	assert.Equal(t, [][]int{{42, 169}, {42, 170}, {42, 171}, {42}}, postOrderPaths(42, adjInt(50)))
+	assert.Equal(t, expectedPostOrderPaths, postOrderPaths(0, adjInt(10)))
 }

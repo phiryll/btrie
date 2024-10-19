@@ -29,9 +29,8 @@ type (
 const zero = byte(0)
 
 var (
-	From        = btrie.From
-	keyName     = btrie.TestingKeyName
-	childBounds = btrie.TestingChildBounds
+	From    = btrie.From
+	keyName = btrie.TestingKeyName
 
 	// Things that failed for some implementation during development.
 	testFailures = []func(*testing.T, func() Obm){
@@ -105,8 +104,6 @@ var (
 		{0xC5, 0x43, 0},
 		nil, // +Inf
 	}
-
-	testBounds = buildTestBounds()
 )
 
 // Returns a sequence of all possible subsequences of presentKeys and their complements.
@@ -126,7 +123,7 @@ func trieTestCases() iter.Seq[trieTestCase] {
 				}
 				mask <<= 1
 			}
-			if !yield(trieTestCase{fmt.Sprintf("%0*b", size, i), present, complement}) {
+			if !yield(trieTestCase{fmt.Sprintf("sub-trie: %0*b", size, i), present, complement}) {
 				return
 			}
 		}
@@ -274,7 +271,7 @@ func testTrieTestCase(t *testing.T, factory func() Obm, tt *trieTestCase) {
 		for i, key := range tt.present {
 			ref.Put(key, byte(i))
 		}
-		for _, bounds := range testBounds {
+		for _, bounds := range buildTestBounds() {
 			assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 				"%s", bounds)
 		}
@@ -332,7 +329,7 @@ func testFail3(t *testing.T, factory func() Obm) {
 }
 
 func testFail4(t *testing.T, factory func() Obm) {
-	t.Run("fail4", func(t *testing.T) {
+	t.Run("fail 4", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
 		trie.Put([]byte{0x50, 0xEF}, 45)
@@ -343,7 +340,7 @@ func testFail4(t *testing.T, factory func() Obm) {
 }
 
 func testFail5(t *testing.T, factory func() Obm) {
-	t.Run("fail5", func(t *testing.T) {
+	t.Run("fail 5", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
 		trie.Put([]byte{0x50, 0xEF}, 45)
@@ -387,6 +384,11 @@ func testOrderedBytesMap(t *testing.T, factory func() Obm) {
 	for tt := range trieTestCases() {
 		testTrieTestCase(t, factory, &tt)
 	}
+}
+
+func TestReference(t *testing.T) {
+	t.Parallel()
+	testOrderedBytesMap(t, newReference)
 }
 
 func TestSimple(t *testing.T) {
