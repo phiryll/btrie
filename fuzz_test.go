@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,7 +78,7 @@ func getFuzzBaseline(factory func() TestBTrie) (ref, trie TestBTrie) {
 
 func TestBaseline(t *testing.T) {
 	t.Parallel()
-	ref, trie := getFuzzBaseline(btrie.NewPointerTrie[byte])
+	ref, trie := getFuzzBaseline(newPointerTrie)
 	bounds := From(nil).To(nil)
 	assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 		"%s", bounds)
@@ -150,17 +149,17 @@ func fuzzRange(f *testing.F, factory func() TestBTrie) {
 }
 
 func FuzzGetPointerTrie(f *testing.F) {
-	fuzzGet(f, btrie.NewPointerTrie[byte])
+	fuzzGet(f, newPointerTrie)
 }
 
 func FuzzPutPointerTrie(f *testing.F) {
-	fuzzPut(f, btrie.NewPointerTrie[byte])
+	fuzzPut(f, newPointerTrie)
 }
 
 func FuzzDeletePointerTrie(f *testing.F) {
-	fuzzDelete(f, btrie.NewPointerTrie[byte])
+	fuzzDelete(f, newPointerTrie)
 }
 
 func FuzzRangePointerTrie(f *testing.F) {
-	fuzzRange(f, btrie.NewPointerTrie[byte])
+	fuzzRange(f, newPointerTrie)
 }

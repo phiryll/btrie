@@ -3,6 +3,7 @@ package btrie_test
 import (
 	"fmt"
 	"iter"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -15,6 +16,10 @@ func newReference() TestBTrie {
 // This serves as an expected value to compare against a BTrie[byte] implementation while testing.
 type reference struct {
 	m map[string]byte
+}
+
+func (r *reference) Clone() TestBTrie {
+	return &reference{maps.Clone(r.m)}
 }
 
 func (r *reference) Put(key []byte, value byte) (byte, bool) {

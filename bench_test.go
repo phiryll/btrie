@@ -41,7 +41,7 @@ type (
 var (
 	trieDefs = []trieDef{
 		{"reference", newReference},
-		{"pointer-trie", btrie.NewPointerTrie[byte]},
+		{"pointer-trie", newPointerTrie},
 	}
 
 	trieConfigs = createTrieConfigs()
@@ -123,11 +123,10 @@ func TestTrieConfigs(t *testing.T) {
 // Returns (trie, presentKeys)
 // Any key longer than c.keySize is absent.
 func (c trieConfig) createTrie(factory func() TestBTrie) (TestBTrie, [][]byte) {
-	count := 0
 	trie := factory()
 	var present [][]byte
 	random := rand.New(rand.NewSource(c.seed))
-	for count < c.trieSize {
+	for count := 0; count < c.trieSize; {
 		key := randomKey(c.keySize, random)
 		if _, ok := trie.Put(key, randomByte(random)); !ok {
 			present = append(present, key)
@@ -206,22 +205,21 @@ func randomKeysOfLength(keySize int, random *rand.Rand) [][]byte {
 
 func BenchmarkPut(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
+		original, present := bench.config.createTrie(bench.def.factory)
+		absent := randomKeysByLength[bench.config.keySize+1]
 		bench.Run("key=present", func(b *testing.B) {
-			trie, present := bench.config.createTrie(bench.def.factory)
 			b.ResetTimer()
 			for i := range b.N {
-				trie.Put(present[i%len(present)], 42)
+				original.Put(present[i%len(present)], 42)
 			}
 		})
 		bench.Run("key=absent", func(b *testing.B) {
-			trie, _ := bench.config.createTrie(bench.def.factory)
-			absent := randomKeysByLength[bench.config.keySize+1]
+			trie := original.Clone()
 			b.ResetTimer()
 			for i := range b.N {
 				if i%len(absent) == 0 && i > 0 {
 					b.StopTimer()
-					// TODO: a clone() method could help minimize the impact here
-					trie, _ = bench.config.createTrie(bench.def.factory)
+					trie = original.Clone()
 					b.StartTimer()
 				}
 				trie.Put(absent[i%len(absent)], 42)
@@ -233,6 +231,7 @@ func BenchmarkPut(b *testing.B) {
 func BenchmarkGet(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
 		trie, present := bench.config.createTrie(bench.def.factory)
+		absent := randomKeysByLength[bench.config.keySize+1]
 		bench.Run("key=present", func(b *testing.B) {
 			b.ResetTimer()
 			for i := range b.N {
@@ -240,7 +239,6 @@ func BenchmarkGet(b *testing.B) {
 			}
 		})
 		bench.Run("key=absent", func(b *testing.B) {
-			absent := randomKeysByLength[bench.config.keySize+1]
 			b.ResetTimer()
 			for i := range b.N {
 				trie.Get(absent[i%len(absent)])
@@ -251,25 +249,24 @@ func BenchmarkGet(b *testing.B) {
 
 func BenchmarkDelete(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
+		original, present := bench.config.createTrie(bench.def.factory)
+		absent := randomKeysByLength[bench.config.keySize+1]
 		bench.Run("key=present", func(b *testing.B) {
-			trie, present := bench.config.createTrie(bench.def.factory)
+			trie := original.Clone()
 			b.ResetTimer()
 			for i := range b.N {
 				if i%len(present) == 0 && i > 0 {
 					b.StopTimer()
-					// TODO: a clone() method could help minimize the impact here
-					trie, _ = bench.config.createTrie(bench.def.factory)
+					trie = original.Clone()
 					b.StartTimer()
 				}
 				trie.Delete(present[i%len(present)])
 			}
 		})
 		bench.Run("key=absent", func(b *testing.B) {
-			trie, _ := bench.config.createTrie(bench.def.factory)
-			absent := randomKeysByLength[bench.config.keySize+1]
 			b.ResetTimer()
 			for i := range b.N {
-				trie.Delete(absent[i%len(absent)])
+				original.Delete(absent[i%len(absent)])
 			}
 		})
 	}

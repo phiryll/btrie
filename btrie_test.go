@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	TestBTrie = btrie.BTrie[byte]
+	TestBTrie = btrie.Cloneable[byte]
 	Bounds    = btrie.Bounds
 
 	entry struct {
@@ -29,6 +29,8 @@ type (
 const zero = byte(0)
 
 var (
+	newPointerTrie = asCloneable(btrie.NewPointerTrie[byte])
+
 	From    = btrie.From
 	keyName = btrie.TestingKeyName
 
@@ -105,6 +107,16 @@ var (
 		nil, // +Inf
 	}
 )
+
+func asCloneable(factory func() btrie.BTrie[byte]) func() TestBTrie {
+	return func() TestBTrie {
+		cloneable, ok := factory().(btrie.Cloneable[byte])
+		if !ok {
+			panic("not Cloneable")
+		}
+		return cloneable
+	}
+}
 
 // Returns a sequence of all possible subsequences of presentKeys and their complements.
 func trieTestCases() iter.Seq[trieTestCase] {
@@ -393,5 +405,5 @@ func TestReference(t *testing.T) {
 
 func TestPointerTrie(t *testing.T) {
 	t.Parallel()
-	testBTrie(t, btrie.NewPointerTrie[byte])
+	testBTrie(t, newPointerTrie)
 }
