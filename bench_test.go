@@ -136,7 +136,6 @@ func (c trieConfig) createTrie(factory func() TestBTrie) (TestBTrie, [][]byte) {
 	return trie, present
 }
 
-// Just testing that the tries can be created without failing or timing out.
 func TestCreateTrie(t *testing.T) {
 	t.Parallel()
 	for _, def := range trieDefs {
@@ -145,7 +144,20 @@ func TestCreateTrie(t *testing.T) {
 			for _, config := range trieConfigs {
 				t.Run(fmt.Sprintf("keyLen=%d/trieSize=%d", config.keySize, config.trieSize), func(t *testing.T) {
 					t.Parallel()
-					config.createTrie(def.factory)
+					trie, present := config.createTrie(def.factory)
+					assert.Len(t, present, config.trieSize)
+					m := map[string]byte{}
+					for _, key := range present {
+						assert.LessOrEqual(t, len(key), config.keySize)
+						value, ok := trie.Get(key)
+						assert.True(t, ok)
+						m[string(key)] = value
+					}
+					for key, value := range trie.Range(From(nil).To(nil)) {
+						assert.Equal(t, m[string(key)], value)
+						delete(m, string(key))
+					}
+					assert.Empty(t, m)
 				})
 			}
 		})
