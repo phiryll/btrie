@@ -290,6 +290,57 @@ func testTrieTestCase(t *testing.T, factory func() TestBTrie, tt *trieTestCase) 
 	})
 }
 
+func testClone(t *testing.T, factory func() TestBTrie) {
+	t.Run("clone", func(t *testing.T) {
+		t.Parallel()
+		original := factory()
+		for i, key := range presentKeys {
+			original.Put(key, byte(i))
+		}
+
+		trie := original.Clone()
+
+		// all presentKeys are present
+		for i, key := range presentKeys {
+			value, ok := trie.Get(key)
+			assert.True(t, ok)
+			assert.Equal(t, byte(i), value)
+		}
+		count := 0
+		for key, value := range trie.Range(From(nil).To(nil)) {
+			index := int(value)
+			assert.Equal(t, presentKeys[index], key)
+			count++
+		}
+		assert.Equal(t, len(presentKeys), count)
+
+		// mutating one does not affect the other
+		for i, key := range presentKeys {
+			value, ok := original.Delete(key)
+			assert.True(t, ok)
+			assert.Equal(t, byte(i), value)
+		}
+		for i, key := range absentKeys {
+			_, ok := original.Put(key, byte(i))
+			assert.False(t, ok)
+		}
+
+		// all presentKeys are present, again
+		for i, key := range presentKeys {
+			value, ok := trie.Get(key)
+			assert.True(t, ok)
+			assert.Equal(t, byte(i), value)
+		}
+		count = 0
+		for key, value := range trie.Range(From(nil).To(nil)) {
+			index := int(value)
+			assert.Equal(t, presentKeys[index], key)
+			count++
+		}
+		assert.Equal(t, len(presentKeys), count)
+	})
+}
+
 // Things that failed at one point or another during testing.
 
 func testFail1(t *testing.T, factory func() TestBTrie) {
@@ -393,6 +444,7 @@ func testBTrie(t *testing.T, factory func() TestBTrie) {
 	}
 	testOneKey(t, factory, []byte{})
 	testOneKey(t, factory, []byte{18, 43, 247, 14})
+	testClone(t, factory)
 	for tt := range trieTestCases() {
 		testTrieTestCase(t, factory, &tt)
 	}

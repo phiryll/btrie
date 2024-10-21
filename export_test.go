@@ -27,9 +27,10 @@ func (n *node[V]) Clone() Cloneable[V] {
 }
 
 func clonePointerTrie[V any](n *node[V]) *node[V] {
-	clone := n
+	clone := *n
+	clone.children = make([]*node[V], len(n.children))
 	for i, child := range n.children {
 		clone.children[i] = clonePointerTrie(child)
 	}
-	return clone
+	return &clone
 }
