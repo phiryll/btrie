@@ -215,6 +215,33 @@ func randomKeysOfLength(keySize int, random *rand.Rand) [][]byte {
 	return keys
 }
 
+// This benchmark serves two purposes.
+// First, Clone() should be more efficient than others in both time and space.
+// Second, Clone() should not be absurdly efficient.
+// If it is, that's a sign it's sharing storage instead of creating new storage.
+func BenchmarkCopy(b *testing.B) {
+	for bench := range benchmarkConfigs(b) {
+		original, present := bench.config.createTrie(bench.def.factory)
+		var trie TestBTrie
+		bench.Run("copy=iterate", func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				trie = bench.def.factory()
+				for _, key := range present {
+					value, _ := original.Get(key)
+					trie.Put(key, value)
+				}
+			}
+		})
+		bench.Run("copy=clone", func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				trie = original.Clone()
+			}
+		})
+	}
+}
+
 func BenchmarkPut(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
 		original, present := bench.config.createTrie(bench.def.factory)
