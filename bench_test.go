@@ -98,7 +98,7 @@ func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser)
 func createTrieConfigs() []trieConfig {
 	configs := []trieConfig{}
 	random := rand.New(rand.NewSource(3472109))
-	for keySize := 1; keySize <= maxKeySize; keySize++ {
+	for keySize := 2; keySize <= maxKeySize; keySize++ {
 		maxKey := 1 << (keySize*8 - 1)
 		if maxKey > maxTrieSize {
 			maxKey = maxTrieSize
