@@ -246,13 +246,13 @@ func BenchmarkPut(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
 		original, present := bench.config.createTrie(bench.def.factory)
 		absent := randomKeysByLength[bench.config.keySize+1]
-		bench.Run("key=present", func(b *testing.B) {
+		bench.Run("existing=true", func(b *testing.B) {
 			b.ResetTimer()
 			for i := range b.N {
 				original.Put(present[i%len(present)], 42)
 			}
 		})
-		bench.Run("key=absent", func(b *testing.B) {
+		bench.Run("existing=false", func(b *testing.B) {
 			trie := original.Clone()
 			b.ResetTimer()
 			for i := range b.N {
@@ -271,13 +271,13 @@ func BenchmarkGet(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
 		trie, present := bench.config.createTrie(bench.def.factory)
 		absent := randomKeysByLength[bench.config.keySize+1]
-		bench.Run("key=present", func(b *testing.B) {
+		bench.Run("existing=true", func(b *testing.B) {
 			b.ResetTimer()
 			for i := range b.N {
 				trie.Get(present[i%len(present)])
 			}
 		})
-		bench.Run("key=absent", func(b *testing.B) {
+		bench.Run("existing=false", func(b *testing.B) {
 			b.ResetTimer()
 			for i := range b.N {
 				trie.Get(absent[i%len(absent)])
@@ -290,7 +290,7 @@ func BenchmarkDelete(b *testing.B) {
 	for bench := range benchmarkConfigs(b) {
 		original, present := bench.config.createTrie(bench.def.factory)
 		absent := randomKeysByLength[bench.config.keySize+1]
-		bench.Run("key=present", func(b *testing.B) {
+		bench.Run("existing=true", func(b *testing.B) {
 			trie := original.Clone()
 			b.ResetTimer()
 			for i := range b.N {
@@ -302,7 +302,7 @@ func BenchmarkDelete(b *testing.B) {
 				trie.Delete(present[i%len(present)])
 			}
 		})
-		bench.Run("key=absent", func(b *testing.B) {
+		bench.Run("existing=false", func(b *testing.B) {
 			b.ResetTimer()
 			for i := range b.N {
 				original.Delete(absent[i%len(absent)])
