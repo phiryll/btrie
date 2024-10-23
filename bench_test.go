@@ -23,10 +23,6 @@ import (
 // To minimize this, all the tries are constructed only once, and they all implement a non-public-API Clone() method.
 
 const (
-	// Maximum size for keys used to test against the benchmakred tries.
-	// Keys present in the tries will be at most this size.
-	maxKeySize = 5
-
 	// The maximum size of created absent and bounds slices, 64K.
 	maxGenSize = 1 << 16
 )
@@ -71,9 +67,12 @@ var (
 		{"pointer-trie", newPointerTrie},
 	}
 
-	// These are how many entries the benchmarked tries will have, from 1024 to ~1M.
-	// Tries will have keys of random length up to maxKeySize.
-	trieSizes = []int{1 << 10, 1 << 12, 1 << 14, 1 << 16, 1 << 18, 1 << 20}
+	// How many entries the benchmarked tries will have, with keys of random length up to maxKeySize.
+	trieSizes = []int{1 << 12, 1 << 16, 1 << 20}
+
+	// Test keys of these lengths against the bencharked tries.
+	keySizes   = []int{3, 4, 5}
+	maxKeySize = keySizes[len(keySizes)-1]
 
 	trieConfigs = createTrieConfigs()
 )
@@ -261,10 +260,11 @@ func TestTrieConfigRepeatability(t *testing.T) {
 // If it is, that's a sign it's sharing storage instead of creating new storage.
 func BenchmarkClone(b *testing.B) {
 	for _, bench := range benchConfigs() {
+		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
-				_ = bench.trie.Clone()
+				_ = original.Clone()
 			}
 		})
 	}
@@ -275,7 +275,7 @@ func BenchmarkPut(b *testing.B) {
 	for _, bench := range benchConfigs() {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
-			for keySize := 2; keySize <= maxKeySize; keySize++ {
+			for _, keySize := range keySizes {
 				present := bench.config.present[keySize]
 				absent := bench.config.absent[keySize]
 				b.Run(fmt.Sprintf("keyLen=%d", keySize), func(b *testing.B) {
@@ -308,7 +308,7 @@ func BenchmarkGet(b *testing.B) {
 	for _, bench := range benchConfigs() {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
-			for keySize := 2; keySize <= maxKeySize; keySize++ {
+			for _, keySize := range keySizes {
 				present := bench.config.present[keySize]
 				absent := bench.config.absent[keySize]
 				b.Run(fmt.Sprintf("keyLen=%d", keySize), func(b *testing.B) {
@@ -337,7 +337,7 @@ func BenchmarkDelete(b *testing.B) {
 	for _, bench := range benchConfigs() {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
-			for keySize := 2; keySize <= maxKeySize; keySize++ {
+			for _, keySize := range keySizes {
 				present := bench.config.present[keySize]
 				absent := bench.config.absent[keySize]
 				b.Run(fmt.Sprintf("keyLen=%d", keySize), func(b *testing.B) {
