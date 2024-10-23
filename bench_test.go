@@ -75,8 +75,7 @@ var (
 	// Tries will have keys of random length up to maxKeySize.
 	trieSizes = []int{1 << 10, 1 << 12, 1 << 14, 1 << 16, 1 << 18, 1 << 20}
 
-	trieConfigs  = createTrieConfigs()
-	benchConfigs = createBenchConfigs(trieConfigs)
+	trieConfigs = createTrieConfigs()
 )
 
 func BenchmarkTraverser(b *testing.B) {
@@ -202,7 +201,7 @@ func createTrieConfigs() []*trieConfig {
 	return result
 }
 
-func createBenchConfigs(trieConfigs []*trieConfig) []benchConfig {
+func benchConfigs() []benchConfig {
 	result := []benchConfig{}
 	for _, def := range implDefs {
 		for _, config := range trieConfigs {
@@ -258,21 +257,10 @@ func TestTrieConfigRepeatability(t *testing.T) {
 	}
 }
 
-/*
-// Useful to determine if these tests need to start building the benchConfigs on the fly.
-func BenchmarkBenchConfigs(b *testing.B) {
-	trieConfigs := createTrieConfigs()
-	b.ResetTimer()
-	for range b.N {
-		_ = createBenchConfigs(trieConfigs)
-	}
-}
-*/
-
-// Clone() should be efficient, but not absurdly efficient.
+// For mutable implementations, Clone() should be efficient, but not absurdly efficient.
 // If it is, that's a sign it's sharing storage instead of creating new storage.
 func BenchmarkClone(b *testing.B) {
-	for _, bench := range benchConfigs {
+	for _, bench := range benchConfigs() {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
@@ -284,7 +272,7 @@ func BenchmarkClone(b *testing.B) {
 
 //nolint:gocognit
 func BenchmarkPut(b *testing.B) {
-	for _, bench := range benchConfigs {
+	for _, bench := range benchConfigs() {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
 			for keySize := 2; keySize <= maxKeySize; keySize++ {
@@ -317,7 +305,7 @@ func BenchmarkPut(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	for _, bench := range benchConfigs {
+	for _, bench := range benchConfigs() {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
 			for keySize := 2; keySize <= maxKeySize; keySize++ {
@@ -346,7 +334,7 @@ func BenchmarkGet(b *testing.B) {
 
 //nolint:gocognit
 func BenchmarkDelete(b *testing.B) {
-	for _, bench := range benchConfigs {
+	for _, bench := range benchConfigs() {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
 			for keySize := 2; keySize <= maxKeySize; keySize++ {
@@ -380,7 +368,7 @@ func BenchmarkDelete(b *testing.B) {
 
 //nolint:gocognit
 func BenchmarkRange(b *testing.B) {
-	for _, bench := range benchConfigs {
+	for _, bench := range benchConfigs() {
 		original := bench.trie
 		forward := bench.config.forward
 		reverse := bench.config.reverse
