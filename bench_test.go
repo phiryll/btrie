@@ -101,7 +101,7 @@ func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser)
 			}
 			b.Run(fmt.Sprintf("size=%d", numPaths), func(b *testing.B) {
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					for path := range traverser(0, adj) {
 						_ = path
 					}
@@ -111,84 +111,92 @@ func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser)
 	})
 }
 
+func createEntries(size int, random *rand.Rand) (map[string]byte, []keySet) {
+	entries := map[string]byte{}
+	present := make([]keySet, maxKeySize+1)
+	for count := 0; count < size; {
+		key := randomKey(maxKeySize, random)
+		keySize := len(key)
+		if _, ok := entries[string(key)]; !ok {
+			present[keySize] = append(present[keySize], key)
+			entries[string(key)] = randomByte(random)
+			count++
+		}
+	}
+	return entries, present
+}
+
+func createAbsent(entries map[string]byte, random *rand.Rand) []keySet {
+	absent := make([]keySet, maxKeySize+1)
+
+	// set absent for key sizes 0-2, everything not present
+	if _, ok := entries[""]; !ok {
+		absent[0] = append(absent[0], []byte{})
+	}
+	for hi := range 256 {
+		key := []byte{byte(hi)}
+		if _, ok := entries[string(key)]; !ok {
+			absent[1] = append(absent[1], key)
+		}
+		for low := range 256 {
+			key := []byte{byte(hi), byte(low)}
+			if _, ok := entries[string(key)]; !ok {
+				absent[2] = append(absent[2], key)
+			}
+		}
+	}
+
+	// set config.absent for key sizes 3+, randomly generated
+	// keep adding until each size has maxGenSize keys
+	count := 0
+	for count < maxGenSize*(maxKeySize-2) {
+		key := randomKey(maxKeySize, random)
+		keySize := len(key)
+		if keySize < 3 || len(absent[keySize]) == maxGenSize {
+			continue
+		}
+		if _, ok := entries[string(key)]; !ok {
+			absent[keySize] = append(absent[keySize], key)
+			count++
+		}
+	}
+
+	return absent
+}
+
+func createBounds(keys keySet) ([]Bounds, []Bounds) {
+	var forward, reverse []Bounds
+	for i := range maxGenSize {
+		begin := keys[(2*i)%len(keys)]
+		end := keys[(2*i+1)%len(keys)]
+		switch cmp := bytes.Compare(begin, end); {
+		case cmp == 0:
+			end = append(end, 0)
+		case cmp > 0:
+			begin, end = end, begin
+		case cmp < 0:
+			// no adjustment needed
+		}
+		forward = append(forward, From(begin).To(end))
+		reverse = append(reverse, From(end).DownTo(begin))
+	}
+	return forward, reverse
+}
+
 func createTrieConfigs() []*trieConfig {
 	result := []*trieConfig{}
-
 	for _, size := range trieSizes {
 		random := rand.New(rand.NewSource(int64(size) + 4839028453))
-		config := trieConfig{
-			size,
-			map[string]byte{},
-			make([]keySet, maxKeySize+1),
-			make([]keySet, maxKeySize+1),
-			nil, nil,
-		}
-
-		// set config.entries, config.present
-		for count := 0; count < size; {
-			key := randomKey(maxKeySize, random)
-			keySize := len(key)
-			if _, ok := config.entries[string(key)]; !ok {
-				config.present[keySize] = append(config.present[keySize], key)
-				config.entries[string(key)] = randomByte(random)
-				count++
-			}
-		}
-
-		// set config.absent for key sizes 0-2, everything not present
-		if len(config.present[0]) == 0 {
-			config.absent[0] = append(config.absent[0], []byte{})
-		}
-		for hi := range 256 {
-			key := []byte{byte(hi)}
-			if _, ok := config.entries[string(key)]; !ok {
-				config.absent[1] = append(config.absent[1], key)
-			}
-			for low := range 256 {
-				key := []byte{byte(hi), byte(low)}
-				if _, ok := config.entries[string(key)]; !ok {
-					config.absent[2] = append(config.absent[2], key)
-				}
-			}
-		}
-
-		// set config.absent for key sizes 3+, randomly generated
-		// keep adding until each size has maxGenSize keys
-		const limit = maxGenSize * (maxKeySize - 2)
-		count := 0
-		for count < limit {
-			key := randomKey(maxKeySize, random)
-			keySize := len(key)
-			if keySize < 3 || len(config.absent[keySize]) == maxGenSize {
-				continue
-			}
-			if _, ok := config.entries[string(key)]; !ok {
-				config.absent[keySize] = append(config.absent[keySize], key)
-				count++
-			}
-		}
-
-		// set config.forward, config.reverse
+		//nolint:exhaustruct
+		config := trieConfig{trieSize: size}
+		config.entries, config.present = createEntries(size, random)
+		config.absent = createAbsent(config.entries, random)
 		// get bounds from a shuffled slice of present and absent keys
 		keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
 		random.Shuffle(len(keys), func(i, j int) {
 			keys[i], keys[j] = keys[j], keys[i]
 		})
-		for i := range maxGenSize {
-			begin := keys[(2*i)%len(keys)]
-			end := keys[(2*i+1)%len(keys)]
-			switch cmp := bytes.Compare(begin, end); {
-			case cmp == 0:
-				end = append(end, 0)
-			case cmp > 0:
-				begin, end = end, begin
-			case cmp < 0:
-				// no adjustment needed
-			}
-			config.forward = append(config.forward, From(begin).To(end))
-			config.reverse = append(config.reverse, From(end).DownTo(begin))
-		}
-
+		config.forward, config.reverse = createBounds(keys)
 		result = append(result, &config)
 	}
 	return result
@@ -274,6 +282,7 @@ func BenchmarkClone(b *testing.B) {
 	}
 }
 
+//nolint:gocognit
 func BenchmarkPut(b *testing.B) {
 	for _, bench := range benchConfigs {
 		original := bench.trie
@@ -335,6 +344,7 @@ func BenchmarkGet(b *testing.B) {
 	}
 }
 
+//nolint:gocognit
 func BenchmarkDelete(b *testing.B) {
 	for _, bench := range benchConfigs {
 		original := bench.trie
@@ -368,6 +378,7 @@ func BenchmarkDelete(b *testing.B) {
 	}
 }
 
+//nolint:gocognit
 func BenchmarkRange(b *testing.B) {
 	for _, bench := range benchConfigs {
 		original := bench.trie
