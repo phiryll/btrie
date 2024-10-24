@@ -33,8 +33,6 @@ type (
 		factory func() TestBTrie
 	}
 
-	keySet = [][]byte // instances will have unique keys
-
 	// For benchmarking, there is one trieConfig with a given trieSize used by all benchmarks,
 	// shared by all trie implementations.
 	trieConfig struct {

@@ -14,6 +14,8 @@ type (
 	TestBTrie = btrie.Cloneable[byte]
 	Bounds    = btrie.Bounds
 
+	keySet = [][]byte // instances will generally have unique keys
+
 	entry struct {
 		key   []byte
 		value byte
@@ -21,8 +23,8 @@ type (
 
 	trieTestCase struct {
 		name       string
-		present    [][]byte
-		complement [][]byte
+		present    keySet
+		complement keySet
 	}
 )
 
@@ -47,7 +49,7 @@ var (
 
 	// Keys used to build test tries.
 	// These are in lexicographical order.
-	presentKeys = [][]byte{
+	presentKeys = keySet{
 		{},
 		{0},
 		{0x23},
@@ -61,7 +63,7 @@ var (
 	}
 
 	// Non-empty keys very near presentKeys, but not in presentKeys.
-	absentKeys = [][]byte{
+	absentKeys = keySet{
 		{0, 0},
 		{0x22, 0xFF},
 		{0x23, 0, 0},
@@ -79,7 +81,7 @@ var (
 
 	// Keys used to test tries built with presentKeys: presentKeys + absentKeys _ +/-Inf.
 	// Except for the nils, these are in lexicographical order.
-	nearKeys = [][]byte{
+	nearKeys = keySet{
 		nil, // -Inf
 		{},
 		{0},
@@ -124,8 +126,8 @@ func trieTestCases() iter.Seq[trieTestCase] {
 	limit := 1 << len(presentKeys)
 	return func(yield func(trieTestCase) bool) {
 		for i := range limit {
-			present := [][]byte{}
-			complement := [][]byte{}
+			present := keySet{}
+			complement := keySet{}
 			mask := 0x01
 			for j := range size {
 				if i&mask != 0 {
