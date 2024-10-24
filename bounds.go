@@ -136,74 +136,54 @@ func (b reverse) Compare(key []byte) int {
 
 //nolint:nonamedreturns
 func (b forward) childBounds(partialKey []byte) (start, stop byte, ok bool) {
-	start, ok = lower(b.begin, partialKey)
-	if !ok {
-		return 0, 0, false
-	}
-	stop, ok = upper(b.end, partialKey)
-	if !ok {
-		return 0, 0, false
-	}
-	return start, stop, true
+	return childBounds(b.begin, b.end, partialKey)
 }
 
 //nolint:nonamedreturns
 func (b reverse) childBounds(partialKey []byte) (start, stop byte, ok bool) {
-	start, ok = upper(b.begin, partialKey)
-	if !ok {
-		return 0, 0, false
+	low, high, ok := childBounds(b.end, b.begin, partialKey)
+	return high, low, ok
+}
+
+//nolint:nestif,nonamedreturns
+func childBounds(low, high, partialKey []byte) (start, stop byte, ok bool) {
+	// For each of start and stop, one of 3 things could happen:
+	// - return early with (0, 0, false) because all children of partialKey are out of bounds
+	// - else, set the value to low/high[len(partialKey)] if partialKey is a prefix of low/high
+	// - else, the value remains the same, 0 or 0xFF
+	start, stop = 0, math.MaxUint8
+
+	keySize := len(partialKey)
+	if low != nil {
+		diffSize := len(low) - keySize
+		lowPrefix := low
+		if diffSize > 0 {
+			lowPrefix = low[:keySize]
+		}
+		cmp := bytes.Compare(partialKey, lowPrefix)
+		if cmp == -1 {
+			return 0, 0, false
+		}
+		if cmp == 0 && diffSize > 0 {
+			start = low[keySize]
+		}
 	}
-	stop, ok = lower(b.end, partialKey)
-	if !ok {
-		return 0, 0, false
+	if high != nil {
+		diffSize := len(high) - keySize
+		highPrefix := high
+		if diffSize > 0 {
+			highPrefix = high[:keySize]
+		}
+		cmp := bytes.Compare(partialKey, highPrefix)
+		if cmp == +1 {
+			return 0, 0, false
+		}
+		if cmp == 0 {
+			if diffSize == 0 {
+				return 0, 0, false
+			}
+			stop = high[keySize]
+		}
 	}
 	return start, stop, true
-}
-
-// Return the lower key byte (start for forward, and stop for reverse).
-func lower(bound, partialKey []byte) (byte, bool) {
-	if bound == nil {
-		return 0, true
-	}
-	keySize := len(partialKey)
-	diffSize := len(bound) - keySize
-	boundPrefix := bound
-	if diffSize > 0 {
-		boundPrefix = bound[:keySize]
-	}
-	switch bytes.Compare(partialKey, boundPrefix) {
-	case -1:
-		return 0, false
-	case +1:
-		return 0, true
-	default:
-		if diffSize == 0 {
-			return 0, true
-		}
-		return bound[keySize], true
-	}
-}
-
-// Return the upper key byte (stop for forward, and start for reverse).
-func upper(bound, partialKey []byte) (byte, bool) {
-	if bound == nil {
-		return math.MaxUint8, true
-	}
-	keySize := len(partialKey)
-	diffSize := len(bound) - keySize
-	boundPrefix := bound
-	if diffSize > 0 {
-		boundPrefix = bound[:keySize]
-	}
-	switch bytes.Compare(partialKey, boundPrefix) {
-	case -1:
-		return math.MaxUint8, true
-	case +1:
-		return 0, false
-	default:
-		if diffSize == 0 {
-			return 0, false
-		}
-		return bound[keySize], true
-	}
 }
