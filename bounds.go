@@ -144,13 +144,6 @@ func (b forward) childBounds(partialKey []byte) (start, stop byte, ok bool) {
 	if !ok {
 		return 0, 0, false
 	}
-	// This optimization would be invalid in reverse.childBounds.
-	if len(partialKey)+1 == len(b.end) && bytes.HasPrefix(b.end, partialKey) {
-		if stop == 0 {
-			return 0, 0, false
-		}
-		stop--
-	}
 	return start, stop, true
 }
 

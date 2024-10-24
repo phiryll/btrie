@@ -218,7 +218,7 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(nil).To(afterEmpty),
 			[]expectedChildBounds{
-				{empty, 0, 0, false},
+				{empty, 0, 0, true},
 				{afterEmpty, 0, 0, false},
 			},
 		},
@@ -229,7 +229,7 @@ func TestChildBounds(t *testing.T) {
 				{afterEmpty, 0, 0xFF, true},
 				{before, 0, 0xFF, true},
 				{low[:1], 0, 0x99, true},
-				{low[:2], 0, 0x71, true},
+				{low[:2], 0, 0x72, true},
 				{beforeLow, 0, 0xFF, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
@@ -251,7 +251,7 @@ func TestChildBounds(t *testing.T) {
 				{afterEmpty, 0, 0xFF, true},
 				{before, 0, 0xFF, true},
 				{low[:1], 0, 0x99, true},
-				{low[:2], 0, 0x71, true},
+				{low[:2], 0, 0x72, true},
 				{beforeLow, 0, 0xFF, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
@@ -279,7 +279,7 @@ func TestChildBounds(t *testing.T) {
 				{afterLow, 0, 0xFF, true},
 				{within, 0, 0xFF, true},
 				{high[:1], 0, 0x12, true},
-				{high[:2], 0, 0x5F, true},
+				{high[:2], 0, 0x60, true},
 				{beforeHigh, 0, 0xFF, true},
 				{high, 0, 0, false},
 				{afterHigh, 0, 0, false},
@@ -403,7 +403,7 @@ func TestChildBounds(t *testing.T) {
 				{[]byte{0x04, 0x05}, 0x06, 0x71, true},
 				{[]byte{0x04, 0x05, 0x06}, 0x83, 0xFF, true},
 				{[]byte{0x04, 0x05, 0x06, 0x83}, 0, 0xFF, true},
-				{[]byte{0x04, 0x05, 0x71}, 0x00, 0x11, true},
+				{[]byte{0x04, 0x05, 0x71}, 0x00, 0x12, true},
 				{[]byte{0x04, 0x05, 0x71, 0x12}, 0, 0, false},
 
 				// From before/after
@@ -449,7 +449,7 @@ func TestChildBounds(t *testing.T) {
 				// From/To prefixes
 				{[]byte{0x04}, 0x05, 0x05, true},
 				{[]byte{0x04, 0x05}, 0x00, 0x71, true},
-				{[]byte{0x04, 0x05, 0x71}, 0x00, 0x11, true},
+				{[]byte{0x04, 0x05, 0x71}, 0x00, 0x12, true},
 				{[]byte{0x04, 0x05, 0x71, 0x12}, 0, 0, false},
 
 				// From before/after
