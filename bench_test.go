@@ -278,26 +278,24 @@ func BenchmarkPut(b *testing.B) {
 			for _, keySize := range keySizes {
 				present := bench.config.present[keySize]
 				absent := bench.config.absent[keySize]
-				b.Run(fmt.Sprintf("keyLen=%d", keySize), func(b *testing.B) {
-					b.Run("existing=true", func(b *testing.B) {
-						trie := original.Clone()
-						b.ResetTimer()
-						for i := range b.N {
-							trie.Put(present[i%len(present)], 42)
+				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keySize), func(b *testing.B) {
+					trie := original.Clone()
+					b.ResetTimer()
+					for i := range b.N {
+						trie.Put(present[i%len(present)], 42)
+					}
+				})
+				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keySize), func(b *testing.B) {
+					trie := original.Clone()
+					b.ResetTimer()
+					for i := range b.N {
+						if i%len(absent) == 0 && i > 0 {
+							b.StopTimer()
+							trie = original.Clone()
+							b.StartTimer()
 						}
-					})
-					b.Run("existing=false", func(b *testing.B) {
-						trie := original.Clone()
-						b.ResetTimer()
-						for i := range b.N {
-							if i%len(absent) == 0 && i > 0 {
-								b.StopTimer()
-								trie = original.Clone()
-								b.StartTimer()
-							}
-							trie.Put(absent[i%len(absent)], 42)
-						}
-					})
+						trie.Put(absent[i%len(absent)], 42)
+					}
 				})
 			}
 		})
@@ -311,21 +309,19 @@ func BenchmarkGet(b *testing.B) {
 			for _, keySize := range keySizes {
 				present := bench.config.present[keySize]
 				absent := bench.config.absent[keySize]
-				b.Run(fmt.Sprintf("keyLen=%d", keySize), func(b *testing.B) {
-					b.Run("existing=true", func(b *testing.B) {
-						trie := original.Clone()
-						b.ResetTimer()
-						for i := range b.N {
-							trie.Get(present[i%len(present)])
-						}
-					})
-					b.Run("existing=false", func(b *testing.B) {
-						trie := original.Clone()
-						b.ResetTimer()
-						for i := range b.N {
-							trie.Get(absent[i%len(absent)])
-						}
-					})
+				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keySize), func(b *testing.B) {
+					trie := original.Clone()
+					b.ResetTimer()
+					for i := range b.N {
+						trie.Get(present[i%len(present)])
+					}
+				})
+				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keySize), func(b *testing.B) {
+					trie := original.Clone()
+					b.ResetTimer()
+					for i := range b.N {
+						trie.Get(absent[i%len(absent)])
+					}
 				})
 			}
 		})
@@ -340,26 +336,24 @@ func BenchmarkDelete(b *testing.B) {
 			for _, keySize := range keySizes {
 				present := bench.config.present[keySize]
 				absent := bench.config.absent[keySize]
-				b.Run(fmt.Sprintf("keyLen=%d", keySize), func(b *testing.B) {
-					b.Run("existing=true", func(b *testing.B) {
-						trie := original.Clone()
-						b.ResetTimer()
-						for i := range b.N {
-							if i%len(present) == 0 && i > 0 {
-								b.StopTimer()
-								trie = original.Clone()
-								b.StartTimer()
-							}
-							trie.Delete(present[i%len(present)])
+				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keySize), func(b *testing.B) {
+					trie := original.Clone()
+					b.ResetTimer()
+					for i := range b.N {
+						if i%len(present) == 0 && i > 0 {
+							b.StopTimer()
+							trie = original.Clone()
+							b.StartTimer()
 						}
-					})
-					b.Run("existing=false", func(b *testing.B) {
-						trie := original.Clone()
-						b.ResetTimer()
-						for i := range b.N {
-							trie.Delete(absent[i%len(absent)])
-						}
-					})
+						trie.Delete(present[i%len(present)])
+					}
+				})
+				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keySize), func(b *testing.B) {
+					trie := original.Clone()
+					b.ResetTimer()
+					for i := range b.N {
+						trie.Delete(absent[i%len(absent)])
+					}
 				})
 			}
 		})
@@ -378,8 +372,7 @@ func BenchmarkRange(b *testing.B) {
 				count := 0
 				b.ResetTimer()
 				for i := 0; true; i++ {
-					for k, v := range trie.Range(forward[i%len(forward)]) {
-						_, _ = k, v
+					for range trie.Range(forward[i%len(forward)]) {
 						count++
 						if count == b.N {
 							return
@@ -392,8 +385,7 @@ func BenchmarkRange(b *testing.B) {
 				count := 0
 				b.ResetTimer()
 				for i := 0; true; i++ {
-					for k, v := range trie.Range(reverse[i%len(reverse)]) {
-						_, _ = k, v
+					for range trie.Range(reverse[i%len(reverse)]) {
 						count++
 						if count == b.N {
 							return
