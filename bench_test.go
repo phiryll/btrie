@@ -107,6 +107,52 @@ func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser)
 	})
 }
 
+//nolint:gocognit
+func BenchmarkChildBounds(b *testing.B) {
+	// Reuse bounds from the biggest trieConfig, but create new (partial) keys.
+	config := trieConfigs[len(trieConfigs)-1]
+	forward := config.forward
+	reverse := config.reverse
+
+	random := rand.New(rand.NewSource(239057752))
+	keys := make(keySet, 1024)
+	for i := range keys {
+		// make keys shorter on average
+		keys[i] = randomKey(maxKeySize-1, random)
+	}
+
+	b.Run("dir=forward", func(b *testing.B) {
+		count := 0
+		b.ResetTimer()
+		for {
+			for _, bounds := range forward {
+				for _, key := range keys {
+					btrie.TestingChildBounds(bounds, key)
+				}
+				count++
+				if count == b.N {
+					return
+				}
+			}
+		}
+	})
+	b.Run("dir=reverse", func(b *testing.B) {
+		count := 0
+		b.ResetTimer()
+		for {
+			for _, bounds := range reverse {
+				for _, key := range keys {
+					btrie.TestingChildBounds(bounds, key)
+				}
+				count++
+				if count == b.N {
+					return
+				}
+			}
+		}
+	})
+}
+
 func createEntries(size int, random *rand.Rand) (map[string]byte, []keySet) {
 	entries := map[string]byte{}
 	present := make([]keySet, maxKeySize+1)
