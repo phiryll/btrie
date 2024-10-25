@@ -80,36 +80,40 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 		panic("key must be non-nil")
 	}
 	var zero V
-	type step struct {
-		n     *node[V]
-		index int // index in n.children where the next keyByte is
+	// Treating the root key as a special case makes the code below simpler wrt pruning.
+	if len(key) == 0 {
+		if !n.isTerminal {
+			return zero, false
+		}
+		prev := n.value
+		n.value = zero
+		n.isTerminal = false
+		return prev, true
 	}
-	path := []step{}
+
+	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
+	prune, pruneIndex := n, 0
 	for _, keyByte := range key {
 		index, found := n.search(keyByte)
 		if !found {
 			return zero, false
 		}
-		path = append(path, step{n, index})
+		// If either n has a value or more than one child, n itself cannot be pruned.
+		// If so, move the maybe-pruned subtree to n.children[index].
+		if n.isTerminal || len(n.children) > 1 {
+			prune, pruneIndex = n, index
+		}
 		n = n.children[index]
 	}
-	// n = found key, path goes from root to n's parent
+	// n = found key
 	if !n.isTerminal {
 		return zero, false
 	}
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	// Remove nodes from the tail of path if possible.
-	for i := len(path) - 1; i >= 0; i-- {
-		parent := path[i]
-		// if n can't be removed from parent, the loop is done
-		if n.isTerminal || len(n.children) > 0 {
-			break
-		}
-		n = parent.n
-		index := parent.index
-		n.children = append(n.children[:index], n.children[index+1:]...)
+	if len(n.children) == 0 {
+		prune.children = append(prune.children[:pruneIndex], prune.children[pruneIndex+1:]...)
 	}
 	return prev, true
 }
