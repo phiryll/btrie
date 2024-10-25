@@ -3,7 +3,6 @@ package btrie
 import (
 	"fmt"
 	"iter"
-	"slices"
 	"strings"
 )
 
@@ -47,15 +46,14 @@ func (n *node[V]) Put(key []byte, value V) (V, bool) {
 		n = n.children[index]
 	}
 	// n = found key, replace value
-	prev := zero
-	var ok bool
 	if n.isTerminal {
-		prev = n.value
-		ok = true
+		prev := n.value
+		n.value = value
+		return prev, true
 	}
 	n.value = value
 	n.isTerminal = true
-	return prev, ok
+	return zero, false
 }
 
 func (n *node[V]) Get(key []byte) (V, bool) {
@@ -103,7 +101,8 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 	n.value = zero
 	n.isTerminal = false
 	// Remove nodes from the tail of path if possible.
-	for _, parent := range slices.Backward(path) {
+	for i := len(path) - 1; i >= 0; i-- {
+		parent := path[i]
 		// if n can't be removed from parent, the loop is done
 		if n.isTerminal || len(n.children) > 0 {
 			break
