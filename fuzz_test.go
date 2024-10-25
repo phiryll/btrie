@@ -67,7 +67,7 @@ func putEntries(trie TestBTrie, n int, seed int64) {
 //
 //nolint:nonamedreturns
 func getFuzzBaseline(factory func() TestBTrie) (ref, trie TestBTrie) {
-	const putCount = 10000
+	const putCount = 1 << 20
 	const seed = 483738
 	ref = newReference()
 	trie = factory()
