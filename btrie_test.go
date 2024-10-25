@@ -239,6 +239,7 @@ func testOneKey(t *testing.T, factory func() TestBTrie, key []byte) {
 	})
 }
 
+//nolint:funlen
 func testTrieTestCase(t *testing.T, factory func() TestBTrie, tt *trieTestCase) {
 	t.Run(tt.name, func(t *testing.T) {
 		trie := factory()
@@ -283,6 +284,20 @@ func testTrieTestCase(t *testing.T, factory func() TestBTrie, tt *trieTestCase) 
 			assert.False(t, ok, "%s", keyName(key))
 			assert.Equal(t, zero, actual, "%s", keyName(key))
 		}
+
+		// Test that nil arguments will panic.
+		assert.Panics(t, func() {
+			trie.Put(nil, 0)
+		})
+		assert.Panics(t, func() {
+			trie.Get(nil)
+		})
+		assert.Panics(t, func() {
+			trie.Delete(nil)
+		})
+		assert.Panics(t, func() {
+			trie.Range(nil)
+		})
 
 		// Test Range.
 		ref := newReference()
