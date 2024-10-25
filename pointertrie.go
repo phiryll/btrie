@@ -1,6 +1,7 @@
 package btrie
 
 import (
+	"bytes"
 	"fmt"
 	"iter"
 	"strings"
@@ -118,21 +119,27 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 	return prev, true
 }
 
+// An iter.Seq of these is returned from the adjFunction used internally by Range.
+// key = {node.keyByte on path from root to node}
+// It is cached here for efficiency, otherwise an iter.Seq of []*node[V] would be used directly.
+// Note that the key must be cloned when yielded from Range.
+type rangePath[V any] struct {
+	node *node[V]
+	key  []byte
+}
+
 func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
-	var pathItr iter.Seq[[]*node[V]]
+	root := rangePath[V]{n, []byte{}}
+	var pathItr iter.Seq[*rangePath[V]]
 	if bounds.IsReverse() {
-		pathItr = postOrder(n, reverseChildAdj[V](bounds))
+		pathItr = postOrder(&root, reverseChildAdj[V](bounds))
 	} else {
-		pathItr = preOrder(n, forwardChildAdj[V](bounds))
+		pathItr = preOrder(&root, forwardChildAdj[V](bounds))
 	}
 	return func(yield func([]byte, V) bool) {
-		// path is a []*node[V], with path[0] being the root
 		for path := range pathItr {
-			key := []byte{}
-			for _, n := range path[1:] {
-				key = append(key, n.keyByte)
-			}
+			key := path.key
 			cmp := bounds.Compare(key)
 			if cmp < 0 {
 				continue
@@ -140,8 +147,8 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 			if cmp > 0 {
 				return
 			}
-			last := path[len(path)-1]
-			if last.isTerminal && !yield(key, last.value) {
+			last := path.node
+			if last.isTerminal && !yield(bytes.Clone(key), last.value) {
 				return
 			}
 		}
@@ -149,27 +156,24 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 }
 
 // Sometimes a child is not within the bounds, but one of its descendants is.
-func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
-	return func(path []*node[V]) iter.Seq[*node[V]] {
-		key := []byte{}
-		for _, n := range path[1:] {
-			key = append(key, n.keyByte)
-		}
+func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
+	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
+		key := path.key
 		start, stop, ok := bounds.childBounds(key)
 		if !ok {
 			return emptySeq
 		}
-		last := path[len(path)-1]
-		return func(yield func(*node[V]) bool) {
-			for i := range len(last.children) {
-				keyByte := last.children[i].keyByte
+		last := path.node
+		return func(yield func(*rangePath[V]) bool) {
+			for _, child := range last.children {
+				keyByte := child.keyByte
 				if keyByte < start {
 					continue
 				}
 				if keyByte > stop {
 					return
 				}
-				if !yield(last.children[i]) {
+				if !yield(&rangePath[V]{child, append(key, keyByte)}) {
 					return
 				}
 			}
@@ -178,27 +182,25 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 }
 
 // Sometimes a child is not within the bounds, but one of its descendants is.
-func reverseChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
-	return func(path []*node[V]) iter.Seq[*node[V]] {
-		key := []byte{}
-		for _, n := range path[1:] {
-			key = append(key, n.keyByte)
-		}
+func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
+	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
+		key := path.key
 		start, stop, ok := bounds.childBounds(key)
 		if !ok {
 			return emptySeq
 		}
-		last := path[len(path)-1]
-		return func(yield func(*node[V]) bool) {
+		last := path.node
+		return func(yield func(*rangePath[V]) bool) {
 			for i := len(last.children) - 1; i >= 0; i-- {
-				keyByte := last.children[i].keyByte
+				child := last.children[i]
+				keyByte := child.keyByte
 				if keyByte > start {
 					continue
 				}
 				if keyByte < stop {
 					return
 				}
-				if !yield(last.children[i]) {
+				if !yield(&rangePath[V]{child, append(key, keyByte)}) {
 					return
 				}
 			}

@@ -9,10 +9,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// adjInt returns a simple adjacency function for testing traversals.
+// adjInt returns a simple adjFunction[int] for testing traversals.
 // If k <= limit, children(k) == [4*k+1, 4*k+2, 4*k+3].
 // If k > limit, children(k) == [].
-func adjInt(limit int) func([]int) iter.Seq[int] {
+func adjInt(limit int) func(int) iter.Seq[int] {
+	if limit < 0 {
+		panic("limit must be non-negative")
+	}
+	return func(node int) iter.Seq[int] {
+		if node > limit {
+			return emptySeqInt
+		}
+		return func(yield func(int) bool) {
+			for child := 4*node + 1; child < 4*node+4; child++ {
+				if !yield(child) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// pathAdjInt returns a pathAdjFunction[int] with the same children as adjInt.
+func pathAdjInt(limit int) func([]int) iter.Seq[int] {
 	if limit < 0 {
 		panic("limit must be non-negative")
 	}
@@ -31,7 +50,7 @@ func adjInt(limit int) func([]int) iter.Seq[int] {
 	}
 }
 
-// Paths for the pre-order traversal of adjInt(10) rooted at 0.
+// Paths for the pre-order traversal of pathAdjInt(10) rooted at 0.
 var expectedPreOrderPaths = [][]int{
 	{0},
 	{0, 1},
@@ -63,7 +82,7 @@ var expectedPreOrderPaths = [][]int{
 	{0, 3, 15},
 }
 
-// Paths for the post-order traversal of adjInt(10) rooted at 0.
+// Paths for the post-order traversal of pathAdjInt(10) rooted at 0.
 var expectedPostOrderPaths = [][]int{
 	{0, 1, 5, 21},
 	{0, 1, 5, 22},
@@ -95,36 +114,70 @@ var expectedPostOrderPaths = [][]int{
 	{0},
 }
 
-func preOrderPaths(root int, adj btrie.TestingAdjFunction) [][]int {
-	paths := [][]int{}
-	for path := range btrie.TestingPreOrder(root, adj) {
-		paths = append(paths, slices.Clone(path))
-	}
-	return paths
+func preOrder(root int, adj btrie.TestingAdjFunction) []int {
+	return slices.Collect(btrie.TestingPreOrder(root, adj))
 }
 
-func postOrderPaths(root int, adj btrie.TestingAdjFunction) [][]int {
-	paths := [][]int{}
-	for path := range btrie.TestingPostOrder(root, adj) {
-		paths = append(paths, slices.Clone(path))
+func postOrder(root int, adj btrie.TestingAdjFunction) []int {
+	return slices.Collect(btrie.TestingPostOrder(root, adj))
+}
+
+func endNodes(paths [][]int) []int {
+	nodes := []int{}
+	for _, path := range paths {
+		nodes = append(nodes, path[len(path)-1])
 	}
-	return paths
+	return nodes
 }
 
 func TestPreOrder(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, [][]int{{0}}, preOrderPaths(0, emptyAdjInt))
-	assert.Equal(t, [][]int{{42}}, preOrderPaths(42, emptyAdjInt))
-	assert.Equal(t, [][]int{{0}, {0, 1}, {0, 2}, {0, 3}}, preOrderPaths(0, adjInt(0)))
-	assert.Equal(t, [][]int{{42}, {42, 169}, {42, 170}, {42, 171}}, preOrderPaths(42, adjInt(50)))
-	assert.Equal(t, expectedPreOrderPaths, preOrderPaths(0, adjInt(10)))
+	assert.Equal(t, []int{0}, preOrder(0, emptyAdjInt))
+	assert.Equal(t, []int{42}, preOrder(42, emptyAdjInt))
+	assert.Equal(t, []int{0, 1, 2, 3}, preOrder(0, adjInt(0)))
+	assert.Equal(t, []int{42, 169, 170, 171}, preOrder(42, adjInt(50)))
+	assert.Equal(t, endNodes(expectedPreOrderPaths), preOrder(0, adjInt(10)))
 }
 
 func TestPostOrder(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, [][]int{{0}}, postOrderPaths(0, emptyAdjInt))
-	assert.Equal(t, [][]int{{42}}, postOrderPaths(42, emptyAdjInt))
-	assert.Equal(t, [][]int{{0, 1}, {0, 2}, {0, 3}, {0}}, postOrderPaths(0, adjInt(0)))
-	assert.Equal(t, [][]int{{42, 169}, {42, 170}, {42, 171}, {42}}, postOrderPaths(42, adjInt(50)))
-	assert.Equal(t, expectedPostOrderPaths, postOrderPaths(0, adjInt(10)))
+	assert.Equal(t, []int{0}, postOrder(0, emptyAdjInt))
+	assert.Equal(t, []int{42}, postOrder(42, emptyAdjInt))
+	assert.Equal(t, []int{1, 2, 3, 0}, postOrder(0, adjInt(0)))
+	assert.Equal(t, []int{169, 170, 171, 42}, postOrder(42, adjInt(50)))
+	assert.Equal(t, endNodes(expectedPostOrderPaths), postOrder(0, adjInt(10)))
+}
+
+func preOrderPaths(root int, pathAdj btrie.TestingPathAdjFunction) [][]int {
+	paths := [][]int{}
+	for path := range btrie.TestingPreOrderPaths(root, pathAdj) {
+		paths = append(paths, slices.Clone(path))
+	}
+	return paths
+}
+
+func postOrderPaths(root int, pathAdj btrie.TestingPathAdjFunction) [][]int {
+	paths := [][]int{}
+	for path := range btrie.TestingPostOrderPaths(root, pathAdj) {
+		paths = append(paths, slices.Clone(path))
+	}
+	return paths
+}
+
+func TestPreOrderPaths(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, [][]int{{0}}, preOrderPaths(0, emptyPathAdjInt))
+	assert.Equal(t, [][]int{{42}}, preOrderPaths(42, emptyPathAdjInt))
+	assert.Equal(t, [][]int{{0}, {0, 1}, {0, 2}, {0, 3}}, preOrderPaths(0, pathAdjInt(0)))
+	assert.Equal(t, [][]int{{42}, {42, 169}, {42, 170}, {42, 171}}, preOrderPaths(42, pathAdjInt(50)))
+	assert.Equal(t, expectedPreOrderPaths, preOrderPaths(0, pathAdjInt(10)))
+}
+
+func TestPostOrderPaths(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, [][]int{{0}}, postOrderPaths(0, emptyPathAdjInt))
+	assert.Equal(t, [][]int{{42}}, postOrderPaths(42, emptyPathAdjInt))
+	assert.Equal(t, [][]int{{0, 1}, {0, 2}, {0, 3}, {0}}, postOrderPaths(0, pathAdjInt(0)))
+	assert.Equal(t, [][]int{{42, 169}, {42, 170}, {42, 171}, {42}}, postOrderPaths(42, pathAdjInt(50)))
+	assert.Equal(t, expectedPostOrderPaths, postOrderPaths(0, pathAdjInt(10)))
 }

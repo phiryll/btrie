@@ -5,20 +5,24 @@ package btrie
 // preventing their inclusion in the public API.
 
 var (
-	TestingKeyName     = keyName
-	TestingPreOrder    = preOrder[int]
-	TestingPostOrder   = postOrder[int]
-	TestingChildBounds = Bounds.childBounds
+	TestingKeyName        = keyName
+	TestingChildBounds    = Bounds.childBounds
+	TestingPreOrder       = preOrder[int]
+	TestingPostOrder      = postOrder[int]
+	TestingPreOrderPaths  = preOrderPaths[int]
+	TestingPostOrderPaths = postOrderPaths[int]
 )
 
 type (
-	TestingAdjFunction = adjFunction[int]
-	TestingTraverser   = traverser[int]
-
 	Cloneable[V any] interface {
 		BTrie[V]
 		Clone() Cloneable[V]
 	}
+
+	TestingAdjFunction     = adjFunction[int]
+	TestingTraverser       = traverser[int]
+	TestingPathAdjFunction = pathAdjFunction[int]
+	TestingPathTraverser   = pathTraverser[int]
 )
 
 // Assumes V is not a reference type.

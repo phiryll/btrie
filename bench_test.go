@@ -91,14 +91,46 @@ func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser)
 			adjInt(1 << 16),
 			adjInt(1 << 20),
 		} {
-			var numPaths int
+			var numNodes int
 			for range traverser(0, adj) {
+				numNodes++
+			}
+			b.Run(fmt.Sprintf("size=%d", numNodes), func(b *testing.B) {
+				b.ResetTimer()
+				for range b.N {
+					for node := range traverser(0, adj) {
+						_ = node
+					}
+				}
+			})
+		}
+	})
+}
+
+func BenchmarkTraverserPaths(b *testing.B) {
+	benchTraverserPaths(b, "kind=pre-order", btrie.TestingPreOrderPaths)
+	benchTraverserPaths(b, "kind=post-order", btrie.TestingPostOrderPaths)
+}
+
+func benchTraverserPaths(b *testing.B, name string, pathTraverser btrie.TestingPathTraverser) {
+	b.Run(name, func(b *testing.B) {
+		for _, pathAdj := range []btrie.TestingPathAdjFunction{
+			emptyPathAdjInt,
+			pathAdjInt(0),
+			pathAdjInt(1 << 4),
+			pathAdjInt(1 << 8),
+			pathAdjInt(1 << 12),
+			pathAdjInt(1 << 16),
+			pathAdjInt(1 << 20),
+		} {
+			var numPaths int
+			for range pathTraverser(0, pathAdj) {
 				numPaths++
 			}
 			b.Run(fmt.Sprintf("size=%d", numPaths), func(b *testing.B) {
 				b.ResetTimer()
 				for range b.N {
-					for path := range traverser(0, adj) {
+					for path := range pathTraverser(0, pathAdj) {
 						_ = path
 					}
 				}
