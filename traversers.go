@@ -6,7 +6,7 @@ import (
 
 // Traversers returning nodes.
 
-// An adjacency function from nodes to adjacent nodes.
+// An adjacency function from a node to adjacent nodes.
 // Adjacency functions should be idempotent.
 type adjFunction[T any] func(T) iter.Seq[T]
 

@@ -139,16 +139,14 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	}
 	return func(yield func([]byte, V) bool) {
 		for path := range pathItr {
-			key := path.key
-			cmp := bounds.Compare(key)
+			cmp := bounds.Compare(path.key)
 			if cmp < 0 {
 				continue
 			}
 			if cmp > 0 {
 				return
 			}
-			last := path.node
-			if last.isTerminal && !yield(bytes.Clone(key), last.value) {
+			if path.node.isTerminal && !yield(bytes.Clone(path.key), path.node.value) {
 				return
 			}
 		}
@@ -158,14 +156,12 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 // Sometimes a child is not within the bounds, but one of its descendants is.
 func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
-		key := path.key
-		start, stop, ok := bounds.childBounds(key)
+		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
 		}
-		last := path.node
 		return func(yield func(*rangePath[V]) bool) {
-			for _, child := range last.children {
+			for _, child := range path.node.children {
 				keyByte := child.keyByte
 				if keyByte < start {
 					continue
@@ -173,7 +169,7 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 				if keyByte > stop {
 					return
 				}
-				if !yield(&rangePath[V]{child, append(key, keyByte)}) {
+				if !yield(&rangePath[V]{child, append(path.key, keyByte)}) {
 					return
 				}
 			}
@@ -184,15 +180,13 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 // Sometimes a child is not within the bounds, but one of its descendants is.
 func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
-		key := path.key
-		start, stop, ok := bounds.childBounds(key)
+		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
 		}
-		last := path.node
 		return func(yield func(*rangePath[V]) bool) {
-			for i := len(last.children) - 1; i >= 0; i-- {
-				child := last.children[i]
+			for i := len(path.node.children) - 1; i >= 0; i-- {
+				child := path.node.children[i]
 				keyByte := child.keyByte
 				if keyByte > start {
 					continue
@@ -200,7 +194,7 @@ func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 				if keyByte < stop {
 					return
 				}
-				if !yield(&rangePath[V]{child, append(key, keyByte)}) {
+				if !yield(&rangePath[V]{child, append(path.key, keyByte)}) {
 					return
 				}
 			}
