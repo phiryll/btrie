@@ -7,10 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
 const fuzzKeyLength = 4
+
+var newPointerTrie = asCloneable(btrie.NewPointerTrie[byte])
 
 // Fuzz testing is very parallel, and tries aren't generally thread-safe.
 // rand.Rand instances are also not thread-safe.

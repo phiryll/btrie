@@ -69,20 +69,16 @@ func TestBoundsBuilder(t *testing.T) {
 func TestBoundsComparePanics(t *testing.T) {
 	t.Parallel()
 	assert.Panics(t, func() {
-		From(nil).To(nil).Compare(nil)
+		forwardAll.Compare(nil)
 	})
 	assert.Panics(t, func() {
-		From(nil).DownTo(nil).Compare(nil)
+		reverseAll.Compare(nil)
 	})
 }
 
 //nolint:funlen
 func TestBoundsCompare(t *testing.T) {
 	t.Parallel()
-	assert.Panics(t, func() {
-		From(nil).To(nil).Compare(nil)
-	})
-
 	for _, tt := range []struct {
 		bounds                Bounds
 		before, within, after keySet

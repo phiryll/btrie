@@ -57,7 +57,7 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 func (r *reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
-	for k, v := range r.Range(From(nil).To(nil)) {
+	for k, v := range r.Range(forwardAll) {
 		fmt.Fprintf(&s, "%s:%v, ", keyName(k), v)
 	}
 	s.WriteString("}")
