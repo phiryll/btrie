@@ -52,7 +52,7 @@ type (
 	testTrie struct {
 		name   string
 		trie   TestBTrie
-		def    implDef
+		def    *implDef
 		config *trieConfig
 	}
 
@@ -74,9 +74,9 @@ const (
 )
 
 var (
-	implDefs = []implDef{
+	implDefs = []*implDef{
 		{"reference", newReference},
-		// {"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
+		{"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
 	}
 
 	From       = btrie.From
@@ -235,6 +235,14 @@ func TestTestTrieConfigRepeatability(t *testing.T) {
 	for i, config := range createTestTrieConfigs() {
 		assert.True(t, reflect.DeepEqual(testTrieConfigs[i], config))
 	}
+}
+
+func createReferenceTrie(config *trieConfig) TestBTrie {
+	trie := newReference()
+	for k, v := range config.entries {
+		trie.Put([]byte(k), v)
+	}
+	return trie
 }
 
 func createTestTries(trieConfigs []*trieConfig) []*testTrie {
@@ -408,10 +416,7 @@ func TestTrie(t *testing.T) {
 			}
 
 			t.Run("op=range", func(t *testing.T) {
-				ref := newReference()
-				for key, value := range test.config.entries {
-					ref.Put([]byte(key), value)
-				}
+				ref := createReferenceTrie(test.config)
 				for _, bounds := range test.config.forward {
 					assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 						"%s", bounds)
