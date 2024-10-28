@@ -17,13 +17,15 @@ import (
 // See keyForFuzzInputs.
 
 const (
-	fuzzTrieSize     = 1 << 20
-	maxFuzzKeyLength = 4
+	fuzzTrieSize      = 1 << 20
+	fuzzRangeTrieSize = 1 << 16 // because Range is an expensive operation
+	maxFuzzKeyLength  = 4
 )
 
 var (
-	// There is currently only one config in this slice.
-	fuzzTrieConfigs = createFuzzTrieConfigs()
+	// There is currently only one config in each of these slices.
+	fuzzTrieConfigs      = createFuzzTrieConfigs(fuzzTrieSize)
+	fuzzRangeTrieConfigs = createFuzzTrieConfigs(fuzzRangeTrieSize)
 )
 
 // Fuzz testing is very parallel, and tries aren't generally thread-safe.
@@ -74,13 +76,13 @@ func keyForFuzzInputs(key uint32, size byte) []byte {
 	return keyBytes[(4 - keySize):] // use low-order bytes
 }
 
-func createFuzzTrieConfigs() []*trieConfig {
+func createFuzzTrieConfigs(trieSize int) []*trieConfig {
 	var config trieConfig
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	config.name = "fuzz"
-	config.trieSize = fuzzTrieSize
+	config.trieSize = trieSize
 	config.entries = map[string]byte{}
-	for count := 0; count < fuzzTrieSize; {
+	for count := 0; count < trieSize; {
 		key := string(randomKey(maxFuzzKeyLength, random))
 		if _, ok := config.entries[key]; !ok {
 			config.entries[key] = randomByte(random)
@@ -153,7 +155,7 @@ func FuzzDelete(f *testing.F) {
 }
 
 func FuzzRange(f *testing.F) {
-	fuzzTries := createTestTries(fuzzTrieConfigs)
+	fuzzTries := createTestTries(fuzzRangeTrieConfigs)
 	ref := fuzzTries[0].trie
 	f.Fuzz(func(t *testing.T, beginKey, endKey uint32, beginKeySize, endKeySize byte) {
 		begin := keyForFuzzInputs(beginKey, beginKeySize)
