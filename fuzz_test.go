@@ -124,13 +124,11 @@ func FuzzPut(f *testing.F) {
 	f.Fuzz(func(t *testing.T, uintKey uint32, keySize, value byte) {
 		key := keyForFuzzInputs(uintKey, keySize)
 		for _, fuzz := range fuzzTries[1:] {
-			refClone := ref.Clone()
-			trie := fuzz.trie.Clone()
-			actual, actualOk := trie.Put(key, value)
-			expected, expectedOk := refClone.Put(key, value)
+			actual, actualOk := fuzz.trie.Put(key, value)
+			expected, expectedOk := ref.Put(key, value)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, keyName(key), value)
 			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
-			actual, ok := trie.Get(key)
+			actual, ok := fuzz.trie.Get(key)
 			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, keyName(key), value)
 			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
 		}
@@ -143,13 +141,11 @@ func FuzzDelete(f *testing.F) {
 	f.Fuzz(func(t *testing.T, uintKey uint32, keySize byte) {
 		key := keyForFuzzInputs(uintKey, keySize)
 		for _, fuzz := range fuzzTries[1:] {
-			refClone := ref.Clone()
-			trie := fuzz.trie.Clone()
-			actual, actualOk := trie.Delete(key)
-			expected, expectedOk := refClone.Delete(key)
+			actual, actualOk := fuzz.trie.Delete(key)
+			expected, expectedOk := ref.Delete(key)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
 			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
-			actual, ok := trie.Get(key)
+			actual, ok := fuzz.trie.Get(key)
 			assert.False(t, ok, "%s: %s", fuzz.def.name, keyName(key))
 			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, keyName(key))
 		}
