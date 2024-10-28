@@ -100,6 +100,7 @@ func TestBaseline(t *testing.T) {
 	refReverse := collect(ref.Range(reverseAll))
 	for _, fuzz := range fuzzTries[1:] {
 		t.Run(fuzz.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, refForward, collect(fuzz.trie.Range(forwardAll)), "forward")
 			assert.Equal(t, refReverse, collect(fuzz.trie.Range(reverseAll)), "reverse")
 		})

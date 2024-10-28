@@ -385,7 +385,6 @@ func TestEmptyKey(t *testing.T) {
 	}
 }
 
-//nolint:gocognit
 func TestTrie(t *testing.T) {
 	t.Parallel()
 	for _, test := range createTestTries(testTrieConfigs) {

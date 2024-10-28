@@ -9,7 +9,7 @@ import (
 
 // A simple implementation, all pointers.
 
-// sub-packages?, because it's helpful to reuse struct names like "root".
+// sub-packages?, because it's helpful to reuse type names like "node".
 // maybe later, at the second implementation.
 
 // NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
