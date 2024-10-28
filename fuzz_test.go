@@ -95,7 +95,8 @@ func TestBaseline(t *testing.T) {
 	ref := createReferenceTrie(fuzzTrieConfigs[0])
 	refForward := collect(ref.Range(forwardAll))
 	refReverse := collect(ref.Range(reverseAll))
-	for _, fuzz := range createTestTries(fuzzTrieConfigs) {
+	fuzzTries := createTestTries(fuzzTrieConfigs)
+	for _, fuzz := range fuzzTries[1:] {
 		t.Run(fuzz.name, func(t *testing.T) {
 			assert.Equal(t, refForward, collect(fuzz.trie.Range(forwardAll)), "forward")
 			assert.Equal(t, refReverse, collect(fuzz.trie.Range(reverseAll)), "reverse")
@@ -108,13 +109,11 @@ func FuzzGet(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	f.Fuzz(func(t *testing.T, uintKey uint32, keySize byte) {
 		key := keyForFuzzInputs(uintKey, keySize)
-		for _, fuzz := range fuzzTries {
-			t.Run(fuzz.name, func(t *testing.T) {
-				actual, actualOk := fuzz.trie.Get(key)
-				expected, expectedOk := ref.Get(key)
-				assert.Equal(t, expectedOk, actualOk, "Get %s", keyName(key))
-				assert.Equal(t, expected, actual, "Get %s", keyName(key))
-			})
+		for _, fuzz := range fuzzTries[1:] {
+			actual, actualOk := fuzz.trie.Get(key)
+			expected, expectedOk := ref.Get(key)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
 		}
 	})
 }
@@ -124,18 +123,16 @@ func FuzzPut(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	f.Fuzz(func(t *testing.T, uintKey uint32, keySize, value byte) {
 		key := keyForFuzzInputs(uintKey, keySize)
-		for _, fuzz := range fuzzTries {
+		for _, fuzz := range fuzzTries[1:] {
 			refClone := ref.Clone()
 			trie := fuzz.trie.Clone()
-			t.Run(fuzz.name, func(t *testing.T) {
-				actual, actualOk := trie.Put(key, value)
-				expected, expectedOk := refClone.Put(key, value)
-				assert.Equal(t, expectedOk, actualOk, "Put %s:%d", keyName(key), value)
-				assert.Equal(t, expected, actual, "Put %s:%d", keyName(key), value)
-				actual, ok := trie.Get(key)
-				assert.True(t, ok, "Put %s:%d", keyName(key), value)
-				assert.Equal(t, value, actual, "Put %s:%d", keyName(key), value)
-			})
+			actual, actualOk := trie.Put(key, value)
+			expected, expectedOk := refClone.Put(key, value)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			actual, ok := trie.Get(key)
+			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
 		}
 	})
 }
@@ -145,18 +142,16 @@ func FuzzDelete(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	f.Fuzz(func(t *testing.T, uintKey uint32, keySize byte) {
 		key := keyForFuzzInputs(uintKey, keySize)
-		for _, fuzz := range fuzzTries {
+		for _, fuzz := range fuzzTries[1:] {
 			refClone := ref.Clone()
 			trie := fuzz.trie.Clone()
-			t.Run(fuzz.name, func(t *testing.T) {
-				actual, actualOk := trie.Delete(key)
-				expected, expectedOk := refClone.Delete(key)
-				assert.Equal(t, expectedOk, actualOk, "Delete %s", keyName(key))
-				assert.Equal(t, expected, actual, "Delete %s", keyName(key))
-				actual, ok := trie.Get(key)
-				assert.False(t, ok, "Delete %s", keyName(key))
-				assert.Equal(t, byte(0), actual, "Delete %s", keyName(key))
-			})
+			actual, actualOk := trie.Delete(key)
+			expected, expectedOk := refClone.Delete(key)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
+			actual, ok := trie.Get(key)
+			assert.False(t, ok, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, keyName(key))
 		}
 	})
 }
@@ -177,11 +172,9 @@ func FuzzRange(f *testing.F) {
 		reverse := From(end).DownTo(begin)
 		refForward := collect(ref.Range(forward))
 		refReverse := collect(ref.Range(reverse))
-		for _, fuzz := range fuzzTries {
-			t.Run(fuzz.name, func(t *testing.T) {
-				assert.Equal(t, refForward, collect(fuzz.trie.Range(forward)), "%s", forward)
-				assert.Equal(t, refReverse, collect(fuzz.trie.Range(reverse)), "%s", reverse)
-			})
+		for _, fuzz := range fuzzTries[1:] {
+			assert.Equal(t, refForward, collect(fuzz.trie.Range(forward)), "%s: %s", fuzz.def.name, forward)
+			assert.Equal(t, refReverse, collect(fuzz.trie.Range(reverse)), "%s: %s", fuzz.def.name, reverse)
 		}
 	})
 }
