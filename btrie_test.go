@@ -385,6 +385,26 @@ func TestEmptyKey(t *testing.T) {
 	}
 }
 
+// If String() exists, make sure it doesn't crash.
+func TestTrieString(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			trie := def.factory()
+			if sTrie, ok := trie.(fmt.Stringer); ok {
+				_ = sTrie.String()
+				trie.Put([]byte{}, 73)
+				_ = sTrie.String()
+				trie.Put([]byte{43, 15}, 94)
+				trie.Put([]byte{126, 73, 12}, 45)
+				_ = sTrie.String()
+			}
+		})
+	}
+}
+
+//nolint:gocognit
 func TestTrie(t *testing.T) {
 	t.Parallel()
 	for _, test := range createTestTries(testTrieConfigs) {
@@ -424,6 +444,21 @@ func TestTrie(t *testing.T) {
 				for _, bounds := range test.config.reverse {
 					assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
 						"%s", bounds)
+				}
+				// need an early yield for test coverage
+				count := 0
+				for range trie.Range(forwardAll) {
+					if count > 3 {
+						break
+					}
+					count++
+				}
+				count = 0
+				for range trie.Range(reverseAll) {
+					if count > 3 {
+						break
+					}
+					count++
 				}
 			})
 		})
