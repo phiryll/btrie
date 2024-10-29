@@ -1,20 +1,20 @@
 package btrie
 
 import (
+	"bytes"
 	"fmt"
 	"iter"
-	"slices"
 	"strings"
 )
 
 // A simple implementation, all pointers.
 
-// sub-packages?, because it's helpful to reuse struct names like "root".
+// sub-packages?, because it's helpful to reuse type names like "node".
 // maybe later, at the second implementation.
 
-// NewSimple returns a new, absurdly simple, and badly coded OrderedBytesMap.
+// NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
-func NewSimple[V any]() OrderedBytesMap[V] {
+func NewPointerTrie[V any]() BTrie[V] {
 	var zero V
 	return &node[V]{zero, nil, 0, false}
 }
@@ -47,15 +47,14 @@ func (n *node[V]) Put(key []byte, value V) (V, bool) {
 		n = n.children[index]
 	}
 	// n = found key, replace value
-	prev := zero
-	var ok bool
 	if n.isTerminal {
-		prev = n.value
-		ok = true
+		prev := n.value
+		n.value = value
+		return prev, true
 	}
 	n.value = value
 	n.isTerminal = true
-	return prev, ok
+	return zero, false
 }
 
 func (n *node[V]) Get(key []byte) (V, bool) {
@@ -82,63 +81,72 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 		panic("key must be non-nil")
 	}
 	var zero V
-	type step struct {
-		n     *node[V]
-		index int // index in n.children where the next keyByte is
+	// Treating the root key as a special case makes the code below simpler wrt pruning.
+	if len(key) == 0 {
+		if !n.isTerminal {
+			return zero, false
+		}
+		prev := n.value
+		n.value = zero
+		n.isTerminal = false
+		return prev, true
 	}
-	path := []step{}
+
+	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
+	prune, pruneIndex := n, 0
 	for _, keyByte := range key {
 		index, found := n.search(keyByte)
 		if !found {
 			return zero, false
 		}
-		path = append(path, step{n, index})
+		// If either n has a value or more than one child, n itself cannot be pruned.
+		// If so, move the maybe-pruned subtree to n.children[index].
+		if n.isTerminal || len(n.children) > 1 {
+			prune, pruneIndex = n, index
+		}
 		n = n.children[index]
 	}
-	// n = found key, path goes from root to n's parent
+	// n = found key
 	if !n.isTerminal {
 		return zero, false
 	}
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	// Remove nodes from the tail of path if possible.
-	for _, parent := range slices.Backward(path) {
-		// if n can't be removed from parent, the loop is done
-		if n.isTerminal || len(n.children) > 0 {
-			break
-		}
-		n = parent.n
-		index := parent.index
-		n.children = append(n.children[:index], n.children[index+1:]...)
+	if len(n.children) == 0 {
+		prune.children = append(prune.children[:pruneIndex], prune.children[pruneIndex+1:]...)
 	}
 	return prev, true
 }
 
+// An iter.Seq of these is returned from the adjFunction used internally by Range.
+// key = {node.keyByte on path from root to node}
+// It is cached here for efficiency, otherwise an iter.Seq of []*node[V] would be used directly.
+// Note that the key must be cloned when yielded from Range.
+type rangePath[V any] struct {
+	node *node[V]
+	key  []byte
+}
+
 func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
-	var pathItr iter.Seq[[]*node[V]]
+	root := rangePath[V]{n, []byte{}}
+	var pathItr iter.Seq[*rangePath[V]]
 	if bounds.IsReverse() {
-		pathItr = postOrder(n, reverseChildAdj[V](bounds))
+		pathItr = postOrder(&root, reverseChildAdj[V](bounds))
 	} else {
-		pathItr = preOrder(n, forwardChildAdj[V](bounds))
+		pathItr = preOrder(&root, forwardChildAdj[V](bounds))
 	}
 	return func(yield func([]byte, V) bool) {
-		// path is a []*node[V], with path[0] being the root
 		for path := range pathItr {
-			key := []byte{}
-			for _, n := range path[1:] {
-				key = append(key, n.keyByte)
-			}
-			cmp := bounds.Compare(key)
+			cmp := bounds.Compare(path.key)
 			if cmp < 0 {
 				continue
 			}
 			if cmp > 0 {
 				return
 			}
-			last := path[len(path)-1]
-			if last.isTerminal && !yield(key, last.value) {
+			if path.node.isTerminal && !yield(bytes.Clone(path.key), path.node.value) {
 				return
 			}
 		}
@@ -146,27 +154,22 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 }
 
 // Sometimes a child is not within the bounds, but one of its descendants is.
-func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
-	return func(path []*node[V]) iter.Seq[*node[V]] {
-		key := []byte{}
-		for _, n := range path[1:] {
-			key = append(key, n.keyByte)
-		}
-		start, stop, ok := bounds.childBounds(key)
+func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
+	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
+		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
 		}
-		last := path[len(path)-1]
-		return func(yield func(*node[V]) bool) {
-			for i := range len(last.children) {
-				keyByte := last.children[i].keyByte
+		return func(yield func(*rangePath[V]) bool) {
+			for _, child := range path.node.children {
+				keyByte := child.keyByte
 				if keyByte < start {
 					continue
 				}
 				if keyByte > stop {
 					return
 				}
-				if !yield(last.children[i]) {
+				if !yield(&rangePath[V]{child, append(path.key, keyByte)}) {
 					return
 				}
 			}
@@ -175,27 +178,23 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
 }
 
 // Sometimes a child is not within the bounds, but one of its descendants is.
-func reverseChildAdj[V any](bounds Bounds) adjFunction[*node[V]] {
-	return func(path []*node[V]) iter.Seq[*node[V]] {
-		key := []byte{}
-		for _, n := range path[1:] {
-			key = append(key, n.keyByte)
-		}
-		start, stop, ok := bounds.childBounds(key)
+func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
+	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
+		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
 		}
-		last := path[len(path)-1]
-		return func(yield func(*node[V]) bool) {
-			for i := len(last.children) - 1; i >= 0; i-- {
-				keyByte := last.children[i].keyByte
+		return func(yield func(*rangePath[V]) bool) {
+			for i := len(path.node.children) - 1; i >= 0; i-- {
+				child := path.node.children[i]
+				keyByte := child.keyByte
 				if keyByte > start {
 					continue
 				}
 				if keyByte < stop {
 					return
 				}
-				if !yield(last.children[i]) {
+				if !yield(&rangePath[V]{child, append(path.key, keyByte)}) {
 					return
 				}
 			}

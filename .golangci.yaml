@@ -83,8 +83,6 @@ linters:
   # Disable specific linter
   # https://golangci-lint.run/usage/linters/#disabled-by-default
   disable:
-    # temporary, lots of TODOs in the code right now
-    - godox
     # causes problems if golangci-lint is compiled with a different version of go
     - typecheck
     # not needed/wanted in this project

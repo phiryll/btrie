@@ -22,6 +22,7 @@ rm -f btrie.test
 go test -c
 
 files=$(ggrep -r --include='**_test.go' -l 'func Bench' .)
+count=${1:-20}
 
 for file in ${files}
 do
@@ -30,6 +31,6 @@ do
     do
         echo "$func in $file"
         test_name=${func#Benchmark}
-        go test -bench "${func}$" -benchmem -timeout 0 -count 20 > benchmarks/${test_name}.tmp
+        go test -bench "${func}$" -benchmem -timeout 0 -count=${count} > benchmarks/${test_name}.tmp
     done
 done

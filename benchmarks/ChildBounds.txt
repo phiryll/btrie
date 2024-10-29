@@ -1,0 +1,46 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/phiryll/btrie
+cpu: Apple M1 Max
+BenchmarkChildBounds/dir=forward-10         	   73886	     16193 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   73942	     16202 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   73902	     16205 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74230	     16232 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74084	     16173 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74421	     16151 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74007	     16146 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74024	     16092 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74607	     16097 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74328	     16038 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74025	     16133 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74710	     16175 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74836	     15994 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   75274	     16094 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74876	     15971 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   75553	     16055 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   75402	     15921 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   75355	     15948 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74467	     16020 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=forward-10         	   74749	     15952 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73128	     16190 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73562	     16174 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73980	     16159 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73884	     16158 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73966	     16173 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73890	     16196 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73141	     16180 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73843	     16163 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73297	     16363 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   74182	     16169 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   72910	     16163 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73898	     16267 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   74103	     16176 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73864	     16156 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73956	     16368 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   74120	     16174 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   73886	     16171 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   74094	     16152 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   74155	     16156 ns/op	       0 B/op	       0 allocs/op
+BenchmarkChildBounds/dir=reverse-10         	   74131	     16168 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/phiryll/btrie	89.508s
