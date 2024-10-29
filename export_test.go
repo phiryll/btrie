@@ -26,13 +26,13 @@ type (
 )
 
 // Assumes V is not a reference type.
-func (n *node[V]) Clone() Cloneable[V] {
+func (n *ptrTrieNode[V]) Clone() Cloneable[V] {
 	return clonePointerTrie(n)
 }
 
-func clonePointerTrie[V any](n *node[V]) *node[V] {
+func clonePointerTrie[V any](n *ptrTrieNode[V]) *ptrTrieNode[V] {
 	clone := *n
-	clone.children = make([]*node[V], len(n.children))
+	clone.children = make([]*ptrTrieNode[V], len(n.children))
 	for i, child := range n.children {
 		clone.children[i] = clonePointerTrie(child)
 	}
