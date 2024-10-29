@@ -158,7 +158,8 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
-			return emptySeq
+			// Unreachable because of how the trie is traversed forward.
+			panic("unreachable")
 		}
 		return func(yield func(*rangePath[V]) bool) {
 			for _, child := range path.node.children {

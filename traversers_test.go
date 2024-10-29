@@ -137,6 +137,13 @@ func TestPreOrder(t *testing.T) {
 	assert.Equal(t, []int{0, 1, 2, 3}, preOrder(0, adjInt(0)))
 	assert.Equal(t, []int{42, 169, 170, 171}, preOrder(42, adjInt(50)))
 	assert.Equal(t, endNodes(expectedPreOrderPaths), preOrder(0, adjInt(10)))
+
+	// need an early yield for test coverage
+	for node := range btrie.TestingPreOrder(0, adjInt(10)) {
+		if node == 7 {
+			break
+		}
+	}
 }
 
 func TestPostOrder(t *testing.T) {
@@ -146,6 +153,13 @@ func TestPostOrder(t *testing.T) {
 	assert.Equal(t, []int{1, 2, 3, 0}, postOrder(0, adjInt(0)))
 	assert.Equal(t, []int{169, 170, 171, 42}, postOrder(42, adjInt(50)))
 	assert.Equal(t, endNodes(expectedPostOrderPaths), postOrder(0, adjInt(10)))
+
+	// need an early yield for test coverage
+	for node := range btrie.TestingPostOrder(0, adjInt(10)) {
+		if node == 7 {
+			break
+		}
+	}
 }
 
 func preOrderPaths(root int, pathAdj btrie.TestingPathAdjFunction) [][]int {
@@ -171,6 +185,13 @@ func TestPreOrderPaths(t *testing.T) {
 	assert.Equal(t, [][]int{{0}, {0, 1}, {0, 2}, {0, 3}}, preOrderPaths(0, pathAdjInt(0)))
 	assert.Equal(t, [][]int{{42}, {42, 169}, {42, 170}, {42, 171}}, preOrderPaths(42, pathAdjInt(50)))
 	assert.Equal(t, expectedPreOrderPaths, preOrderPaths(0, pathAdjInt(10)))
+
+	// need an early yield for test coverage
+	for path := range btrie.TestingPreOrderPaths(0, pathAdjInt(10)) {
+		if path[len(path)-1] == 7 {
+			break
+		}
+	}
 }
 
 func TestPostOrderPaths(t *testing.T) {
@@ -180,4 +201,11 @@ func TestPostOrderPaths(t *testing.T) {
 	assert.Equal(t, [][]int{{0, 1}, {0, 2}, {0, 3}, {0}}, postOrderPaths(0, pathAdjInt(0)))
 	assert.Equal(t, [][]int{{42, 169}, {42, 170}, {42, 171}, {42}}, postOrderPaths(42, pathAdjInt(50)))
 	assert.Equal(t, expectedPostOrderPaths, postOrderPaths(0, pathAdjInt(10)))
+
+	// need an early yield for test coverage
+	for path := range btrie.TestingPostOrderPaths(0, pathAdjInt(10)) {
+		if path[len(path)-1] == 7 {
+			break
+		}
+	}
 }
