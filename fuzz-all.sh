@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 rm -f btrie.test
 go test -c
 
-fuzzTime=${1:-10}
+fuzzTime=${1:-30}
 
 files=$(ggrep -r --include='**_test.go' --files-with-matches 'func Fuzz' .)
 
