@@ -223,15 +223,22 @@ func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
 }
 
 func (n *ptrTrieNode[V]) search(byt byte) (int, bool) {
-	// This is weirdly slightly faster than sort.Search.
-	for i := range len(n.children) {
-		keyByte := n.children[i].keyByte
-		if byt == keyByte {
-			return i, true
+	// Copied and tweaked from sort.Search. Inlining this is much, much faster.
+	// Invariant: child[i-1] < byt <= child[j]
+	i, j := 0, len(n.children)
+	for i < j {
+		//nolint:gosec
+		h := int(uint(i+j) >> 1) // avoid overflow when computing h
+		// i ≤ h < j
+		childByte := n.children[h].keyByte
+		if childByte == byt {
+			return h, true
 		}
-		if byt < keyByte {
-			return i, false
+		if childByte < byt {
+			i = h + 1 // preserves child[i-1] < byt
+		} else {
+			j = h // preserves byt <= child[j]
 		}
 	}
-	return len(n.children), false
+	return i, false
 }
