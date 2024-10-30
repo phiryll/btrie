@@ -95,7 +95,7 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 		}
 		// If either n has a value or more than one child, n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if n.isTerminal || n.numChildren() > 1 {
+		if n.isTerminal || n.cardinality() > 1 {
 			prune, pruneIndex = n, keyByte
 		}
 		n = n.children[keyByte]
@@ -107,16 +107,20 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	if n.numChildren() == 0 {
+	if n.cardinality() == 0 {
 		prune.children[pruneIndex] = nil
 	}
 	return prev, true
 }
 
-func (n *arrayTrieNode[V]) numChildren() int {
+// Returns 0, 1, or 2 (for >= 2).
+func (n *arrayTrieNode[V]) cardinality() int {
 	var count int
 	for _, child := range &n.children {
 		if child != nil {
+			if count >= 1 {
+				return 2
+			}
 			count++
 		}
 	}
