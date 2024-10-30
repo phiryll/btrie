@@ -16,6 +16,6 @@ rm -f btrie.test
 go test -c
 
 tests=${1:-Get}
-fuzzTime=${2:-10}
+fuzzTime=${2:-30}
 
 go test -fuzz=$tests -fuzztime=${fuzzTime}s

@@ -7,26 +7,41 @@ import (
 	"strings"
 )
 
-// A simple implementation, all pointers.
-
-// sub-packages?, because it's helpful to reuse type names like "node".
-// maybe later, at the second implementation.
-
-// NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
-// This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
-func NewPointerTrie[V any]() BTrie[V] {
-	var zero V
-	return &node[V]{zero, nil, 0, false}
-}
-
-type node[V any] struct {
+type ptrTrieNode[V any] struct {
 	value      V // valid only if isTerminal is true
-	children   []*node[V]
+	children   []*ptrTrieNode[V]
 	keyByte    byte
 	isTerminal bool
 }
 
-func (n *node[V]) Put(key []byte, value V) (V, bool) {
+// NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
+// Pointers to children are stored densely in slices.
+// This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
+func NewPointerTrie[V any]() BTrie[V] {
+	var zero V
+	return &ptrTrieNode[V]{zero, nil, 0, false}
+}
+
+func (n *ptrTrieNode[V]) Get(key []byte) (V, bool) {
+	if key == nil {
+		panic("key must be non-nil")
+	}
+	var zero V
+	for _, keyByte := range key {
+		index, found := n.search(keyByte)
+		if !found {
+			return zero, false
+		}
+		n = n.children[index]
+	}
+	// n = found key
+	if n.isTerminal {
+		return n.value, true
+	}
+	return zero, false
+}
+
+func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}
@@ -35,9 +50,9 @@ func (n *node[V]) Put(key []byte, value V) (V, bool) {
 		index, found := n.search(keyByte)
 		if !found {
 			k := len(key) - 1
-			child := &node[V]{value, nil, key[k], true}
+			child := &ptrTrieNode[V]{value, nil, key[k], true}
 			for k--; k >= i; k-- {
-				child = &node[V]{zero, []*node[V]{child}, key[k], false}
+				child = &ptrTrieNode[V]{zero, []*ptrTrieNode[V]{child}, key[k], false}
 			}
 			n.children = append(n.children, child)
 			copy(n.children[index+1:], n.children[index:])
@@ -57,26 +72,7 @@ func (n *node[V]) Put(key []byte, value V) (V, bool) {
 	return zero, false
 }
 
-func (n *node[V]) Get(key []byte) (V, bool) {
-	if key == nil {
-		panic("key must be non-nil")
-	}
-	var zero V
-	for _, keyByte := range key {
-		index, found := n.search(keyByte)
-		if !found {
-			return zero, false
-		}
-		n = n.children[index]
-	}
-	// n = found key
-	if n.isTerminal {
-		return n.value, true
-	}
-	return zero, false
-}
-
-func (n *node[V]) Delete(key []byte) (V, bool) {
+func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}
@@ -120,22 +116,22 @@ func (n *node[V]) Delete(key []byte) (V, bool) {
 }
 
 // An iter.Seq of these is returned from the adjFunction used internally by Range.
-// key = {node.keyByte on path from root to node}
-// It is cached here for efficiency, otherwise an iter.Seq of []*node[V] would be used directly.
+// key = path from root to node
+// It is cached here for efficiency, otherwise an iter.Seq of []*ptrTrieNode[V] would be used directly.
 // Note that the key must be cloned when yielded from Range.
-type rangePath[V any] struct {
-	node *node[V]
+type ptrTrieRangePath[V any] struct {
+	node *ptrTrieNode[V]
 	key  []byte
 }
 
-func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
+func (n *ptrTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
-	root := rangePath[V]{n, []byte{}}
-	var pathItr iter.Seq[*rangePath[V]]
+	root := ptrTrieRangePath[V]{n, []byte{}}
+	var pathItr iter.Seq[*ptrTrieRangePath[V]]
 	if bounds.IsReverse() {
-		pathItr = postOrder(&root, reverseChildAdj[V](bounds))
+		pathItr = postOrder(&root, ptrTrieReverseAdj[V](bounds))
 	} else {
-		pathItr = preOrder(&root, forwardChildAdj[V](bounds))
+		pathItr = preOrder(&root, ptrTrieForwardAdj[V](bounds))
 	}
 	return func(yield func([]byte, V) bool) {
 		for path := range pathItr {
@@ -153,15 +149,15 @@ func (n *node[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	}
 }
 
-// Sometimes a child is not within the bounds, but one of its descendants is.
-func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
-	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
+func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
+	// Sometimes a child is not within the bounds, but one of its descendants is.
+	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			// Unreachable because of how the trie is traversed forward.
 			panic("unreachable")
 		}
-		return func(yield func(*rangePath[V]) bool) {
+		return func(yield func(*ptrTrieRangePath[V]) bool) {
 			for _, child := range path.node.children {
 				keyByte := child.keyByte
 				if keyByte < start {
@@ -170,7 +166,7 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 				if keyByte > stop {
 					return
 				}
-				if !yield(&rangePath[V]{child, append(path.key, keyByte)}) {
+				if !yield(&ptrTrieRangePath[V]{child, append(path.key, keyByte)}) {
 					return
 				}
 			}
@@ -178,14 +174,14 @@ func forwardChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 	}
 }
 
-// Sometimes a child is not within the bounds, but one of its descendants is.
-func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
-	return func(path *rangePath[V]) iter.Seq[*rangePath[V]] {
+func ptrTrieReverseAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
+	// Sometimes a child is not within the bounds, but one of its descendants is.
+	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
 		}
-		return func(yield func(*rangePath[V]) bool) {
+		return func(yield func(*ptrTrieRangePath[V]) bool) {
 			for i := len(path.node.children) - 1; i >= 0; i-- {
 				child := path.node.children[i]
 				keyByte := child.keyByte
@@ -195,7 +191,7 @@ func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 				if keyByte < stop {
 					return
 				}
-				if !yield(&rangePath[V]{child, append(path.key, keyByte)}) {
+				if !yield(&ptrTrieRangePath[V]{child, append(path.key, keyByte)}) {
 					return
 				}
 			}
@@ -203,14 +199,14 @@ func reverseChildAdj[V any](bounds Bounds) adjFunction[*rangePath[V]] {
 	}
 }
 
-func (n *node[V]) String() string {
+func (n *ptrTrieNode[V]) String() string {
 	var s strings.Builder
 	n.printNode(&s, "")
 	return s.String()
 }
 
 //nolint:revive
-func (n *node[V]) printNode(s *strings.Builder, indent string) {
+func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
 	if indent == "" {
 		s.WriteString("[]")
 	} else {
@@ -226,7 +222,7 @@ func (n *node[V]) printNode(s *strings.Builder, indent string) {
 	}
 }
 
-func (n *node[V]) search(byt byte) (int, bool) {
+func (n *ptrTrieNode[V]) search(byt byte) (int, bool) {
 	// This is weirdly slightly faster than sort.Search.
 	for i := range len(n.children) {
 		keyByte := n.children[i].keyByte

@@ -78,6 +78,7 @@ var (
 		// fuzz tests assume reference is first
 		{"reference", newReference},
 		{"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
+		{"array-trie", asCloneable(btrie.NewArrayTrie[byte])},
 	}
 
 	From       = btrie.From
@@ -153,9 +154,10 @@ var (
 
 func asCloneable(factory func() btrie.BTrie[byte]) func() TestBTrie {
 	return func() TestBTrie {
-		cloneable, ok := factory().(btrie.Cloneable[byte])
+		trie := factory()
+		cloneable, ok := trie.(TestBTrie)
 		if !ok {
-			panic("not Cloneable")
+			panic(fmt.Sprintf("%T is not Cloneable", trie))
 		}
 		return cloneable
 	}
