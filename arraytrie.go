@@ -8,19 +8,34 @@ import (
 )
 
 type arrayTrieNode[V any] struct {
-	value      V // valid only if isTerminal is true
-	children   [256]*arrayTrieNode[V]
+	value      V                       // valid only if isTerminal is true
+	children   *[256]*arrayTrieNode[V] // only non-nil if there are children
 	isTerminal bool
 }
 
-func newArrayTrieNode[V any](value V, isTerminal bool) *arrayTrieNode[V] {
-	return &arrayTrieNode[V]{value, [256]*arrayTrieNode[V]{}, isTerminal}
+// Returns 0, 1, or 2 (for >= 2).
+func (n *arrayTrieNode[V]) cardinality() int {
+	if n.children == nil {
+		return 0
+	}
+	var count int
+	for _, child := range n.children {
+		if child == nil {
+			continue
+		}
+		if count >= 1 {
+			//nolint:mnd
+			return 2
+		}
+		count++
+	}
+	return count
 }
 
 // NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
 func NewArrayTrie[V any]() BTrie[V] {
 	var zero V
-	return newArrayTrieNode(zero, false)
+	return &arrayTrieNode[V]{zero, nil, false}
 }
 
 func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {
@@ -29,6 +44,9 @@ func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {
 	}
 	var zero V
 	for _, keyByte := range key {
+		if n.children == nil {
+			return zero, false
+		}
 		n = n.children[keyByte]
 		if n == nil {
 			return zero, false
@@ -47,11 +65,14 @@ func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
 	}
 	var zero V
 	for i, keyByte := range key {
+		if n.children == nil {
+			n.children = &[256]*arrayTrieNode[V]{}
+		}
 		if n.children[keyByte] == nil {
 			k := len(key) - 1
-			child := newArrayTrieNode(value, true)
+			child := &arrayTrieNode[V]{value, nil, true}
 			for k--; k >= i; k-- {
-				parent := newArrayTrieNode(zero, false)
+				parent := &arrayTrieNode[V]{zero, &[256]*arrayTrieNode[V]{}, false}
 				parent.children[key[k+1]] = child
 				child = parent
 			}
@@ -90,7 +111,7 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
 	prune, pruneIndex := n, byte(0)
 	for _, keyByte := range key {
-		if n.children[keyByte] == nil {
+		if n.children == nil || n.children[keyByte] == nil {
 			return zero, false
 		}
 		// If either n has a value or more than one child, n itself cannot be pruned.
@@ -111,20 +132,6 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 		prune.children[pruneIndex] = nil
 	}
 	return prev, true
-}
-
-// Returns 0, 1, or 2 (for >= 2).
-func (n *arrayTrieNode[V]) cardinality() int {
-	var count int
-	for _, child := range &n.children {
-		if child != nil {
-			if count >= 1 {
-				return 2
-			}
-			count++
-		}
-	}
-	return count
 }
 
 // An iter.Seq of these is returned from the adjFunction used internally by Range.
@@ -167,18 +174,20 @@ func (n *arrayTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	}
 }
 
-// Sometimes a child is not within the bounds, but one of its descendants is.
-//
 //nolint:gocognit
 func arrayTrieForwardAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V]] {
+	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
+		if path.node.children == nil {
+			return emptySeq
+		}
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			// Unreachable because of how the trie is traversed forward.
 			panic("unreachable")
 		}
 		return func(yield func(*arrayTrieRangePath[V]) bool) {
-			for i, child := range &path.node.children {
+			for i, child := range path.node.children {
 				if child == nil {
 					continue
 				}
@@ -197,11 +206,13 @@ func arrayTrieForwardAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V
 	}
 }
 
-// Sometimes a child is not within the bounds, but one of its descendants is.
-//
 //nolint:gocognit
 func arrayTrieReverseAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V]] {
+	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
+		if path.node.children == nil {
+			return emptySeq
+		}
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
@@ -245,7 +256,10 @@ func (n *arrayTrieNode[V]) printNode(s *strings.Builder, keyByte byte, indent st
 	} else {
 		s.WriteString("\n")
 	}
-	for i, child := range &n.children {
+	if n.children == nil {
+		return
+	}
+	for i, child := range n.children {
 		if child != nil {
 			child.printNode(s, byte(i), indent+"  ")
 		}

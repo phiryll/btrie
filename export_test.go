@@ -49,8 +49,13 @@ func cloneArrayTrie[V any](n *arrayTrieNode[V]) *arrayTrieNode[V] {
 		return nil
 	}
 	clone := *n
-	for i, child := range &n.children {
-		clone.children[i] = cloneArrayTrie(child)
+	if n.children != nil {
+		clone.children = &[256]*arrayTrieNode[V]{}
+		for i, child := range n.children {
+			if child != nil {
+				clone.children[i] = cloneArrayTrie(child)
+			}
+		}
 	}
 	return &clone
 }

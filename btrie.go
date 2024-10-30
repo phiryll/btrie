@@ -31,7 +31,7 @@ type BTrie[V any] interface {
 	Range(bounds Bounds) iter.Seq2[[]byte, V]
 }
 
-func emptySeq[T any](_ func(T) bool) {}
+func emptySeq[V any](_ func(V) bool) {}
 
 func keyName(key []byte) string {
 	if key == nil {
