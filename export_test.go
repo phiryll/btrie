@@ -38,3 +38,19 @@ func clonePointerTrie[V any](n *ptrTrieNode[V]) *ptrTrieNode[V] {
 	}
 	return &clone
 }
+
+// Assumes V is not a reference type.
+func (n *arrayTrieNode[V]) Clone() Cloneable[V] {
+	return cloneArrayTrie(n)
+}
+
+func cloneArrayTrie[V any](n *arrayTrieNode[V]) *arrayTrieNode[V] {
+	if n == nil {
+		return nil
+	}
+	clone := *n
+	for i, child := range &n.children {
+		clone.children[i] = cloneArrayTrie(child)
+	}
+	return &clone
+}

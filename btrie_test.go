@@ -78,6 +78,7 @@ var (
 		// fuzz tests assume reference is first
 		{"reference", newReference},
 		{"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
+		{"array-trie", asCloneable(btrie.NewArrayTrie[byte])},
 	}
 
 	From       = btrie.From
