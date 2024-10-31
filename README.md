@@ -2,6 +2,8 @@
 
 Binary Tries
 
+**UNDER DEVELOPMENT, IT WILL CHANGE**
+
 Btrie is a library with a few binary trie implementations.
 These are roughly equivalent to an ordered `map[[]byte]<value type>`,
 but without a `map`'s syntax or its full semantics.
