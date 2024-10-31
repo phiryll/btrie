@@ -605,6 +605,21 @@ func testFail7(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
+func testFail8(t *testing.T, factory func() TestBTrie) {
+	t.Run("fail 8", func(t *testing.T) {
+		t.Parallel()
+		trie := factory()
+		trie.Put([]byte{}, 1)
+		trie.Put([]byte{0}, 3)
+		trie.Put([]byte{0x23}, 4)
+		trie.Put([]byte{0x23, 0}, 5)
+		trie.Put([]byte{0x23, 0xA5}, 6)
+		assert.Equal(t,
+			[]entry{{[]byte{0x23, 0}, 5}},
+			collect(trie.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0}))))
+	})
+}
+
 func TestPastFailures(t *testing.T) {
 	t.Parallel()
 	for _, def := range implDefs {
@@ -618,6 +633,7 @@ func TestPastFailures(t *testing.T) {
 			testFail5(t, factory)
 			testFail6(t, factory)
 			testFail7(t, factory)
+			testFail8(t, factory)
 		})
 	}
 }
