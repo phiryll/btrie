@@ -110,7 +110,9 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 	n.value = zero
 	n.isTerminal = false
 	if len(n.children) == 0 {
-		prune.children = append(prune.children[:pruneIndex], prune.children[pruneIndex+1:]...)
+		copy(prune.children[pruneIndex:], prune.children[pruneIndex+1:])
+		prune.children[len(prune.children)-1] = nil
+		prune.children = prune.children[:len(prune.children)-1]
 	}
 	return prev, true
 }
