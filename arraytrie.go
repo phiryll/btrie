@@ -97,7 +97,7 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 		panic("key must be non-nil")
 	}
 	var zero V
-	// Treating the root key as a special case makes the code below simpler wrt pruning.
+	// Treating the root key as a special case is faster.
 	if len(key) == 0 {
 		if !n.isTerminal {
 			return zero, false
