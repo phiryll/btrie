@@ -152,6 +152,9 @@ func (n *ptrTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
+		if len(path.node.children) == 0 {
+			return emptySeq
+		}
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			// Unreachable because of how the trie is traversed forward.
@@ -177,6 +180,9 @@ func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
 func ptrTrieReverseAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
+		if len(path.node.children) == 0 {
+			return emptySeq
+		}
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
