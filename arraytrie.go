@@ -161,12 +161,6 @@ func (n *arrayTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 			if cmp > 0 {
 				return
 			}
-			if path.node == nil {
-				panic("path.node is nil")
-			}
-			if path.key == nil {
-				panic("path.key is nil")
-			}
 			if path.node.isTerminal && !yield(bytes.Clone(path.key), path.node.value) {
 				return
 			}
@@ -187,18 +181,11 @@ func arrayTrieForwardAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V
 			panic("unreachable")
 		}
 		return func(yield func(*arrayTrieRangePath[V]) bool) {
-			for i, child := range path.node.children {
+			for i, child := range path.node.children[start : int(stop)+1] {
 				if child == nil {
 					continue
 				}
-				keyByte := byte(i)
-				if keyByte < start {
-					continue
-				}
-				if keyByte > stop {
-					return
-				}
-				if !yield(&arrayTrieRangePath[V]{child, append(path.key, keyByte)}) {
+				if !yield(&arrayTrieRangePath[V]{child, append(path.key, start+byte(i))}) {
 					return
 				}
 			}
@@ -218,19 +205,13 @@ func arrayTrieReverseAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V
 			return emptySeq
 		}
 		return func(yield func(*arrayTrieRangePath[V]) bool) {
-			for i := 255; i >= 0; i-- {
-				child := path.node.children[i]
+			children := path.node.children[stop : int(start)+1]
+			for i := len(children) - 1; i >= 0; i-- {
+				child := children[i]
 				if child == nil {
 					continue
 				}
-				keyByte := byte(i)
-				if keyByte > start {
-					continue
-				}
-				if keyByte < stop {
-					return
-				}
-				if !yield(&arrayTrieRangePath[V]{child, append(path.key, keyByte)}) {
+				if !yield(&arrayTrieRangePath[V]{child, append(path.key, stop+byte(i))}) {
 					return
 				}
 			}
