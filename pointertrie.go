@@ -219,7 +219,7 @@ func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
 	if indent == "" {
 		s.WriteString("[]")
 	} else {
-		fmt.Fprintf(s, "%s%X", indent, n.keyByte)
+		fmt.Fprintf(s, "%s%02X", indent, n.keyByte)
 	}
 	if n.isTerminal {
 		fmt.Fprintf(s, ": %v\n", n.value)

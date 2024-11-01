@@ -230,7 +230,7 @@ func (n *arrayTrieNode[V]) printNode(s *strings.Builder, keyByte byte, indent st
 	if indent == "" {
 		s.WriteString("[]")
 	} else {
-		fmt.Fprintf(s, "%s%X", indent, keyByte)
+		fmt.Fprintf(s, "%s%02X", indent, keyByte)
 	}
 	if n.isTerminal {
 		fmt.Fprintf(s, ": %v\n", n.value)
