@@ -77,19 +77,9 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 		panic("key must be non-nil")
 	}
 	var zero V
-	// Treating the root key as a special case is faster.
-	if len(key) == 0 {
-		if !n.isTerminal {
-			return zero, false
-		}
-		prev := n.value
-		n.value = zero
-		n.isTerminal = false
-		return prev, true
-	}
-
 	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
-	prune, pruneIndex := n, 0
+	var prune *ptrTrieNode[V]
+	pruneIndex := 0
 	for _, keyByte := range key {
 		index, found := n.search(keyByte)
 		if !found {
@@ -109,7 +99,7 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	if len(n.children) == 0 {
+	if prune != nil && len(n.children) == 0 {
 		children := prune.children
 		copy(children[pruneIndex:], children[pruneIndex+1:])
 		children[len(children)-1] = nil
