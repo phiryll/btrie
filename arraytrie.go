@@ -156,7 +156,6 @@ func (n *arrayTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	}
 }
 
-//nolint:gocognit
 func arrayTrieForwardAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
@@ -181,7 +180,6 @@ func arrayTrieForwardAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V
 	}
 }
 
-//nolint:gocognit
 func arrayTrieReverseAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
