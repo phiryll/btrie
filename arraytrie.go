@@ -97,14 +97,15 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 	}
 	var zero V
 	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
-	prune, pruneIndex := n, byte(0)
-	for _, keyByte := range key {
+	var prune *arrayTrieNode[V]
+	var pruneIndex byte
+	for i, keyByte := range key {
 		if n.children == nil || n.children[keyByte] == nil {
 			return zero, false
 		}
-		// If either n has a value or more than one child, n itself cannot be pruned.
+		// If either n is the root, or n has a value, or n has more than one child, n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if n.isTerminal || n.cardinality() > 1 {
+		if i == 0 || n.isTerminal || n.cardinality() > 1 {
 			prune, pruneIndex = n, keyByte
 		}
 		n = n.children[keyByte]

@@ -79,15 +79,15 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 	var zero V
 	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
 	var prune *ptrTrieNode[V]
-	pruneIndex := 0
-	for _, keyByte := range key {
+	var pruneIndex int
+	for i, keyByte := range key {
 		index, found := n.search(keyByte)
 		if !found {
 			return zero, false
 		}
-		// If either n has a value or more than one child, n itself cannot be pruned.
+		// If either n is the root, or n has a value, or n has more than one child, n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if n.isTerminal || len(n.children) > 1 {
+		if i == 0 || n.isTerminal || len(n.children) > 1 {
 			prune, pruneIndex = n, index
 		}
 		n = n.children[index]
@@ -99,7 +99,7 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	if prune != nil && len(n.children) == 0 {
+	if len(key) > 0 && len(n.children) == 0 {
 		children := prune.children
 		copy(children[pruneIndex:], children[pruneIndex+1:])
 		children[len(children)-1] = nil

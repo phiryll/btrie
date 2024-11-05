@@ -620,6 +620,27 @@ func testFail8(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
+func testFail9(t *testing.T, factory func() TestBTrie) {
+	// Test that removing the last value on a path removes the path.
+	// Definite hack to detect this one,
+	// but there's no good way to test this using the public API.
+	// The alternative would be to have implementation-specific tests,
+	// which is probably a better approach, but this works for now.
+	t.Run("fail 9", func(t *testing.T) {
+		t.Parallel()
+		trie := factory()
+		sTrie, ok := trie.(fmt.Stringer)
+		if !ok {
+			t.Skipf("%T does not implement Stringer", trie)
+		}
+		expected := sTrie.String()
+		key := []byte{0x23}
+		trie.Put(key, 6)
+		trie.Delete(key)
+		assert.Equal(t, expected, sTrie.String())
+	})
+}
+
 func TestPastFailures(t *testing.T) {
 	t.Parallel()
 	for _, def := range implDefs {
@@ -634,6 +655,7 @@ func TestPastFailures(t *testing.T) {
 			testFail6(t, factory)
 			testFail7(t, factory)
 			testFail8(t, factory)
+			testFail9(t, factory)
 		})
 	}
 }
