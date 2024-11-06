@@ -2,6 +2,7 @@ package btrie_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"maps"
 	"math/rand"
@@ -270,6 +271,60 @@ func TestBenchTrieConfigRepeatability(t *testing.T) {
 	t.Parallel()
 	for i, config := range createBenchTrieConfigs() {
 		assert.True(t, reflect.DeepEqual(benchTrieConfigs[i], config))
+	}
+}
+
+// This benchmark is for memory allocations, not time.
+func BenchmarkDenseTries(b *testing.B) {
+	oneKeys := make([][]byte, 1<<8)
+	twoKeys := make([][]byte, 1<<16)
+	threeKeys := make([][]byte, 1<<24)
+	for key := range 1 << 8 {
+		oneKeys[key] = []byte{byte(key)}
+	}
+	for key := range 1 << 16 {
+		keyBytes := binary.LittleEndian.AppendUint16(nil, uint16(key))
+		twoKeys[key] = []byte{keyBytes[0], keyBytes[1]}
+	}
+	for key := range 1 << 24 {
+		keyBytes := binary.LittleEndian.AppendUint32(nil, uint32(key))
+		threeKeys[key] = []byte{keyBytes[0], keyBytes[1], keyBytes[2]}
+	}
+	for _, def := range implDefs {
+		for _, tt := range []struct {
+			name string
+			keys [][]byte
+		}{
+			{"/keyLen=1", oneKeys},
+			{"/keyLen=2", twoKeys},
+			{"/keyLen=3", threeKeys},
+		} {
+			b.Run("impl="+def.name+tt.name, func(b *testing.B) {
+				b.ResetTimer()
+				for range b.N {
+					trie := def.factory()
+					for _, key := range tt.keys {
+						trie.Put(key, 0)
+					}
+				}
+			})
+		}
+	}
+}
+
+// This benchmark is for memory allocations, not time.
+func BenchmarkSparseTries(b *testing.B) {
+	for _, def := range implDefs {
+		b.Run("impl="+def.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				trie := def.factory()
+				for key := range 1 << 8 {
+					keyByte := byte(key)
+					trie.Put([]byte{keyByte, keyByte, keyByte, keyByte}, 0)
+				}
+			}
+		})
 	}
 }
 
