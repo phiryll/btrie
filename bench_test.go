@@ -35,6 +35,19 @@ var (
 	benchTrieConfigs = createBenchTrieConfigs()
 )
 
+// Does not work for single-use iterators.
+func repeat2[K, V any](itr iter.Seq2[K, V]) iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for {
+			for k, v := range itr {
+				if !yield(k, v) {
+					return
+				}
+			}
+		}
+	}
+}
+
 func BenchmarkTraverser(b *testing.B) {
 	benchTraverser(b, "kind=pre-order", btrie.TestingPreOrder)
 	benchTraverser(b, "kind=post-order", btrie.TestingPostOrder)
@@ -116,30 +129,26 @@ func BenchmarkChildBounds(b *testing.B) {
 	b.Run("dir=forward", func(b *testing.B) {
 		count := 0
 		b.ResetTimer()
-		for {
-			for _, bounds := range forward {
-				for _, key := range keys {
-					btrie.TestingChildBounds(bounds, key)
-				}
-				count++
-				if count == b.N {
-					return
-				}
+		for _, bounds := range repeat2(slices.All(forward)) {
+			for _, key := range keys {
+				btrie.TestingChildBounds(bounds, key)
+			}
+			count++
+			if count == b.N {
+				return
 			}
 		}
 	})
 	b.Run("dir=reverse", func(b *testing.B) {
 		count := 0
 		b.ResetTimer()
-		for {
-			for _, bounds := range reverse {
-				for _, key := range keys {
-					btrie.TestingChildBounds(bounds, key)
-				}
-				count++
-				if count == b.N {
-					return
-				}
+		for _, bounds := range repeat2(slices.All(reverse)) {
+			for _, key := range keys {
+				btrie.TestingChildBounds(bounds, key)
+			}
+			count++
+			if count == b.N {
+				return
 			}
 		}
 	})
@@ -493,8 +502,8 @@ func BenchmarkRange(b *testing.B) {
 			b.Run("dir=forward/op=iter", func(b *testing.B) {
 				count := 0
 				b.ResetTimer()
-				for i := 0; true; i++ {
-					for range forwardIters[i%len(forwardIters)] {
+				for _, itr := range repeat2(slices.All(forwardIters)) {
+					for range itr {
 						count++
 						if count == b.N {
 							return
@@ -514,8 +523,8 @@ func BenchmarkRange(b *testing.B) {
 			b.Run("dir=reverse/op=iter", func(b *testing.B) {
 				count := 0
 				b.ResetTimer()
-				for i := 0; true; i++ {
-					for range reverseIters[i%len(reverseIters)] {
+				for _, itr := range repeat2(slices.All(reverseIters)) {
+					for range itr {
 						count++
 						if count == b.N {
 							return
