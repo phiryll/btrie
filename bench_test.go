@@ -132,10 +132,10 @@ func BenchmarkChildBounds(b *testing.B) {
 		for _, bounds := range repeat2(slices.All(forward)) {
 			for _, key := range keys {
 				btrie.TestingChildBounds(bounds, key)
-			}
-			count++
-			if count == b.N {
-				return
+				count++
+				if count == b.N {
+					return
+				}
 			}
 		}
 	})
@@ -145,10 +145,10 @@ func BenchmarkChildBounds(b *testing.B) {
 		for _, bounds := range repeat2(slices.All(reverse)) {
 			for _, key := range keys {
 				btrie.TestingChildBounds(bounds, key)
-			}
-			count++
-			if count == b.N {
-				return
+				count++
+				if count == b.N {
+					return
+				}
 			}
 		}
 	})
