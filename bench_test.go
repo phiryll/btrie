@@ -144,6 +144,37 @@ func BenchmarkChildBounds(b *testing.B) {
 	})
 }
 
+func createSparseKeys(random *rand.Rand) keySet {
+	var keys keySet
+	for key := range 1 << 8 {
+		keyByte := byte(key)
+		keys = append(keys, []byte{keyByte, keyByte, keyByte, keyByte})
+	}
+	shuffle(keys, random)
+	return keys
+}
+
+func createDenseKeys(random *rand.Rand) (keySet, keySet, keySet) {
+	oneKeys := make(keySet, 1<<8)
+	twoKeys := make(keySet, 1<<16)
+	threeKeys := make(keySet, 1<<24)
+	for key := range 1 << 8 {
+		oneKeys[key] = []byte{byte(key)}
+	}
+	for key := range 1 << 16 {
+		keyBytes := binary.LittleEndian.AppendUint16(nil, uint16(key))
+		twoKeys[key] = []byte{keyBytes[0], keyBytes[1]}
+	}
+	for key := range 1 << 24 {
+		keyBytes := binary.LittleEndian.AppendUint32(nil, uint32(key))
+		threeKeys[key] = []byte{keyBytes[0], keyBytes[1], keyBytes[2]}
+	}
+	shuffle(oneKeys, random)
+	shuffle(twoKeys, random)
+	shuffle(threeKeys, random)
+	return oneKeys, twoKeys, threeKeys
+}
+
 func createEntries(size int, random *rand.Rand) (map[string]byte, []keySet) {
 	entries := map[string]byte{}
 	present := make([]keySet, maxBenchKeySize+1)
@@ -227,9 +258,7 @@ func createBenchTrieConfigs() []*trieConfig {
 		config.absent = createAbsent(config.entries, random)
 		// get bounds from a shuffled slice of present and absent keys
 		keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
-		random.Shuffle(len(keys), func(i, j int) {
-			keys[i], keys[j] = keys[j], keys[i]
-		})
+		shuffle(keys, random)
 		config.forward, config.reverse = createBounds(keys)
 		result = append(result, &config)
 	}
@@ -275,25 +304,30 @@ func TestBenchTrieConfigRepeatability(t *testing.T) {
 }
 
 // This benchmark is for memory allocations, not time.
+func BenchmarkSparseTries(b *testing.B) {
+	random := rand.New(rand.NewSource(12337405))
+	keys := createSparseKeys(random)
+	for _, def := range implDefs {
+		b.Run("impl="+def.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				trie := def.factory()
+				for _, key := range keys {
+					trie.Put(key, 0)
+				}
+			}
+		})
+	}
+}
+
+// This benchmark is for memory allocations, not time.
 func BenchmarkDenseTries(b *testing.B) {
-	oneKeys := make([][]byte, 1<<8)
-	twoKeys := make([][]byte, 1<<16)
-	threeKeys := make([][]byte, 1<<24)
-	for key := range 1 << 8 {
-		oneKeys[key] = []byte{byte(key)}
-	}
-	for key := range 1 << 16 {
-		keyBytes := binary.LittleEndian.AppendUint16(nil, uint16(key))
-		twoKeys[key] = []byte{keyBytes[0], keyBytes[1]}
-	}
-	for key := range 1 << 24 {
-		keyBytes := binary.LittleEndian.AppendUint32(nil, uint32(key))
-		threeKeys[key] = []byte{keyBytes[0], keyBytes[1], keyBytes[2]}
-	}
+	random := rand.New(rand.NewSource(9321075532))
+	oneKeys, twoKeys, threeKeys := createDenseKeys(random)
 	for _, def := range implDefs {
 		for _, tt := range []struct {
 			name string
-			keys [][]byte
+			keys keySet
 		}{
 			{"/keyLen=1", oneKeys},
 			{"/keyLen=2", twoKeys},
@@ -309,22 +343,6 @@ func BenchmarkDenseTries(b *testing.B) {
 				}
 			})
 		}
-	}
-}
-
-// This benchmark is for memory allocations, not time.
-func BenchmarkSparseTries(b *testing.B) {
-	for _, def := range implDefs {
-		b.Run("impl="+def.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
-				trie := def.factory()
-				for key := range 1 << 8 {
-					keyByte := byte(key)
-					trie.Put([]byte{keyByte, keyByte, keyByte, keyByte}, 0)
-				}
-			}
-		})
 	}
 }
 

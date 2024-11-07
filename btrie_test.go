@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"math/bits"
+	"math/rand"
 	"reflect"
 	"slices"
 	"testing"
@@ -187,6 +188,12 @@ func collect(itr iter.Seq2[[]byte, byte]) []entry {
 		entries = append(entries, entry{k, v})
 	}
 	return entries
+}
+
+func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
+	random.Shuffle(len(slice), func(i, j int) {
+		slice[i], slice[j] = slice[j], slice[i]
+	})
 }
 
 // trieConfigs for all possible subsequences of presentKeys.
