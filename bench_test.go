@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"iter"
 	"maps"
 	"math/rand"
 	"reflect"
@@ -247,6 +248,22 @@ func createBounds(keys keySet) ([]Bounds, []Bounds) {
 	return forward, reverse
 }
 
+func nonEmptyIterators(trie TestBTrie, bounds []Bounds, numIters int) []iter.Seq2[[]byte, byte] {
+	iters := []iter.Seq2[[]byte, byte]{}
+	for _, bound := range bounds {
+		itr := trie.Range(bound)
+		itr(func([]byte, byte) bool {
+			// This yield function was called, so there's at least one element.
+			iters = append(iters, itr)
+			return false
+		})
+		if len(iters) == numIters {
+			break
+		}
+	}
+	return iters
+}
+
 func createBenchTrieConfigs() []*trieConfig {
 	result := []*trieConfig{}
 	for _, size := range benchTrieSizes {
@@ -454,15 +471,30 @@ func BenchmarkDelete(b *testing.B) {
 func BenchmarkRange(b *testing.B) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
 		original := bench.trie
+		trie := original.Clone()
 		forward := bench.config.forward
 		reverse := bench.config.reverse
+		numIters := maxGenSize
+		if _, ok := trie.(*reference); ok {
+			numIters = 64
+		}
+		forwardIters := nonEmptyIterators(trie, forward, numIters)
+		reverseIters := nonEmptyIterators(trie, reverse, numIters)
 		b.Run(bench.name, func(b *testing.B) {
-			b.Run("dir=forward", func(b *testing.B) {
-				trie := original.Clone()
+			b.Run("dir=forward/op=range", func(b *testing.B) {
+				if _, ok := trie.(*reference); ok {
+					b.Skip("reference.Range() creation is grossly inefficient")
+				}
+				b.ResetTimer()
+				for i := range b.N {
+					trie.Range(forward[i%len(forward)])
+				}
+			})
+			b.Run("dir=forward/op=iter", func(b *testing.B) {
 				count := 0
 				b.ResetTimer()
 				for i := 0; true; i++ {
-					for range trie.Range(forward[i%len(forward)]) {
+					for range forwardIters[i%len(forwardIters)] {
 						count++
 						if count == b.N {
 							return
@@ -470,12 +502,20 @@ func BenchmarkRange(b *testing.B) {
 					}
 				}
 			})
-			b.Run("dir=reverse", func(b *testing.B) {
-				trie := original.Clone()
+			b.Run("dir=reverse/op=range", func(b *testing.B) {
+				if _, ok := trie.(*reference); ok {
+					b.Skip("reference.Range() creation is grossly inefficient")
+				}
+				b.ResetTimer()
+				for i := range b.N {
+					trie.Range(reverse[i%len(reverse)])
+				}
+			})
+			b.Run("dir=reverse/op=iter", func(b *testing.B) {
 				count := 0
 				b.ResetTimer()
 				for i := 0; true; i++ {
-					for range trie.Range(reverse[i%len(reverse)]) {
+					for range reverseIters[i%len(reverseIters)] {
 						count++
 						if count == b.N {
 							return
