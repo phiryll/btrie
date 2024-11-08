@@ -7,11 +7,12 @@ import (
 	"strings"
 )
 
+//nolint:govet  // govet wants V first, but that doesn't give the best alignment
 type ptrTrieNode[V any] struct {
-	value      V // valid only if isTerminal is true
 	children   []*ptrTrieNode[V]
 	keyByte    byte
 	isTerminal bool
+	value      V // valid only if isTerminal is true
 }
 
 // NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
@@ -19,7 +20,7 @@ type ptrTrieNode[V any] struct {
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 func NewPointerTrie[V any]() BTrie[V] {
 	var zero V
-	return &ptrTrieNode[V]{zero, nil, 0, false}
+	return &ptrTrieNode[V]{nil, 0, false, zero}
 }
 
 func (n *ptrTrieNode[V]) Get(key []byte) (V, bool) {
@@ -50,9 +51,9 @@ func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
 		index, found := n.search(keyByte)
 		if !found {
 			k := len(key) - 1
-			child := &ptrTrieNode[V]{value, nil, key[k], true}
+			child := &ptrTrieNode[V]{nil, key[k], true, value}
 			for k--; k >= i; k-- {
-				child = &ptrTrieNode[V]{zero, []*ptrTrieNode[V]{child}, key[k], false}
+				child = &ptrTrieNode[V]{[]*ptrTrieNode[V]{child}, key[k], false, zero}
 			}
 			n.children = append(n.children, child)
 			copy(n.children[index+1:], n.children[index:])

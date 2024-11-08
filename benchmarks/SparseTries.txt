@@ -1,0 +1,66 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/phiryll/btrie
+cpu: Apple M1 Max
+BenchmarkSparseTries/impl=reference-10         	   52632	     22970 ns/op	   23792 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   51219	     23216 ns/op	   23789 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50450	     23279 ns/op	   23791 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50752	     23208 ns/op	   23794 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50923	     23218 ns/op	   23791 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   51069	     23250 ns/op	   23787 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50972	     23049 ns/op	   23791 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50545	     23177 ns/op	   23790 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50887	     23280 ns/op	   23788 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   51254	     23257 ns/op	   23790 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   51212	     23193 ns/op	   23790 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50596	     23346 ns/op	   23790 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50671	     23030 ns/op	   23792 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   51469	     23251 ns/op	   23790 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   49486	     23320 ns/op	   23787 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50766	     23264 ns/op	   23789 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50757	     23363 ns/op	   23789 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50271	     23166 ns/op	   23795 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50347	     23311 ns/op	   23791 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=reference-10         	   50402	     24256 ns/op	   23789 B/op	     274 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22244	     51772 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22596	     52124 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22159	     52777 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22699	     52953 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22297	     53150 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22442	     52174 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22602	     52387 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22262	     52415 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22521	     52427 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22764	     52597 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22406	     53683 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   21738	     51449 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22882	     53569 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   21735	     52515 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22024	     51732 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22650	     52801 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   21960	     52297 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22036	     52440 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22497	     52922 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=pointer-trie-10      	   22454	     53202 ns/op	   43416 B/op	    1802 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    5210	    287977 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4318	    281839 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4017	    287856 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    3924	    291954 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    3777	    293685 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4377	    281103 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    3798	    297528 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4131	    284612 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    3661	    279910 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    3741	    287755 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    3603	    288062 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4664	    256839 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4414	    259487 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4407	    255617 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4543	    257892 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4562	    257992 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4455	    257635 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4396	    257083 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4501	    256402 ns/op	 1788176 B/op	    1794 allocs/op
+BenchmarkSparseTries/impl=array-trie-10        	    4443	    257509 ns/op	 1788176 B/op	    1794 allocs/op
+PASS
+ok  	github.com/phiryll/btrie	253.252s
