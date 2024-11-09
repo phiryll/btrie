@@ -9,34 +9,16 @@ import (
 
 //nolint:govet  // govet wants V first, but that doesn't give the best alignment
 type arrayTrieNode[V any] struct {
-	children   *[256]*arrayTrieNode[V] // only non-nil if there are children
-	isTerminal bool
-	value      V // valid only if isTerminal is true
-}
-
-// Returns 0, 1, or 2 (for >= 2).
-func (n *arrayTrieNode[V]) cardinality() int {
-	if n.children == nil {
-		return 0
-	}
-	var count int
-	for _, child := range n.children {
-		if child == nil {
-			continue
-		}
-		if count >= 1 {
-			//nolint:mnd
-			return 2
-		}
-		count++
-	}
-	return count
+	children    *[256]*arrayTrieNode[V] // only non-nil if there are children
+	numChildren uint16                  // possible values 0-256, so need the extra byte
+	isTerminal  bool                    // whether value is valid
+	value       V                       // valid only if isTerminal is true
 }
 
 // NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
 func NewArrayTrie[V any]() BTrie[V] {
 	var zero V
-	return &arrayTrieNode[V]{nil, false, zero}
+	return &arrayTrieNode[V]{nil, 0, false, zero}
 }
 
 func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {
@@ -70,13 +52,14 @@ func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
 			n.children = &[256]*arrayTrieNode[V]{}
 		}
 		if n.children[keyByte] == nil {
-			child := &arrayTrieNode[V]{nil, true, value}
+			child := &arrayTrieNode[V]{nil, 0, true, value}
 			for k := len(key) - 1; k > i; k-- {
-				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, false, zero}
+				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, 1, false, zero}
 				parent.children[key[k]] = child
 				child = parent
 			}
 			n.children[keyByte] = child
+			n.numChildren++
 			return zero, false
 		}
 		n = n.children[keyByte]
@@ -104,9 +87,9 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 		if n.children == nil || n.children[keyByte] == nil {
 			return zero, false
 		}
-		// If either n is the root, or n has a value, or n has more than one child, n itself cannot be pruned.
+		// If either n is the root, or n has a value, or n has more than one child, then n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if i == 0 || n.isTerminal || n.cardinality() > 1 {
+		if i == 0 || n.isTerminal || n.numChildren > 1 {
 			prune, pruneIndex = n, keyByte
 		}
 		n = n.children[keyByte]
@@ -118,8 +101,9 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	if len(key) > 0 && n.cardinality() == 0 {
+	if len(key) > 0 && n.numChildren == 0 {
 		prune.children[pruneIndex] = nil
+		prune.numChildren--
 	}
 	return prev, true
 }
@@ -170,11 +154,16 @@ func arrayTrieForwardAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V
 			panic("unreachable")
 		}
 		return func(yield func(*arrayTrieRangePath[V]) bool) {
+			count := path.node.numChildren
 			for i, child := range path.node.children[start : int(stop)+1] {
 				if child == nil {
 					continue
 				}
 				if !yield(&arrayTrieRangePath[V]{child, append(path.key, start+byte(i))}) {
+					return
+				}
+				count--
+				if count == 0 {
 					return
 				}
 			}
@@ -194,12 +183,17 @@ func arrayTrieReverseAdj[V any](bounds Bounds) adjFunction[*arrayTrieRangePath[V
 		}
 		return func(yield func(*arrayTrieRangePath[V]) bool) {
 			children := path.node.children[stop : int(start)+1]
+			count := path.node.numChildren
 			for i := len(children) - 1; i >= 0; i-- {
 				child := children[i]
 				if child == nil {
 					continue
 				}
 				if !yield(&arrayTrieRangePath[V]{child, append(path.key, stop+byte(i))}) {
+					return
+				}
+				count--
+				if count == 0 {
 					return
 				}
 			}

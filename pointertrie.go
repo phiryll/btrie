@@ -86,7 +86,7 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 		if !found {
 			return zero, false
 		}
-		// If either n is the root, or n has a value, or n has more than one child, n itself cannot be pruned.
+		// If either n is the root, or n has a value, or n has more than one child, then n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
 		if i == 0 || n.isTerminal || len(n.children) > 1 {
 			prune, pruneIndex = n, index
