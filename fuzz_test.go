@@ -177,3 +177,31 @@ func FuzzRange(f *testing.F) {
 		}
 	})
 }
+
+func FuzzMixed(f *testing.F) {
+	fuzzTries := createTestTries(fuzzTrieConfigs)
+	ref := fuzzTries[0].trie
+	f.Fuzz(func(t *testing.T, putKey, deleteKey uint32, putKeySize, deleteKeySize, value byte) {
+		key := keyForFuzzInputs(putKey, putKeySize)
+		expected, expectedOk := ref.Put(key, value)
+		for _, fuzz := range fuzzTries[1:] {
+			actual, actualOk := fuzz.trie.Put(key, value)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			actual, ok := fuzz.trie.Get(key)
+			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+		}
+
+		key = keyForFuzzInputs(deleteKey, deleteKeySize)
+		expected, expectedOk = ref.Delete(key)
+		for _, fuzz := range fuzzTries[1:] {
+			actual, actualOk := fuzz.trie.Delete(key)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
+			actual, ok := fuzz.trie.Get(key)
+			assert.False(t, ok, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, keyName(key))
+		}
+	})
+}
