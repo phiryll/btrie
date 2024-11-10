@@ -76,7 +76,6 @@ const (
 
 var (
 	implDefs = []*implDef{
-		// fuzz tests assume reference is first
 		{"reference", newReference},
 		{"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
 		{"array-trie", asCloneable(btrie.NewArrayTrie[byte])},
