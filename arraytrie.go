@@ -7,18 +7,17 @@ import (
 	"strings"
 )
 
-//nolint:govet  // govet wants V first, but that doesn't give the best alignment
 type arrayTrieNode[V any] struct {
 	children    *[256]*arrayTrieNode[V] // only non-nil if there are children
+	value       V                       // valid only if isTerminal is true
 	numChildren uint16                  // possible values 0-256, so need the extra byte
 	isTerminal  bool                    // whether value is valid
-	value       V                       // valid only if isTerminal is true
 }
 
 // NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
 func NewArrayTrie[V any]() BTrie[V] {
 	var zero V
-	return &arrayTrieNode[V]{nil, 0, false, zero}
+	return &arrayTrieNode[V]{nil, zero, 0, false}
 }
 
 func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {
@@ -52,9 +51,9 @@ func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
 			n.children = &[256]*arrayTrieNode[V]{}
 		}
 		if n.children[keyByte] == nil {
-			child := &arrayTrieNode[V]{nil, 0, true, value}
+			child := &arrayTrieNode[V]{nil, value, 0, true}
 			for k := len(key) - 1; k > i; k-- {
-				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, 1, false, zero}
+				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, zero, 1, false}
 				parent.children[key[k]] = child
 				child = parent
 			}
