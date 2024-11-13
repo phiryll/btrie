@@ -270,22 +270,6 @@ func createFixedBounds(step int, random *rand.Rand) ([]Bounds, []Bounds) {
 	return forward, reverse
 }
 
-func nonEmptyIterators(trie TestBTrie, bounds []Bounds, numIters int) []iter.Seq2[[]byte, byte] {
-	iters := []iter.Seq2[[]byte, byte]{}
-	for _, bound := range bounds {
-		itr := trie.Range(bound)
-		itr(func([]byte, byte) bool {
-			// This yield function was called, so there's at least one element.
-			iters = append(iters, itr)
-			return false
-		})
-		if len(iters) == numIters {
-			break
-		}
-	}
-	return iters
-}
-
 func createBenchTrieConfigs() []*trieConfig {
 	result := []*trieConfig{}
 	for _, size := range benchTrieSizes {
@@ -492,55 +476,39 @@ func BenchmarkDelete(b *testing.B) {
 //nolint:gocognit
 func benchmarkRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
+		if _, ok := bench.trie.(*reference); ok {
+			// reference.Range() creation is grossly inefficient
+			continue
+		}
 		forward, reverse := getBounds(bench)
 		original := bench.trie
 		trie := original.Clone()
-		numIters := maxGenSize
-		if _, ok := trie.(*reference); ok {
-			numIters = 64
-		}
-		forwardIters := nonEmptyIterators(trie, forward, numIters)
-		reverseIters := nonEmptyIterators(trie, reverse, numIters)
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("dir=forward/op=range", func(b *testing.B) {
-				if _, ok := trie.(*reference); ok {
-					b.Skip("reference.Range() creation is grossly inefficient")
-				}
 				b.ResetTimer()
 				for i := range b.N {
 					trie.Range(forward[i%len(forward)])
 				}
 			})
-			b.Run("dir=forward/op=iter", func(b *testing.B) {
-				count := 0
+			b.Run("dir=forward/op=full", func(b *testing.B) {
 				b.ResetTimer()
-				for _, itr := range repeat2(slices.All(forwardIters)) {
-					for range itr {
-						count++
-						if count == b.N {
-							return
-						}
+				for i := range b.N {
+					for k, v := range trie.Range(forward[i%len(forward)]) {
+						_, _ = k, v
 					}
 				}
 			})
 			b.Run("dir=reverse/op=range", func(b *testing.B) {
-				if _, ok := trie.(*reference); ok {
-					b.Skip("reference.Range() creation is grossly inefficient")
-				}
 				b.ResetTimer()
 				for i := range b.N {
 					trie.Range(reverse[i%len(reverse)])
 				}
 			})
-			b.Run("dir=reverse/op=iter", func(b *testing.B) {
-				count := 0
+			b.Run("dir=reverse/op=full", func(b *testing.B) {
 				b.ResetTimer()
-				for _, itr := range repeat2(slices.All(reverseIters)) {
-					for range itr {
-						count++
-						if count == b.N {
-							return
-						}
+				for i := range b.N {
+					for k, v := range trie.Range(reverse[i%len(reverse)]) {
+						_, _ = k, v
 					}
 				}
 			})
