@@ -28,12 +28,6 @@ type Bounds struct {
 	IsReverse bool
 }
 
-// A BoundsBuilder is returned by [From].
-type BoundsBuilder interface {
-	To(end []byte) *Bounds
-	DownTo(end []byte) *Bounds
-}
-
 // Clone returns a deep clone of this Bounds.
 func (b *Bounds) Clone() *Bounds {
 	return &Bounds{bytes.Clone(b.Begin), bytes.Clone(b.End), b.IsReverse}
@@ -46,29 +40,28 @@ func (b *Bounds) String() string {
 	return fmt.Sprintf("[%s to %s]", keyName(b.Begin), keyName(b.End))
 }
 
-type beginKey []byte
-
-// From returns a builder with To and DownTo methods for constructing a Bounds.
-func From(begin []byte) BoundsBuilder {
-	return beginKey(begin)
+// From returns a Bounds with the given Begin, nil End, and IsReverse false.
+// This is normally used with [To] or [DownTo].
+func From(begin []byte) *Bounds {
+	return &Bounds{begin, nil, false}
 }
 
-// To returns a new Bounds from begin (inclusve) to key (exclusive).
-// To will panic if begin >= key.
-func (begin beginKey) To(end []byte) *Bounds {
-	if begin != nil && end != nil && bytes.Compare(begin, end) >= 0 {
+// To returns a new Bounds from b.Begin (inclusve) to end (exclusive), with IsReverse false.
+// To will panic if begin >= end.
+func (b *Bounds) To(end []byte) *Bounds {
+	if b.Begin != nil && end != nil && bytes.Compare(b.Begin, end) >= 0 {
 		panic("bounds From >= To")
 	}
-	return &Bounds{begin, end, false}
+	return &Bounds{b.Begin, end, false}
 }
 
-// DownTo returns a new Bounds from begin (inclusve) down to key (exclusive).
-// DownTo will panic if begin <= key.
-func (begin beginKey) DownTo(end []byte) *Bounds {
-	if begin != nil && end != nil && bytes.Compare(begin, end) <= 0 {
+// DownTo returns a new Bounds from b.Begin (inclusve) down to end (exclusive), with IsReverse true.
+// DownTo will panic if begin <= end.
+func (b *Bounds) DownTo(end []byte) *Bounds {
+	if b.Begin != nil && end != nil && bytes.Compare(b.Begin, end) <= 0 {
 		panic("bounds From <= DownTo")
 	}
-	return &Bounds{begin, end, true}
+	return &Bounds{b.Begin, end, true}
 }
 
 // Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
