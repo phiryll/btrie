@@ -128,7 +128,7 @@ func BenchmarkChildBounds(b *testing.B) {
 		b.ResetTimer()
 		for _, bounds := range repeat2(slices.All(forward)) {
 			for _, key := range keys {
-				btrie.TestingChildBounds(bounds, key)
+				btrie.TestingChildBounds(&bounds, key)
 				count++
 				if count == b.N {
 					return
@@ -141,7 +141,7 @@ func BenchmarkChildBounds(b *testing.B) {
 		b.ResetTimer()
 		for _, bounds := range repeat2(slices.All(reverse)) {
 			for _, key := range keys {
-				btrie.TestingChildBounds(bounds, key)
+				btrie.TestingChildBounds(&bounds, key)
 				count++
 				if count == b.N {
 					return
@@ -248,8 +248,8 @@ func createBounds(keys keySet) ([]Bounds, []Bounds) {
 		case cmp < 0:
 			// no adjustment needed
 		}
-		forward = append(forward, From(begin).To(end))
-		reverse = append(reverse, From(end).DownTo(begin))
+		forward = append(forward, *From(begin).To(end))
+		reverse = append(reverse, *From(end).DownTo(begin))
 	}
 	return forward, reverse
 }
@@ -262,8 +262,8 @@ func createFixedBounds(step int, random *rand.Rand) ([]Bounds, []Bounds) {
 		lowKey := []byte{keyBytes[1], keyBytes[2], keyBytes[3]}
 		keyBytes = binary.BigEndian.AppendUint32(nil, uint32(high))
 		highKey := []byte{keyBytes[1], keyBytes[2], keyBytes[3]}
-		forward = append(forward, From(lowKey).To(highKey))
-		reverse = append(reverse, From(highKey).DownTo(lowKey))
+		forward = append(forward, *From(lowKey).To(highKey))
+		reverse = append(reverse, *From(highKey).DownTo(lowKey))
 	}
 	shuffle(forward, random)
 	shuffle(reverse, random)
@@ -487,13 +487,13 @@ func benchmarkRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)
 			b.Run("dir=forward/op=range", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					trie.Range(forward[i%len(forward)])
+					trie.Range(&forward[i%len(forward)])
 				}
 			})
 			b.Run("dir=forward/op=full", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					for k, v := range trie.Range(forward[i%len(forward)]) {
+					for k, v := range trie.Range(&forward[i%len(forward)]) {
 						_, _ = k, v
 					}
 				}
@@ -501,13 +501,13 @@ func benchmarkRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)
 			b.Run("dir=reverse/op=range", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					trie.Range(reverse[i%len(reverse)])
+					trie.Range(&reverse[i%len(reverse)])
 				}
 			})
 			b.Run("dir=reverse/op=full", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					for k, v := range trie.Range(reverse[i%len(reverse)]) {
+					for k, v := range trie.Range(&reverse[i%len(reverse)]) {
 						_, _ = k, v
 					}
 				}

@@ -64,7 +64,7 @@ func (r *reference) String() string {
 	return s.String()
 }
 
-func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
+func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	entries := []entry{}
 	for k, v := range r.m {
 		key := []byte(k)
@@ -73,7 +73,7 @@ func (r *reference) Range(bounds Bounds) iter.Seq2[[]byte, byte] {
 		}
 		entries = append(entries, entry{key, v})
 	}
-	if bounds.IsReverse() {
+	if bounds.IsReverse {
 		slices.SortFunc(entries, cmpEntryReverse)
 	} else {
 		slices.SortFunc(entries, cmpEntryForward)

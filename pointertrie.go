@@ -118,11 +118,11 @@ type ptrTrieRangePath[V any] struct {
 	key  []byte
 }
 
-func (n *ptrTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
+func (n *ptrTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
 	root := ptrTrieRangePath[V]{n, []byte{}}
 	var pathItr iter.Seq[*ptrTrieRangePath[V]]
-	if bounds.IsReverse() {
+	if bounds.IsReverse {
 		pathItr = postOrder(&root, ptrTrieReverseAdj[V](bounds))
 	} else {
 		pathItr = preOrder(&root, ptrTrieForwardAdj[V](bounds))
@@ -143,7 +143,7 @@ func (n *ptrTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	}
 }
 
-func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
+func ptrTrieForwardAdj[V any](bounds *Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
 		if len(path.node.children) == 0 {
@@ -171,7 +171,7 @@ func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	}
 }
 
-func ptrTrieReverseAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
+func ptrTrieReverseAdj[V any](bounds *Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
 		if len(path.node.children) == 0 {

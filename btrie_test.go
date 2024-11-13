@@ -203,8 +203,8 @@ func createTestTrieConfigs() []*trieConfig {
 	var forward, reverse []Bounds
 	for i, low := range nearTestKeys {
 		for _, high := range nearTestKeys[i+1:] {
-			forward = append(forward, From(low).To(high))
-			reverse = append(reverse, From(high).DownTo(low))
+			forward = append(forward, *From(low).To(high))
+			reverse = append(reverse, *From(high).DownTo(low))
 		}
 	}
 
@@ -446,11 +446,11 @@ func TestTrie(t *testing.T) {
 			t.Run("op=range", func(t *testing.T) {
 				ref := createReferenceTrie(test.config)
 				for _, bounds := range test.config.forward {
-					assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
+					assert.Equal(t, collect(ref.Range(&bounds)), collect(trie.Range(&bounds)),
 						"%s", bounds)
 				}
 				for _, bounds := range test.config.reverse {
-					assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
+					assert.Equal(t, collect(ref.Range(&bounds)), collect(trie.Range(&bounds)),
 						"%s", bounds)
 				}
 				// need an early yield for test coverage

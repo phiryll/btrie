@@ -6,7 +6,7 @@ package btrie
 
 var (
 	TestingKeyName        = keyName
-	TestingChildBounds    = Bounds.childBounds
+	TestingChildBounds    = (*Bounds).childBounds
 	TestingPreOrder       = preOrder[int]
 	TestingPostOrder      = postOrder[int]
 	TestingPreOrderPaths  = preOrderPaths[int]
