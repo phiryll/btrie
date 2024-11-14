@@ -54,14 +54,14 @@ func TestBoundsBuilder(t *testing.T) {
 		t.Run(fmt.Sprintf("(%s,%s)", keyName(tt.first), keyName(tt.second)), func(t *testing.T) {
 			t.Parallel()
 			bounds := From(tt.first).To(tt.second)
-			assert.Equal(t, tt.first, bounds.Begin())
-			assert.Equal(t, tt.second, bounds.End())
-			assert.False(t, bounds.IsReverse())
+			assert.Equal(t, tt.first, bounds.Begin)
+			assert.Equal(t, tt.second, bounds.End)
+			assert.False(t, bounds.IsReverse)
 
 			bounds = From(tt.second).DownTo(tt.first)
-			assert.Equal(t, tt.second, bounds.Begin())
-			assert.Equal(t, tt.first, bounds.End())
-			assert.True(t, bounds.IsReverse())
+			assert.Equal(t, tt.second, bounds.Begin)
+			assert.Equal(t, tt.first, bounds.End)
+			assert.True(t, bounds.IsReverse)
 		})
 	}
 }
@@ -80,7 +80,7 @@ func TestBoundsComparePanics(t *testing.T) {
 func TestBoundsCompare(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
-		bounds                Bounds
+		bounds                *Bounds
 		before, within, after keySet
 	}{
 		// forward bounds
@@ -200,7 +200,7 @@ func TestChildBounds(t *testing.T) {
 		ok          bool
 	}
 	for _, tt := range []struct {
-		bounds   Bounds
+		bounds   *Bounds
 		expected []expectedChildBounds
 	}{
 		// forward bounds, begin[0] != end[0]

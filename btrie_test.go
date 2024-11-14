@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"math/bits"
+	"math/rand"
 	"reflect"
 	"slices"
 	"testing"
@@ -75,7 +76,6 @@ const (
 
 var (
 	implDefs = []*implDef{
-		// fuzz tests assume reference is first
 		{"reference", newReference},
 		{"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
 		{"array-trie", asCloneable(btrie.NewArrayTrie[byte])},
@@ -189,6 +189,12 @@ func collect(itr iter.Seq2[[]byte, byte]) []entry {
 	return entries
 }
 
+func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
+	random.Shuffle(len(slice), func(i, j int) {
+		slice[i], slice[j] = slice[j], slice[i]
+	})
+}
+
 // trieConfigs for all possible subsequences of presentKeys.
 func createTestTrieConfigs() []*trieConfig {
 	result := []*trieConfig{}
@@ -197,8 +203,8 @@ func createTestTrieConfigs() []*trieConfig {
 	var forward, reverse []Bounds
 	for i, low := range nearTestKeys {
 		for _, high := range nearTestKeys[i+1:] {
-			forward = append(forward, From(low).To(high))
-			reverse = append(reverse, From(high).DownTo(low))
+			forward = append(forward, *From(low).To(high))
+			reverse = append(reverse, *From(high).DownTo(low))
 		}
 	}
 
@@ -440,11 +446,11 @@ func TestTrie(t *testing.T) {
 			t.Run("op=range", func(t *testing.T) {
 				ref := createReferenceTrie(test.config)
 				for _, bounds := range test.config.forward {
-					assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
+					assert.Equal(t, collect(ref.Range(&bounds)), collect(trie.Range(&bounds)),
 						"%s", bounds)
 				}
 				for _, bounds := range test.config.reverse {
-					assert.Equal(t, collect(ref.Range(bounds)), collect(trie.Range(bounds)),
+					assert.Equal(t, collect(ref.Range(&bounds)), collect(trie.Range(&bounds)),
 						"%s", bounds)
 				}
 				// need an early yield for test coverage
@@ -605,6 +611,42 @@ func testFail7(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
+func testFail8(t *testing.T, factory func() TestBTrie) {
+	t.Run("fail 8", func(t *testing.T) {
+		t.Parallel()
+		trie := factory()
+		trie.Put([]byte{}, 1)
+		trie.Put([]byte{0}, 3)
+		trie.Put([]byte{0x23}, 4)
+		trie.Put([]byte{0x23, 0}, 5)
+		trie.Put([]byte{0x23, 0xA5}, 6)
+		assert.Equal(t,
+			[]entry{{[]byte{0x23, 0}, 5}},
+			collect(trie.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0}))))
+	})
+}
+
+func testFail9(t *testing.T, factory func() TestBTrie) {
+	// Test that removing the last value on a path removes the path.
+	// Definite hack to detect this one,
+	// but there's no good way to test this using the public API.
+	// The alternative would be to have implementation-specific tests,
+	// which is probably a better approach, but this works for now.
+	t.Run("fail 9", func(t *testing.T) {
+		t.Parallel()
+		trie := factory()
+		sTrie, ok := trie.(fmt.Stringer)
+		if !ok {
+			t.Skipf("%T does not implement Stringer", trie)
+		}
+		expected := sTrie.String()
+		key := []byte{0x23}
+		trie.Put(key, 6)
+		trie.Delete(key)
+		assert.Equal(t, expected, sTrie.String())
+	})
+}
+
 func TestPastFailures(t *testing.T) {
 	t.Parallel()
 	for _, def := range implDefs {
@@ -618,6 +660,8 @@ func TestPastFailures(t *testing.T) {
 			testFail5(t, factory)
 			testFail6(t, factory)
 			testFail7(t, factory)
+			testFail8(t, factory)
+			testFail9(t, factory)
 		})
 	}
 }

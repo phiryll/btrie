@@ -7,9 +7,10 @@ import (
 	"strings"
 )
 
+//nolint:govet  // govet wants V first, but that doesn't give the best alignment
 type ptrTrieNode[V any] struct {
-	value      V // valid only if isTerminal is true
 	children   []*ptrTrieNode[V]
+	value      V // valid only if isTerminal is true
 	keyByte    byte
 	isTerminal bool
 }
@@ -19,7 +20,7 @@ type ptrTrieNode[V any] struct {
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 func NewPointerTrie[V any]() BTrie[V] {
 	var zero V
-	return &ptrTrieNode[V]{zero, nil, 0, false}
+	return &ptrTrieNode[V]{nil, zero, 0, false}
 }
 
 func (n *ptrTrieNode[V]) Get(key []byte) (V, bool) {
@@ -50,9 +51,9 @@ func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
 		index, found := n.search(keyByte)
 		if !found {
 			k := len(key) - 1
-			child := &ptrTrieNode[V]{value, nil, key[k], true}
+			child := &ptrTrieNode[V]{nil, value, key[k], true}
 			for k--; k >= i; k-- {
-				child = &ptrTrieNode[V]{zero, []*ptrTrieNode[V]{child}, key[k], false}
+				child = &ptrTrieNode[V]{[]*ptrTrieNode[V]{child}, zero, key[k], false}
 			}
 			n.children = append(n.children, child)
 			copy(n.children[index+1:], n.children[index:])
@@ -77,27 +78,17 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 		panic("key must be non-nil")
 	}
 	var zero V
-	// Treating the root key as a special case makes the code below simpler wrt pruning.
-	if len(key) == 0 {
-		if !n.isTerminal {
-			return zero, false
-		}
-		prev := n.value
-		n.value = zero
-		n.isTerminal = false
-		return prev, true
-	}
-
 	// If the deleted node has no children, remove the subtree rooted at prune.children[pruneIndex].
-	prune, pruneIndex := n, 0
-	for _, keyByte := range key {
+	var prune *ptrTrieNode[V]
+	var pruneIndex int
+	for i, keyByte := range key {
 		index, found := n.search(keyByte)
 		if !found {
 			return zero, false
 		}
-		// If either n has a value or more than one child, n itself cannot be pruned.
+		// If either n is the root, or n has a value, or n has more than one child, then n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if n.isTerminal || len(n.children) > 1 {
+		if i == 0 || n.isTerminal || len(n.children) > 1 {
 			prune, pruneIndex = n, index
 		}
 		n = n.children[index]
@@ -109,8 +100,11 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	if len(n.children) == 0 {
-		prune.children = append(prune.children[:pruneIndex], prune.children[pruneIndex+1:]...)
+	if len(key) > 0 && len(n.children) == 0 {
+		children := prune.children
+		copy(children[pruneIndex:], children[pruneIndex+1:])
+		children[len(children)-1] = nil
+		prune.children = children[:len(children)-1]
 	}
 	return prev, true
 }
@@ -124,11 +118,11 @@ type ptrTrieRangePath[V any] struct {
 	key  []byte
 }
 
-func (n *ptrTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
+func (n *ptrTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 	bounds = bounds.Clone()
 	root := ptrTrieRangePath[V]{n, []byte{}}
 	var pathItr iter.Seq[*ptrTrieRangePath[V]]
-	if bounds.IsReverse() {
+	if bounds.IsReverse {
 		pathItr = postOrder(&root, ptrTrieReverseAdj[V](bounds))
 	} else {
 		pathItr = preOrder(&root, ptrTrieForwardAdj[V](bounds))
@@ -149,9 +143,12 @@ func (n *ptrTrieNode[V]) Range(bounds Bounds) iter.Seq2[[]byte, V] {
 	}
 }
 
-func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
+func ptrTrieForwardAdj[V any](bounds *Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
+		if len(path.node.children) == 0 {
+			return emptySeq
+		}
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			// Unreachable because of how the trie is traversed forward.
@@ -174,9 +171,12 @@ func ptrTrieForwardAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	}
 }
 
-func ptrTrieReverseAdj[V any](bounds Bounds) adjFunction[*ptrTrieRangePath[V]] {
+func ptrTrieReverseAdj[V any](bounds *Bounds) adjFunction[*ptrTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *ptrTrieRangePath[V]) iter.Seq[*ptrTrieRangePath[V]] {
+		if len(path.node.children) == 0 {
+			return emptySeq
+		}
 		start, stop, ok := bounds.childBounds(path.key)
 		if !ok {
 			return emptySeq
@@ -210,7 +210,7 @@ func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
 	if indent == "" {
 		s.WriteString("[]")
 	} else {
-		fmt.Fprintf(s, "%s%X", indent, n.keyByte)
+		fmt.Fprintf(s, "%s%02X", indent, n.keyByte)
 	}
 	if n.isTerminal {
 		fmt.Fprintf(s, ": %v\n", n.value)
@@ -223,15 +223,22 @@ func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
 }
 
 func (n *ptrTrieNode[V]) search(byt byte) (int, bool) {
-	// This is weirdly slightly faster than sort.Search.
-	for i := range len(n.children) {
-		keyByte := n.children[i].keyByte
-		if byt == keyByte {
-			return i, true
+	// Copied and tweaked from sort.Search. Inlining this is much, much faster.
+	// Invariant: child[i-1] < byt <= child[j]
+	i, j := 0, len(n.children)
+	for i < j {
+		//nolint:gosec
+		h := int(uint(i+j) >> 1) // avoid overflow when computing h
+		// i ≤ h < j
+		childByte := n.children[h].keyByte
+		if childByte == byt {
+			return h, true
 		}
-		if byt < keyByte {
-			return i, false
+		if childByte < byt {
+			i = h + 1 // preserves child[i-1] < byt
+		} else {
+			j = h // preserves byt <= child[j]
 		}
 	}
-	return len(n.children), false
+	return i, false
 }

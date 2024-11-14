@@ -28,7 +28,7 @@ type BTrie[V any] interface {
 	// Implementations should make a defensive copy of bounds using [Bounds.Clone] if necessary.
 	// Most BTrie implementations should not be mutated while a Range iteration is in progress.
 	// Implementations should document if they can be safely mutated during iteration.
-	Range(bounds Bounds) iter.Seq2[[]byte, V]
+	Range(bounds *Bounds) iter.Seq2[[]byte, V]
 }
 
 func emptySeq[V any](_ func(V) bool) {}

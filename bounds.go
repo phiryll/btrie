@@ -6,9 +6,6 @@ import (
 	"math"
 )
 
-// The original Bounds was a struct with exported members and a Reverse field.
-// This ends up being simpler internally because the forward/reverse differences are significant.
-
 // Bounds is the argument type for [BTrie.Range].
 // A nil value for [Bounds.Begin] or [Bounds.End] represents +/-Inf;
 // which one depends on the value of [Bounds.IsReverse].
@@ -19,130 +16,95 @@ import (
 //
 //	From(begin).To(end)      // IsReverse() is false
 //	From(begin).DownTo(end)  // IsReverse() is true
-type Bounds interface {
-	// Begin returns the [From] argument used to construct this Bounds.
-	Begin() []byte
+type Bounds struct {
+	// Begin is the [From] argument used to construct this Bounds.
+	Begin []byte
 
-	// End returns the [BoundsBuilder.To] or [BoundsBuilder.DownTo] argument used to construct this Bounds.
-	End() []byte
+	// End is the [BoundsBuilder.To] or [BoundsBuilder.DownTo] argument used to construct this Bounds.
+	End []byte
 
-	// IsReverse returns false if this Bounds was created by [BoundsBuilder.To],
+	// IsReverse is false if this Bounds was created by [BoundsBuilder.To],
 	// and true if it was created by [BoundsBuilder.DownTo].
-	IsReverse() bool
-
-	// Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
-	// Compare will panic if key is nil.
-	// -Inf < {} < {0}.
-	Compare(key []byte) int
-
-	// Clone returns a deep clone of this Bounds.
-	Clone() Bounds
-
-	String() string
-
-	// childBounds returns the start and stop key bytes, inclusive,
-	// for the children of partialKey that a traversal should recurse into.
-	// If IsReverse is false or true, returns start <= stop or start >= stop respectively.
-	// If ok is false, no children should be recursed into.
-	//
-	// For example, with partialKey {5, 8} and bounds [{5, 8, 4, 13} to {5, 8, 7}], return (4, 6, true).
-	childBounds(partialKey []byte) (start, stop byte, ok bool)
+	IsReverse bool
 }
 
-// A BoundsBuilder is returned by [From].
-type BoundsBuilder interface {
-	To(end []byte) Bounds
-	DownTo(end []byte) Bounds
+// Clone returns a deep clone of this Bounds.
+func (b *Bounds) Clone() *Bounds {
+	return &Bounds{bytes.Clone(b.Begin), bytes.Clone(b.End), b.IsReverse}
 }
 
-type (
-	baseBounds struct {
-		begin, end []byte
+func (b *Bounds) String() string {
+	if b.IsReverse {
+		return fmt.Sprintf("[%s down to %s]", keyName(b.Begin), keyName(b.End))
 	}
-	forward baseBounds
-	reverse baseBounds
-)
-
-func (b forward) Begin() []byte { return b.begin }
-func (b forward) End() []byte   { return b.end }
-func (forward) IsReverse() bool { return false }
-func (b forward) Clone() Bounds { return forward{bytes.Clone(b.begin), bytes.Clone(b.end)} }
-
-func (b reverse) Begin() []byte { return b.begin }
-func (b reverse) End() []byte   { return b.end }
-func (reverse) IsReverse() bool { return true }
-func (b reverse) Clone() Bounds { return reverse{bytes.Clone(b.begin), bytes.Clone(b.end)} }
-
-func (b forward) String() string {
-	return fmt.Sprintf("[%s to %s]", keyName(b.begin), keyName(b.end))
+	return fmt.Sprintf("[%s to %s]", keyName(b.Begin), keyName(b.End))
 }
 
-func (b reverse) String() string {
-	return fmt.Sprintf("[%s down to %s]", keyName(b.begin), keyName(b.end))
+// From returns a Bounds with the given Begin, nil End, and IsReverse false.
+// This is normally used with [To] or [DownTo].
+func From(begin []byte) *Bounds {
+	return &Bounds{begin, nil, false}
 }
 
-type beginKey []byte
-
-// From returns a builder with To and DownTo methods for constructing a Bounds.
-func From(begin []byte) BoundsBuilder {
-	return beginKey(begin)
-}
-
-// To returns a new Bounds from begin (inclusve) to key (exclusive).
-// To will panic if begin >= key.
-func (begin beginKey) To(end []byte) Bounds {
-	if begin != nil && end != nil && bytes.Compare(begin, end) >= 0 {
+// To returns a new Bounds from b.Begin (inclusve) to end (exclusive), with IsReverse false.
+// To will panic if begin >= end.
+func (b *Bounds) To(end []byte) *Bounds {
+	if b.Begin != nil && end != nil && bytes.Compare(b.Begin, end) >= 0 {
 		panic("bounds From >= To")
 	}
-	return forward{begin, end}
+	return &Bounds{b.Begin, end, false}
 }
 
-// DownTo returns a new Bounds from begin (inclusve) down to key (exclusive).
-// DownTo will panic if begin <= key.
-func (begin beginKey) DownTo(end []byte) Bounds {
-	if begin != nil && end != nil && bytes.Compare(begin, end) <= 0 {
+// DownTo returns a new Bounds from b.Begin (inclusve) down to end (exclusive), with IsReverse true.
+// DownTo will panic if begin <= end.
+func (b *Bounds) DownTo(end []byte) *Bounds {
+	if b.Begin != nil && end != nil && bytes.Compare(b.Begin, end) <= 0 {
 		panic("bounds From <= DownTo")
 	}
-	return reverse{begin, end}
+	return &Bounds{b.Begin, end, true}
 }
 
-func (b forward) Compare(key []byte) int {
+// Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
+// Compare will panic if key is nil.
+// -Inf < {} < {0}.
+func (b *Bounds) Compare(key []byte) int {
 	if key == nil {
 		panic("key cannot be nil")
 	}
-	if b.begin != nil && bytes.Compare(key, b.begin) < 0 {
+	if b.IsReverse {
+		if b.Begin != nil && bytes.Compare(key, b.Begin) > 0 {
+			return -1
+		}
+		if b.End != nil && bytes.Compare(b.End, key) >= 0 {
+			return +1
+		}
+		// end < key <= begin
+		return 0
+	}
+	if b.Begin != nil && bytes.Compare(key, b.Begin) < 0 {
 		return -1
 	}
-	if b.end != nil && bytes.Compare(b.end, key) <= 0 {
+	if b.End != nil && bytes.Compare(b.End, key) <= 0 {
 		return +1
 	}
 	// begin <= key < end
 	return 0
 }
 
-func (b reverse) Compare(key []byte) int {
-	if key == nil {
-		panic("key cannot be nil")
-	}
-	if b.begin != nil && bytes.Compare(key, b.begin) > 0 {
-		return -1
-	}
-	if b.end != nil && bytes.Compare(b.end, key) >= 0 {
-		return +1
-	}
-	// end < key <= begin
-	return 0
-}
-
+// childBounds returns the start and stop key bytes, inclusive,
+// for the children of partialKey that a traversal should recurse into.
+// If IsReverse is false or true, returns start <= stop or start >= stop respectively.
+// If ok is false, no children should be recursed into.
+//
+// For example, with partialKey {5, 8} and bounds [{5, 8, 4, 13} to {5, 8, 7}], return (4, 6, true).
+//
 //nolint:nonamedreturns
-func (b forward) childBounds(partialKey []byte) (start, stop byte, ok bool) {
-	return childBounds(b.begin, b.end, partialKey)
-}
-
-//nolint:nonamedreturns
-func (b reverse) childBounds(partialKey []byte) (start, stop byte, ok bool) {
-	low, high, ok := childBounds(b.end, b.begin, partialKey)
-	return high, low, ok
+func (b *Bounds) childBounds(partialKey []byte) (start, stop byte, ok bool) {
+	if b.IsReverse {
+		low, high, ok := childBounds(b.End, b.Begin, partialKey)
+		return high, low, ok
+	}
+	return childBounds(b.Begin, b.End, partialKey)
 }
 
 //nolint:nestif,nonamedreturns
