@@ -144,7 +144,7 @@ func (n *arrayTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 func arrayTrieForwardAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
-		if path.node.children == nil {
+		if path.node.numChildren == 0 {
 			return emptySeq
 		}
 		start, stop, ok := bounds.childBounds(path.key)
@@ -173,7 +173,7 @@ func arrayTrieForwardAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[
 func arrayTrieReverseAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
-		if path.node.children == nil {
+		if path.node.numChildren == 0 {
 			return emptySeq
 		}
 		start, stop, ok := bounds.childBounds(path.key)
