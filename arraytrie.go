@@ -100,7 +100,7 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 	prev := n.value
 	n.value = zero
 	n.isTerminal = false
-	if len(key) > 0 && n.numChildren == 0 {
+	if len(key) > 0 && n.children == nil {
 		prune.children[pruneIndex] = nil
 		prune.numChildren--
 	}
@@ -144,7 +144,7 @@ func (n *arrayTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 func arrayTrieForwardAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
-		if path.node.numChildren == 0 {
+		if path.node.children == nil {
 			return emptySeq
 		}
 		start, stop, ok := bounds.childBounds(path.key)
@@ -173,7 +173,7 @@ func arrayTrieForwardAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[
 func arrayTrieReverseAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[V]] {
 	// Sometimes a child is not within the bounds, but one of its descendants is.
 	return func(path *arrayTrieRangePath[V]) iter.Seq[*arrayTrieRangePath[V]] {
-		if path.node.numChildren == 0 {
+		if path.node.children == nil {
 			return emptySeq
 		}
 		start, stop, ok := bounds.childBounds(path.key)
