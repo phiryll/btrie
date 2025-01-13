@@ -3,7 +3,6 @@ package btrie_test
 import (
 	"bytes"
 	"encoding/binary"
-	"math/bits"
 	"math/rand"
 	"testing"
 	"time"
@@ -30,34 +29,6 @@ var (
 
 // Fuzz testing is very parallel, and tries aren't generally thread-safe.
 // Ensure that instances are not shared.
-
-func randomBytes(n int, random *rand.Rand) []byte {
-	b := make([]byte, n)
-	_, _ = random.Read(b)
-	return b
-}
-
-func randomByte(random *rand.Rand) byte {
-	b := []byte{0}
-	_, _ = random.Read(b)
-	return b[0]
-}
-
-// Returns a random key length with distribution:
-//
-//	50% of maxLength
-//	25% of maxLength-1
-//	...
-//	2 of length 2
-//	1 of length 1
-//	1 of length 0
-func randomKeyLength(maxLength int, random *rand.Rand) int {
-	return bits.Len(uint(random.Intn(1 << maxLength)))
-}
-
-func randomKey(maxLength int, random *rand.Rand) []byte {
-	return randomBytes(randomKeyLength(maxLength, random), random)
-}
 
 func keyForFuzzInputs(key uint32, size byte) []byte {
 	// size => keySize of result (# out of 256)

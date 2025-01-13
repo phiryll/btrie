@@ -189,6 +189,34 @@ func collect(itr iter.Seq2[[]byte, byte]) []entry {
 	return entries
 }
 
+func randomBytes(n int, random *rand.Rand) []byte {
+	b := make([]byte, n)
+	_, _ = random.Read(b)
+	return b
+}
+
+func randomByte(random *rand.Rand) byte {
+	b := []byte{0}
+	_, _ = random.Read(b)
+	return b[0]
+}
+
+// Returns a random key length with distribution:
+//
+//	50% of maxLength
+//	25% of maxLength-1
+//	...
+//	2 of length 2
+//	1 of length 1
+//	1 of length 0
+func randomKeyLength(maxLength int, random *rand.Rand) int {
+	return bits.Len(uint(random.Intn(1 << maxLength)))
+}
+
+func randomKey(maxLength int, random *rand.Rand) []byte {
+	return randomBytes(randomKeyLength(maxLength, random), random)
+}
+
 func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
 	random.Shuffle(len(slice), func(i, j int) {
 		slice[i], slice[j] = slice[j], slice[i]
