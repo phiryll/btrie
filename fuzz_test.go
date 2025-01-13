@@ -18,7 +18,7 @@ import (
 const (
 	fuzzTrieSize      = 1 << 20
 	fuzzRangeTrieSize = 1 << 16 // because Range is an expensive operation
-	maxFuzzKeyLength  = 4
+	fuzzMaxKeyLen     = 4
 )
 
 var (
@@ -30,21 +30,23 @@ var (
 // Fuzz testing is very parallel, and tries aren't generally thread-safe.
 // Ensure that instances are not shared.
 
-func keyForFuzzInputs(key uint32, size byte) []byte {
-	// size => keySize of result (# out of 256)
+// Returns a key for fuzz inputs fuzzKey and fuzzKeyLen.
+// The fuzz inputs are used to generate the key, and are not themselves the key and length.
+func keyForFuzzInputs(fuzzKey uint32, fuzzKeyLen byte) []byte {
+	// fuzzKeyLen => keyLen of result (# out of 256)
 	// 0x40-0xFF => 4 (192)
 	// 0x10-0x3F => 3 ( 48)
 	// 0x04-0x0F => 2 ( 12)
 	// 0x01-0x03 => 1 (  3)
 	// 0x00      => 0 (  1)
-	keySize := 4
-	for ; keySize > 0; keySize-- {
-		if size&(0x03<<(2*(keySize-1))) != 0 {
+	keyLen := 4
+	for ; keyLen > 0; keyLen-- {
+		if fuzzKeyLen&(0x03<<(2*(keyLen-1))) != 0 {
 			break
 		}
 	}
-	keyBytes := binary.BigEndian.AppendUint32(nil, key)
-	return keyBytes[(4 - keySize):] // use low-order bytes
+	keyBytes := binary.BigEndian.AppendUint32(nil, fuzzKey)
+	return keyBytes[(4 - keyLen):] // use low-order bytes
 }
 
 func createFuzzTrieConfigs(trieSize int) []*trieConfig {
@@ -54,7 +56,7 @@ func createFuzzTrieConfigs(trieSize int) []*trieConfig {
 	config.trieSize = trieSize
 	config.entries = map[string]byte{}
 	for count := 0; count < trieSize; {
-		key := string(randomKey(maxFuzzKeyLength, random))
+		key := string(randomKey(fuzzMaxKeyLen, random))
 		if _, ok := config.entries[key]; !ok {
 			config.entries[key] = randomByte(random)
 			count++
@@ -81,8 +83,8 @@ func TestBaseline(t *testing.T) {
 func FuzzGet(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	ref := createReferenceTrie(fuzzTrieConfigs[0])
-	f.Fuzz(func(t *testing.T, uintKey uint32, keySize byte) {
-		key := keyForFuzzInputs(uintKey, keySize)
+	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
+		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Get(key)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Get(key)
@@ -95,8 +97,8 @@ func FuzzGet(f *testing.F) {
 func FuzzPut(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	ref := createReferenceTrie(fuzzTrieConfigs[0])
-	f.Fuzz(func(t *testing.T, uintKey uint32, keySize, value byte) {
-		key := keyForFuzzInputs(uintKey, keySize)
+	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen, value byte) {
+		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Put(key, value)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Put(key, value)
@@ -112,8 +114,8 @@ func FuzzPut(f *testing.F) {
 func FuzzDelete(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	ref := createReferenceTrie(fuzzTrieConfigs[0])
-	f.Fuzz(func(t *testing.T, uintKey uint32, keySize byte) {
-		key := keyForFuzzInputs(uintKey, keySize)
+	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
+		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Delete(key)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Delete(key)
@@ -129,9 +131,9 @@ func FuzzDelete(f *testing.F) {
 func FuzzRange(f *testing.F) {
 	fuzzTries := createTestTries(fuzzRangeTrieConfigs)
 	ref := createReferenceTrie(fuzzRangeTrieConfigs[0])
-	f.Fuzz(func(t *testing.T, beginKey, endKey uint32, beginKeySize, endKeySize byte) {
-		begin := keyForFuzzInputs(beginKey, beginKeySize)
-		end := keyForFuzzInputs(endKey, endKeySize)
+	f.Fuzz(func(t *testing.T, fuzzBeginKey, fuzzEndKey uint32, fuzzBeginKeyLen, fuzzEndKeyLen byte) {
+		begin := keyForFuzzInputs(fuzzBeginKey, fuzzBeginKeyLen)
+		end := keyForFuzzInputs(fuzzEndKey, fuzzEndKeyLen)
 		cmp := bytes.Compare(begin, end)
 		if cmp == 0 {
 			end = append(end, 0)
@@ -152,8 +154,8 @@ func FuzzRange(f *testing.F) {
 func FuzzMixed(f *testing.F) {
 	fuzzTries := createTestTries(fuzzTrieConfigs)
 	ref := createReferenceTrie(fuzzTrieConfigs[0])
-	f.Fuzz(func(t *testing.T, putKey, deleteKey uint32, putKeySize, deleteKeySize, value byte) {
-		key := keyForFuzzInputs(putKey, putKeySize)
+	f.Fuzz(func(t *testing.T, fuzzPutKey, fuzzDeleteKey uint32, fuzzPutKeyLen, fuzzDeleteKeyLen, value byte) {
+		key := keyForFuzzInputs(fuzzPutKey, fuzzPutKeyLen)
 		expected, expectedOk := ref.Put(key, value)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Put(key, value)
@@ -164,7 +166,7 @@ func FuzzMixed(f *testing.F) {
 			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
 		}
 
-		key = keyForFuzzInputs(deleteKey, deleteKeySize)
+		key = keyForFuzzInputs(fuzzDeleteKey, fuzzDeleteKeyLen)
 		expected, expectedOk = ref.Delete(key)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Delete(key)
