@@ -214,6 +214,10 @@ func randomKey(maxLen int, random *rand.Rand) []byte {
 	return randomBytes(randomKeyLen(maxLen, random), random)
 }
 
+func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {
+	return randomBytes(keyLen, random)
+}
+
 func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
 	random.Shuffle(len(slice), func(i, j int) {
 		slice[i], slice[j] = slice[j], slice[i]

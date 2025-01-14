@@ -1,12 +1,14 @@
 package btrie_test
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"iter"
 	"maps"
 	"math/rand"
+	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -33,6 +35,9 @@ const (
 
 	// The maximum size of created absent and bounds slices, 64K.
 	genMaxSize = 1 << 16
+
+	// Only the lowercase characters a-z and newlines appear in this file.
+	filenameWords = "testdata/words_alpha.txt"
 )
 
 var (
@@ -176,6 +181,30 @@ func randomEntries(numEntries int, random *rand.Rand) (map[string]byte, []keySet
 	return entries, present
 }
 
+func entriesFromFile(filename string) (map[string]byte, []keySet) {
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(fmt.Sprintf("text file %s could not be opened: %s", filename, err))
+	}
+	defer file.Close()
+	entries := map[string]byte{}
+	present := []keySet{}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		word := scanner.Text()
+		entries[word] = 0
+		keyLen := len(word)
+		for i := len(present); i <= keyLen; i++ {
+			present = append(present, keySet{})
+		}
+		present[keyLen] = append(present[keyLen], []byte(word))
+	}
+	if err := scanner.Err(); err != nil {
+		panic(fmt.Sprintf("error reading text file %s: %s", filename, err))
+	}
+	return entries, present
+}
+
 func createAbsent(entries map[string]byte, maxKeyLen int, random *rand.Rand) []keySet {
 	absent := make([]keySet, maxKeyLen+1)
 
@@ -196,18 +225,17 @@ func createAbsent(entries map[string]byte, maxKeyLen int, random *rand.Rand) []k
 		}
 	}
 
-	// set config.absent for key lengths 3+, randomly generated
+	// set absent for key lengths 3+, randomly generated
 	// keep adding until each absent[keyLen] has maxGenSize keys
-	count := 0
-	for count < genMaxSize*(maxKeyLen-2) {
-		key := randomKey(maxKeyLen, random)
-		keyLen := len(key)
-		if keyLen < 3 || len(absent[keyLen]) == genMaxSize {
+	for keyLen := range absent {
+		if keyLen < benchMinKeyLen {
 			continue
 		}
-		if _, ok := entries[string(key)]; !ok {
-			absent[keyLen] = append(absent[keyLen], key)
-			count++
+		for len(absent[keyLen]) < genMaxSize {
+			key := randomFixedLengthKey(keyLen, random)
+			if _, ok := entries[string(key)]; !ok {
+				absent[keyLen] = append(absent[keyLen], key)
+			}
 		}
 	}
 
@@ -249,7 +277,7 @@ func createFixedBounds(step int, random *rand.Rand) ([]Bounds, []Bounds) {
 	return forward, reverse
 }
 
-func createBenchTrieConfigs() []*trieConfig {
+func createBenchRandomTrieConfigs() []*trieConfig {
 	result := []*trieConfig{}
 	for _, trieSize := range benchRandomTrieSizes {
 		random := rand.New(rand.NewSource(int64(trieSize) + 4839028453))
@@ -257,7 +285,7 @@ func createBenchTrieConfigs() []*trieConfig {
 		config.name = fmt.Sprintf("trieSize=%d", trieSize)
 		config.trieSize = trieSize
 		config.entries, config.present = randomEntries(trieSize, random)
-		config.absent = createAbsent(config.entries, benchMaxRandomKeyLen, random)
+		config.absent = createAbsent(config.entries, len(config.present), random)
 		// get bounds from a shuffled slice of present and absent keys
 		keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
 		shuffle(keys, random)
@@ -265,6 +293,24 @@ func createBenchTrieConfigs() []*trieConfig {
 		result = append(result, &config)
 	}
 	return result
+}
+
+// Config with lower-case english words, values are all 0.
+func createWordTrieConfigs() []*trieConfig {
+	var config trieConfig
+	config.name = "trieSize=words"
+	config.entries, config.present = entriesFromFile(filenameWords)
+	config.trieSize = len(config.entries)
+	random := rand.New(rand.NewSource(int64(config.trieSize) + 4839028453))
+	config.absent = createAbsent(config.entries, len(config.present), random)
+	keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
+	shuffle(keys, random)
+	config.forward, config.reverse = createBounds(keys)
+	return []*trieConfig{&config}
+}
+
+func createBenchTrieConfigs() []*trieConfig {
+	return append(createBenchRandomTrieConfigs(), createWordTrieConfigs()...)
 }
 
 func TestBenchTrieConfigs(t *testing.T) {
