@@ -33,6 +33,9 @@ const (
 	// The maximum length of keys for randomly generated tries.
 	benchMaxRandomKeyLen = 5
 
+	// The minimum number of keys to benchmark when tries must be cloned after exhausting the keys.
+	benchMinNumMutableKeys = 1 << 10
+
 	// The maximum size of created absent and bounds slices, 64K.
 	genMaxSize = 1 << 16
 
@@ -450,7 +453,6 @@ func BenchmarkPut(b *testing.B) {
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
-						// TODO: if present is short, this will not work
 						trie.Put(present[i%len(present)], 42)
 					}
 				})
@@ -458,6 +460,9 @@ func BenchmarkPut(b *testing.B) {
 					absent := bench.config.absent[keyLen]
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
+					}
+					if len(absent) < benchMinNumMutableKeys {
+						b.Skipf("insufficient absent keys of length %d: %d", keyLen, len(absent))
 					}
 					trie := original.Clone()
 					b.ResetTimer()
@@ -523,6 +528,9 @@ func BenchmarkDelete(b *testing.B) {
 					present := bench.config.present[keyLen]
 					if len(present) == 0 {
 						b.Skipf("no present keys of length %d", keyLen)
+					}
+					if len(present) < benchMinNumMutableKeys {
+						b.Skipf("insufficient present keys of length %d: %d", keyLen, len(present))
 					}
 					trie := original.Clone()
 					b.ResetTimer()
