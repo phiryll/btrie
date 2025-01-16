@@ -285,7 +285,7 @@ func createBenchRandomTrieConfigs() []*trieConfig {
 		config.name = fmt.Sprintf("trieSize=%d", trieSize)
 		config.trieSize = trieSize
 		config.entries, config.present = randomEntries(trieSize, random)
-		config.absent = createAbsent(config.entries, len(config.present), random)
+		config.absent = createAbsent(config.entries, len(config.present)-1, random)
 		// get bounds from a shuffled slice of present and absent keys
 		keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
 		shuffle(keys, random)
@@ -302,7 +302,7 @@ func createWordTrieConfigs() []*trieConfig {
 	config.entries, config.present = entriesFromFile(filenameWords)
 	config.trieSize = len(config.entries)
 	random := rand.New(rand.NewSource(int64(config.trieSize) + 4839028453))
-	config.absent = createAbsent(config.entries, len(config.present), random)
+	config.absent = createAbsent(config.entries, len(config.present)-1, random)
 	keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
 	shuffle(keys, random)
 	config.forward, config.reverse = createBounds(keys)
@@ -316,31 +316,34 @@ func createBenchTrieConfigs() []*trieConfig {
 func TestBenchTrieConfigs(t *testing.T) {
 	t.Parallel()
 	for _, config := range benchTrieConfigs {
-		assert.Len(t, config.entries, config.trieSize)
-		assert.Equal(t, 1, len(config.present[0])+len(config.absent[0]))
-		assert.Equal(t, 1<<8, len(config.present[1])+len(config.absent[1]))
-		assert.Equal(t, 1<<16, len(config.present[2])+len(config.absent[2]))
-		assert.Len(t, config.forward, 1<<16)
-		assert.Len(t, config.reverse, 1<<16)
+		t.Run(config.name, func(t *testing.T) {
+			assert.Len(t, config.entries, config.trieSize)
+			assert.Equal(t, len(config.present), len(config.absent))
+			assert.Equal(t, 1, len(config.present[0])+len(config.absent[0]))
+			assert.Equal(t, 1<<8, len(config.present[1])+len(config.absent[1]))
+			assert.Equal(t, 1<<16, len(config.present[2])+len(config.absent[2]))
+			assert.Len(t, config.forward, 1<<16)
+			assert.Len(t, config.reverse, 1<<16)
 
-		present := maps.Clone(config.entries)
-		for i := range len(config.present) {
-			if i > 2 {
-				assert.Len(t, config.absent[i], 1<<16)
+			present := maps.Clone(config.entries)
+			for i := range len(config.present) {
+				if i > 2 {
+					assert.Len(t, config.absent[i], 1<<16)
+				}
+				for _, key := range config.absent[i] {
+					assert.Len(t, key, i)
+					_, ok := present[string(key)]
+					assert.False(t, ok)
+				}
+				for _, key := range config.present[i] {
+					assert.Len(t, key, i)
+					_, ok := present[string(key)]
+					assert.True(t, ok)
+					delete(present, string(key))
+				}
 			}
-			for _, key := range config.absent[i] {
-				assert.Len(t, key, i)
-				_, ok := present[string(key)]
-				assert.False(t, ok)
-			}
-			for _, key := range config.present[i] {
-				assert.Len(t, key, i)
-				_, ok := present[string(key)]
-				assert.True(t, ok)
-				delete(present, string(key))
-			}
-		}
-		assert.Empty(t, present)
+			assert.Empty(t, present)
+		})
 	}
 }
 
@@ -439,16 +442,23 @@ func BenchmarkPut(b *testing.B) {
 				if keyLen < benchMinKeyLen {
 					continue
 				}
-				present := bench.config.present[keyLen]
-				absent := bench.config.absent[keyLen]
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
+					present := bench.config.present[keyLen]
+					if len(present) == 0 {
+						b.Skipf("no present keys of length %d", keyLen)
+					}
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
+						// TODO: if present is short, this will not work
 						trie.Put(present[i%len(present)], 42)
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
+					absent := bench.config.absent[keyLen]
+					if len(absent) == 0 {
+						b.Skipf("no absent keys of length %d", keyLen)
+					}
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
@@ -473,9 +483,11 @@ func BenchmarkGet(b *testing.B) {
 				if keyLen < benchMinKeyLen {
 					continue
 				}
-				present := bench.config.present[keyLen]
-				absent := bench.config.absent[keyLen]
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
+					present := bench.config.present[keyLen]
+					if len(present) == 0 {
+						b.Skipf("no present keys of length %d", keyLen)
+					}
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
@@ -483,6 +495,10 @@ func BenchmarkGet(b *testing.B) {
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
+					absent := bench.config.absent[keyLen]
+					if len(absent) == 0 {
+						b.Skipf("no absent keys of length %d", keyLen)
+					}
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
@@ -503,9 +519,11 @@ func BenchmarkDelete(b *testing.B) {
 				if keyLen < benchMinKeyLen {
 					continue
 				}
-				present := bench.config.present[keyLen]
-				absent := bench.config.absent[keyLen]
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
+					present := bench.config.present[keyLen]
+					if len(present) == 0 {
+						b.Skipf("no present keys of length %d", keyLen)
+					}
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
@@ -518,6 +536,10 @@ func BenchmarkDelete(b *testing.B) {
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
+					absent := bench.config.absent[keyLen]
+					if len(absent) == 0 {
+						b.Skipf("no absent keys of length %d", keyLen)
+					}
 					trie := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
