@@ -468,6 +468,10 @@ func BenchmarkPut(b *testing.B) {
 				if keyLen < benchMinKeyLen {
 					continue
 				}
+				if keyLen > benchMaxRandomKeyLen && keyLen%4 != 0 {
+					// Don't benchmark every key length, it isn't that useful.
+					continue
+				}
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
 					present := bench.config.present[keyLen]
 					if len(present) == 0 {
@@ -511,6 +515,10 @@ func BenchmarkGet(b *testing.B) {
 				if keyLen < benchMinKeyLen {
 					continue
 				}
+				if keyLen > benchMaxRandomKeyLen && keyLen%4 != 0 {
+					// Don't benchmark every key length, it isn't that useful.
+					continue
+				}
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
 					present := bench.config.present[keyLen]
 					if len(present) == 0 {
@@ -545,6 +553,10 @@ func BenchmarkDelete(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			for keyLen := range len(bench.config.present) {
 				if keyLen < benchMinKeyLen {
+					continue
+				}
+				if keyLen > benchMaxRandomKeyLen && keyLen%4 != 0 {
+					// Don't benchmark every key length, it isn't that useful.
 					continue
 				}
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
