@@ -169,43 +169,50 @@ func BenchmarkChildBounds(b *testing.B) {
 	})
 }
 
-func randomEntries(numEntries int, random *rand.Rand) (map[string]byte, []keySet) {
+func randomEntries(numEntries int) map[string]byte {
+	random := rand.New(rand.NewSource(int64(numEntries) + 83741074321))
 	entries := map[string]byte{}
-	present := make([]keySet, benchMaxRandomKeyLen+1)
 	for count := 0; count < numEntries; {
 		key := randomKey(benchMaxRandomKeyLen, random)
-		keyLen := len(key)
 		if _, ok := entries[string(key)]; !ok {
-			present[keyLen] = append(present[keyLen], key)
 			entries[string(key)] = randomByte(random)
 			count++
 		}
 	}
-	return entries, present
+	return entries
 }
 
-func entriesFromFile(filename string) (map[string]byte, []keySet) {
+func entriesFromFile(filename string) map[string]byte {
 	file, err := os.Open(filename)
 	if err != nil {
 		panic(fmt.Sprintf("text file %s could not be opened: %s", filename, err))
 	}
 	defer file.Close()
 	entries := map[string]byte{}
-	present := []keySet{}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		word := scanner.Text()
-		entries[word] = 0
-		keyLen := len(word)
-		for i := len(present); i <= keyLen; i++ {
-			present = append(present, keySet{})
-		}
-		present[keyLen] = append(present[keyLen], []byte(word))
+		entries[scanner.Text()] = 0
 	}
 	if err := scanner.Err(); err != nil {
 		panic(fmt.Sprintf("error reading text file %s: %s", filename, err))
 	}
-	return entries, present
+	return entries
+}
+
+func createPresent(entries map[string]byte, random *rand.Rand) []keySet {
+	present := []keySet{}
+	for key := range entries {
+		keyLen := len(key)
+		for i := len(present); i <= keyLen; i++ {
+			present = append(present, keySet{})
+		}
+		present[keyLen] = append(present[keyLen], []byte(key))
+	}
+	for _, keys := range present {
+		slices.SortFunc(keys, bytes.Compare)
+		shuffle(keys, random)
+	}
+	return present
 }
 
 func createAbsent(entries map[string]byte, maxKeyLen int, random *rand.Rand) []keySet {
@@ -280,40 +287,39 @@ func createFixedBounds(step int, random *rand.Rand) ([]Bounds, []Bounds) {
 	return forward, reverse
 }
 
+func createBenchTrieConfig(corpusName string, entries map[string]byte) *trieConfig {
+	random := rand.New(rand.NewSource(int64(len(entries)) + 4839028453))
+	present := createPresent(entries, random)
+	absent := createAbsent(entries, len(present)-1, random)
+	keys := append(slices.Concat(present...), slices.Concat(absent...)...)
+	shuffle(keys, random)
+	forward, reverse := createBounds(keys)
+	return &trieConfig{
+		name:     fmt.Sprintf("corpus=%s/trieSize=%d", corpusName, len(entries)),
+		trieSize: len(entries),
+		entries:  entries,
+		present:  present,
+		absent:   absent,
+		forward:  forward,
+		reverse:  reverse,
+	}
+}
+
 func createBenchRandomTrieConfigs() []*trieConfig {
 	result := []*trieConfig{}
 	for _, trieSize := range benchRandomTrieSizes {
-		random := rand.New(rand.NewSource(int64(trieSize) + 4839028453))
-		var config trieConfig
-		config.name = fmt.Sprintf("trieSize=%d", trieSize)
-		config.trieSize = trieSize
-		config.entries, config.present = randomEntries(trieSize, random)
-		config.absent = createAbsent(config.entries, len(config.present)-1, random)
-		// get bounds from a shuffled slice of present and absent keys
-		keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
-		shuffle(keys, random)
-		config.forward, config.reverse = createBounds(keys)
-		result = append(result, &config)
+		result = append(result, createBenchTrieConfig("random", randomEntries(trieSize)))
 	}
 	return result
 }
 
 // Config with lower-case english words, values are all 0.
-func createWordTrieConfigs() []*trieConfig {
-	var config trieConfig
-	config.name = "trieSize=words"
-	config.entries, config.present = entriesFromFile(filenameWords)
-	config.trieSize = len(config.entries)
-	random := rand.New(rand.NewSource(int64(config.trieSize) + 4839028453))
-	config.absent = createAbsent(config.entries, len(config.present)-1, random)
-	keys := append(slices.Concat(config.present...), slices.Concat(config.absent...)...)
-	shuffle(keys, random)
-	config.forward, config.reverse = createBounds(keys)
-	return []*trieConfig{&config}
+func createBenchWordTrieConfigs() []*trieConfig {
+	return []*trieConfig{createBenchTrieConfig("words", entriesFromFile(filenameWords))}
 }
 
 func createBenchTrieConfigs() []*trieConfig {
-	return append(createBenchRandomTrieConfigs(), createWordTrieConfigs()...)
+	return append(createBenchRandomTrieConfigs(), createBenchWordTrieConfigs()...)
 }
 
 func TestBenchTrieConfigs(t *testing.T) {
