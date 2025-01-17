@@ -353,7 +353,9 @@ func TestBenchTrieConfigs(t *testing.T) {
 func TestBenchTrieConfigRepeatability(t *testing.T) {
 	t.Parallel()
 	for i, config := range createBenchTrieConfigs() {
-		assert.True(t, reflect.DeepEqual(benchTrieConfigs[i], config))
+		t.Run(config.name, func(t *testing.T) {
+			assert.True(t, reflect.DeepEqual(benchTrieConfigs[i], config))
+		})
 	}
 }
 
