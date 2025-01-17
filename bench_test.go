@@ -365,6 +365,33 @@ func TestBenchTrieConfigRepeatability(t *testing.T) {
 	}
 }
 
+// For mutable implementations, Clone() should be efficient, but not absurdly efficient.
+// If it is, that's a sign it's sharing storage instead of creating new storage.
+// This also helps to understand how Clone() can impact other benchmarks which use it.
+func BenchmarkClone(b *testing.B) {
+	for _, bench := range createTestTries(benchTrieConfigs) {
+		original := bench.trie
+		b.Run(bench.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				_ = original.Clone()
+			}
+		})
+	}
+}
+
+// This helps to understand how factory() can impact other benchmarks which use it.
+func BenchmarkFactory(b *testing.B) {
+	for _, def := range implDefs {
+		b.Run("impl="+def.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				_ = def.factory()
+			}
+		})
+	}
+}
+
 // This benchmark is for memory allocations, not time.
 func BenchmarkSparseTries(b *testing.B) {
 	random := rand.New(rand.NewSource(12337405))
@@ -427,20 +454,6 @@ func BenchmarkDenseTries(b *testing.B) {
 				}
 			})
 		}
-	}
-}
-
-// For mutable implementations, Clone() should be efficient, but not absurdly efficient.
-// If it is, that's a sign it's sharing storage instead of creating new storage.
-func BenchmarkClone(b *testing.B) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
-		original := bench.trie
-		b.Run(bench.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
-				_ = original.Clone()
-			}
-		})
 	}
 }
 
