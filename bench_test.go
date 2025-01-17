@@ -393,6 +393,7 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 // This benchmark is for memory allocations, not time.
+// Creates one trie and puts many keys per benchmark iteration.
 func BenchmarkSparseTries(b *testing.B) {
 	random := rand.New(rand.NewSource(12337405))
 	var keys keySet
@@ -415,6 +416,7 @@ func BenchmarkSparseTries(b *testing.B) {
 }
 
 // This benchmark is for memory allocations, not time.
+// Creates one trie and puts many keys per benchmark iteration.
 func BenchmarkDenseTries(b *testing.B) {
 	random := rand.New(rand.NewSource(9321075532))
 	oneKeys := make(keySet, 1<<8)
