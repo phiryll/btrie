@@ -482,6 +482,7 @@ func BenchmarkPut(b *testing.B) {
 					for i := range b.N {
 						trie.Put(present[i%len(present)], 42)
 					}
+					b.ReportMetric(0.0, "clones")
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
 					absent := bench.config.absent[keyLen]
@@ -492,15 +493,18 @@ func BenchmarkPut(b *testing.B) {
 						b.Skipf("insufficient absent keys of length %d: %d", keyLen, len(absent))
 					}
 					trie := original.Clone()
+					numClones := 0
 					b.ResetTimer()
 					for i := range b.N {
 						if i%len(absent) == 0 && i > 0 {
 							b.StopTimer()
 							trie = original.Clone()
+							numClones++
 							b.StartTimer()
 						}
 						trie.Put(absent[i%len(absent)], 42)
 					}
+					b.ReportMetric(float64(numClones), "clones")
 				})
 			}
 		})
@@ -568,15 +572,18 @@ func BenchmarkDelete(b *testing.B) {
 						b.Skipf("insufficient present keys of length %d: %d", keyLen, len(present))
 					}
 					trie := original.Clone()
+					numClones := 0
 					b.ResetTimer()
 					for i := range b.N {
 						if i%len(present) == 0 && i > 0 {
 							b.StopTimer()
 							trie = original.Clone()
+							numClones++
 							b.StartTimer()
 						}
 						trie.Delete(present[i%len(present)])
 					}
+					b.ReportMetric(float64(numClones), "clones")
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
 					absent := bench.config.absent[keyLen]
@@ -588,6 +595,7 @@ func BenchmarkDelete(b *testing.B) {
 					for i := range b.N {
 						trie.Delete(absent[i%len(absent)])
 					}
+					b.ReportMetric(0.0, "clones")
 				})
 			}
 		})
