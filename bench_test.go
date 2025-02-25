@@ -190,6 +190,7 @@ func entriesFromFile(filename string) map[string]byte {
 	if err != nil {
 		panic(fmt.Sprintf("text file %s could not be opened: %s", filename, err))
 	}
+	//nolint:errcheck
 	defer file.Close()
 	entries := map[string]byte{}
 	scanner := bufio.NewScanner(file)
@@ -329,6 +330,7 @@ func TestBenchTrieConfigs(t *testing.T) {
 	t.Parallel()
 	for _, config := range benchTrieConfigs {
 		t.Run(config.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Len(t, config.entries, config.trieSize)
 			assert.Equal(t, len(config.present), len(config.absent))
 			assert.Equal(t, 1, len(config.present[0])+len(config.absent[0]))
@@ -363,6 +365,7 @@ func TestBenchTrieConfigRepeatability(t *testing.T) {
 	t.Parallel()
 	for i, config := range createBenchTrieConfigs() {
 		t.Run(config.name, func(t *testing.T) {
+			t.Parallel()
 			assert.True(t, reflect.DeepEqual(benchTrieConfigs[i], config))
 		})
 	}
@@ -510,6 +513,7 @@ func BenchmarkPut(b *testing.B) {
 	}
 }
 
+//nolint:gocognit
 func BenchmarkGet(b *testing.B) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
 		original := bench.trie
