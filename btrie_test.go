@@ -67,11 +67,8 @@ type (
 const (
 	zero = byte(0)
 
-	// The maximum size of created absent and bounds slices, 64K.
-	maxGenSize = 1 << 16
-
-	// The max key length from presentKeys, absentKeys, and nearKeys.
-	maxTestKeySize = 3
+	// The max key length from testPresentKeys, testAbsentKeys, and testNearKeys.
+	testMaxKeyLen = 3
 )
 
 var (
@@ -89,7 +86,7 @@ var (
 
 	// Keys used to build test tries.
 	// These are in lexicographical order.
-	presentTestKeys = keySet{
+	testPresentKeys = keySet{
 		{},
 		{0},
 		{0x23},
@@ -103,7 +100,7 @@ var (
 	}
 
 	// Non-empty keys very near presentTestKeys, but not in presentTestKeys.
-	absentTestKeys = keySet{
+	testAbsentKeys = keySet{
 		{0, 0},
 		{0x22, 0xFF},
 		{0x23, 0, 0},
@@ -121,7 +118,7 @@ var (
 
 	// presentTestKeys + absentTestKeys + +/-Inf.
 	// Except for the nils, these are in lexicographical order.
-	nearTestKeys = keySet{
+	testNearKeys = keySet{
 		nil, // -Inf
 		{},
 		{0},
@@ -189,6 +186,38 @@ func collect(itr iter.Seq2[[]byte, byte]) []entry {
 	return entries
 }
 
+func randomBytes(n int, random *rand.Rand) []byte {
+	b := make([]byte, n)
+	_, _ = random.Read(b)
+	return b
+}
+
+func randomByte(random *rand.Rand) byte {
+	b := []byte{0}
+	_, _ = random.Read(b)
+	return b[0]
+}
+
+// Returns a random key length with distribution:
+//
+//	50% of maxLen
+//	25% of maxLen-1
+//	...
+//	2 of length 2
+//	1 of length 1
+//	1 of length 0
+func randomKeyLen(maxLen int, random *rand.Rand) int {
+	return bits.Len(uint(random.Intn(1 << maxLen)))
+}
+
+func randomKey(maxLen int, random *rand.Rand) []byte {
+	return randomBytes(randomKeyLen(maxLen, random), random)
+}
+
+func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {
+	return randomBytes(keyLen, random)
+}
+
 func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
 	random.Shuffle(len(slice), func(i, j int) {
 		slice[i], slice[j] = slice[j], slice[i]
@@ -201,38 +230,38 @@ func createTestTrieConfigs() []*trieConfig {
 
 	// Every trieConfig here gets the same set of test Bounds.
 	var forward, reverse []Bounds
-	for i, low := range nearTestKeys {
-		for _, high := range nearTestKeys[i+1:] {
+	for i, low := range testNearKeys {
+		for _, high := range testNearKeys[i+1:] {
 			forward = append(forward, *From(low).To(high))
 			reverse = append(reverse, *From(high).DownTo(low))
 		}
 	}
 
 	// Every bit pattern of i defines which keys are present in that config.
-	for i := range 1 << len(presentTestKeys) {
+	for i := range 1 << len(testPresentKeys) {
 		config := trieConfig{
-			fmt.Sprintf("sub-trie=%0*b", len(presentTestKeys), i),
+			fmt.Sprintf("sub-trie=%0*b", len(testPresentKeys), i),
 			bits.OnesCount(uint(i)),
 			map[string]byte{},
-			make([]keySet, maxTestKeySize+1),
-			make([]keySet, maxTestKeySize+1),
+			make([]keySet, testMaxKeyLen+1),
+			make([]keySet, testMaxKeyLen+1),
 			forward,
 			reverse,
 		}
 		mask := 0x01
-		for k, key := range presentTestKeys {
-			keySize := len(key)
+		for k, key := range testPresentKeys {
+			keyLen := len(key)
 			if i&mask != 0 {
 				config.entries[string(key)] = byte(k)
-				config.present[keySize] = append(config.present[keySize], key)
+				config.present[keyLen] = append(config.present[keyLen], key)
 			} else {
-				config.absent[keySize] = append(config.absent[keySize], key)
+				config.absent[keyLen] = append(config.absent[keyLen], key)
 			}
 			mask <<= 1
 		}
-		for _, key := range absentTestKeys {
-			keySize := len(key)
-			config.absent[keySize] = append(config.absent[keySize], key)
+		for _, key := range testAbsentKeys {
+			keyLen := len(key)
+			config.absent[keyLen] = append(config.absent[keyLen], key)
 		}
 		result = append(result, &config)
 	}

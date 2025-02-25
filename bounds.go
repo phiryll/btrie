@@ -115,36 +115,36 @@ func childBounds(low, high, partialKey []byte) (start, stop byte, ok bool) {
 	// - else, the value remains the same, 0 or 0xFF
 	start, stop = 0, math.MaxUint8
 
-	keySize := len(partialKey)
+	keyLen := len(partialKey)
 	if low != nil {
-		diffSize := len(low) - keySize
+		diffLen := len(low) - keyLen
 		lowPrefix := low
-		if diffSize > 0 {
-			lowPrefix = low[:keySize]
+		if diffLen > 0 {
+			lowPrefix = low[:keyLen]
 		}
 		cmp := bytes.Compare(partialKey, lowPrefix)
 		if cmp == -1 {
 			return 0, 0, false
 		}
-		if cmp == 0 && diffSize > 0 {
-			start = low[keySize]
+		if cmp == 0 && diffLen > 0 {
+			start = low[keyLen]
 		}
 	}
 	if high != nil {
-		diffSize := len(high) - keySize
+		diffLen := len(high) - keyLen
 		highPrefix := high
-		if diffSize > 0 {
-			highPrefix = high[:keySize]
+		if diffLen > 0 {
+			highPrefix = high[:keyLen]
 		}
 		cmp := bytes.Compare(partialKey, highPrefix)
 		if cmp == +1 {
 			return 0, 0, false
 		}
 		if cmp == 0 {
-			if diffSize == 0 {
+			if diffLen == 0 {
 				return 0, 0, false
 			}
-			stop = high[keySize]
+			stop = high[keyLen]
 		}
 	}
 	return start, stop, true
