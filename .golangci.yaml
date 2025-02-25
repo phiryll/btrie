@@ -420,7 +420,7 @@ linters-settings:
   testpackage:
     # List of packages that don't end with _test that tests are allowed to be in.
     # Default: "main"
-    allow-packages:
+    allow-packages: []
 
   usestdlibvars:
     # Suggest the use of time.Month.String().
