@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/phiryll/btrie"
@@ -607,6 +608,11 @@ func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 		original := bench.trie
 		trie := original.Clone()
 		b.Run(bench.name, func(b *testing.B) {
+			// This is a hack, but good enough for now.
+			// The words corpus is not uniformly random, unlike the forward/reverse ranges being used.
+			if strings.Contains(bench.name, "corpus=words") {
+				b.Skip()
+			}
 			b.Run("dir=forward/op=range", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
