@@ -8,6 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	max = 0xFF
+)
+
 var (
 	// Testing Bounds with combinations of nil, empty, low, and high.
 	// The remaining values are test arguments to Bounds.Compare().
@@ -15,17 +19,17 @@ var (
 	empty      = []byte{}
 	afterEmpty = []byte{0}
 	before     = []byte{0x02, 0x27}
-	beforeLow  = []byte{0x04, 0x99, 0x72, 0xD2, 0xFF}
+	beforeLow  = []byte{0x04, 0x99, 0x72, 0xD2, max}
 	low        = []byte{0x04, 0x99, 0x72, 0xD3}
 	afterLow   = []byte{0x04, 0x99, 0x72, 0xD3, 0x00}
 	within     = []byte{0x27, 0x83, 0x02}
-	beforeHigh = []byte{0x42, 0x12, 0xBC, 0x5F, 0xFF}
+	beforeHigh = []byte{0x42, 0x12, 0xBC, 0x5F, max}
 	high       = []byte{0x42, 0x12, 0xBC, 0x60}
 	afterHigh  = []byte{0x42, 0x12, 0xBC, 0x60, 0x00}
-	after      = []byte{0xA5, 0x00}
+	after      = []byte{0xA5, 0x02}
 
 	// low < low2, they share a common prefix of 2 bytes.
-	beforeLow2 = []byte{0x04, 0x99, 0x9E, 0x26, 0xFF}
+	beforeLow2 = []byte{0x04, 0x99, 0x9E, 0x26, max}
 	low2       = []byte{0x04, 0x99, 0x9E, 0x27}
 	afterLow2  = []byte{0x04, 0x99, 0x9E, 0x27, 0x00}
 )
@@ -249,13 +253,13 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(nil).To(low),
 			[]expectedChildBounds{
-				{empty, 0, 0x04, true},
-				{afterEmpty, 0, 0xFF, true},
-				{before, 0, 0xFF, true},
-				{low[:1], 0, 0x99, true},
-				{low[:2], 0, 0x72, true},
-				{low[:3], 0, 0xD3, true},
-				{beforeLow, 0, 0xFF, true},
+				{empty, 0, low[0], true},
+				{afterEmpty, 0, max, true},
+				{before, 0, max, true},
+				{low[:1], 0, low[1], true},
+				{low[:2], 0, low[2], true},
+				{low[:3], 0, low[3], true},
+				{beforeLow, 0, max, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
 			},
@@ -263,22 +267,22 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(nil).To(nil),
 			[]expectedChildBounds{
-				{empty, 0, 0xFF, true},
-				{afterEmpty, 0, 0xFF, true},
-				{within, 0, 0xFF, true},
-				{after, 0, 0xFF, true},
+				{empty, 0, max, true},
+				{afterEmpty, 0, max, true},
+				{within, 0, max, true},
+				{after, 0, max, true},
 			},
 		},
 		{
 			From(empty).To(low),
 			[]expectedChildBounds{
-				{empty, 0, 0x04, true},
-				{afterEmpty, 0, 0xFF, true},
-				{before, 0, 0xFF, true},
-				{low[:1], 0, 0x99, true},
-				{low[:2], 0, 0x72, true},
-				{low[:3], 0, 0xD3, true},
-				{beforeLow, 0, 0xFF, true},
+				{empty, 0, low[0], true},
+				{afterEmpty, 0, max, true},
+				{before, 0, max, true},
+				{low[:1], 0, low[1], true},
+				{low[:2], 0, low[2], true},
+				{low[:3], 0, low[3], true},
+				{beforeLow, 0, max, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
 			},
@@ -286,29 +290,29 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(empty).To(nil),
 			[]expectedChildBounds{
-				{empty, 0, 0xFF, true},
-				{afterEmpty, 0, 0xFF, true},
-				{within, 0, 0xFF, true},
-				{after, 0, 0xFF, true},
+				{empty, 0, max, true},
+				{afterEmpty, 0, max, true},
+				{within, 0, max, true},
+				{after, 0, max, true},
 			},
 		},
 		{
 			From(low).To(high),
 			[]expectedChildBounds{
-				{empty, 0x04, 0x42, true},
+				{empty, low[0], high[0], true},
 				{afterEmpty, 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], 0x99, 0xFF, true},
-				{low[:2], 0x72, 0xFF, true},
-				{low[:3], 0xD3, 0xFF, true},
+				{low[:1], low[1], max, true},
+				{low[:2], low[2], max, true},
+				{low[:3], low[3], max, true},
 				{beforeLow, 0, 0, false},
-				{low, 0, 0xFF, true},
-				{afterLow, 0, 0xFF, true},
-				{within, 0, 0xFF, true},
-				{high[:1], 0, 0x12, true},
-				{high[:2], 0, 0xBC, true},
-				{high[:3], 0, 0x60, true},
-				{beforeHigh, 0, 0xFF, true},
+				{low, 0, max, true},
+				{afterLow, 0, max, true},
+				{within, 0, max, true},
+				{high[:1], 0, high[1], true},
+				{high[:2], 0, high[2], true},
+				{high[:3], 0, high[3], true},
+				{beforeHigh, 0, max, true},
 				{high, 0, 0, false},
 				{afterHigh, 0, 0, false},
 				{after, 0, 0, false},
@@ -317,16 +321,16 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(low).To(nil),
 			[]expectedChildBounds{
-				{empty, 0x04, 0xFF, true},
+				{empty, low[0], max, true},
 				{afterEmpty, 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], 0x99, 0xFF, true},
-				{low[:2], 0x72, 0xFF, true},
-				{low[:3], 0xD3, 0xFF, true},
+				{low[:1], low[1], max, true},
+				{low[:2], low[2], max, true},
+				{low[:3], low[3], max, true},
 				{beforeLow, 0, 0, false},
-				{low, 0, 0xFF, true},
-				{afterLow, 0, 0xFF, true},
-				{after, 0, 0xFF, true},
+				{low, 0, max, true},
+				{afterLow, 0, max, true},
+				{after, 0, max, true},
 			},
 		},
 
@@ -334,35 +338,35 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(nil).DownTo(low),
 			[]expectedChildBounds{
-				{after, 0xFF, 0, true},
-				{within, 0xFF, 0, true},
-				{afterLow, 0xFF, 0, true},
-				{low, 0xFF, 0, true},
+				{after, max, 0, true},
+				{within, max, 0, true},
+				{afterLow, max, 0, true},
+				{low, max, 0, true},
 				{beforeLow, 0, 0, false},
-				{low[:3], 0xFF, 0xD3, true},
-				{low[:2], 0xFF, 0x72, true},
-				{low[:1], 0xFF, 0x99, true},
+				{low[:3], max, low[3], true},
+				{low[:2], max, low[2], true},
+				{low[:1], max, low[1], true},
 				{before, 0, 0, false},
 				{afterEmpty, 0, 0, false},
-				{empty, 0xFF, 0x04, true},
+				{empty, max, low[0], true},
 			},
 		},
 		{
 			From(nil).DownTo(empty),
 			[]expectedChildBounds{
-				{after, 0xFF, 0, true},
-				{before, 0xFF, 0, true},
-				{afterEmpty, 0xFF, 0, true},
-				{empty, 0xFF, 0, true},
+				{after, max, 0, true},
+				{before, max, 0, true},
+				{afterEmpty, max, 0, true},
+				{empty, max, 0, true},
 			},
 		},
 		{
 			From(nil).DownTo(nil),
 			[]expectedChildBounds{
-				{after, 0xFF, 0, true},
-				{before, 0xFF, 0, true},
-				{afterEmpty, 0xFF, 0, true},
-				{empty, 0xFF, 0, true},
+				{after, max, 0, true},
+				{before, max, 0, true},
+				{afterEmpty, max, 0, true},
+				{empty, max, 0, true},
 			},
 		},
 		{
@@ -371,20 +375,20 @@ func TestChildBounds(t *testing.T) {
 				{after, 0, 0, false},
 				{afterHigh, 0, 0, false},
 				{high, 0, 0, false},
-				{beforeHigh, 0xFF, 0, true},
-				{high[:3], 0x60, 0, true},
-				{high[:2], 0xBC, 0, true},
-				{high[:1], 0x12, 0, true},
-				{within, 0xFF, 0, true},
-				{afterLow, 0xFF, 0, true},
-				{low, 0xFF, 0, true},
+				{beforeHigh, max, 0, true},
+				{high[:3], high[3], 0, true},
+				{high[:2], high[2], 0, true},
+				{high[:1], high[1], 0, true},
+				{within, max, 0, true},
+				{afterLow, max, 0, true},
+				{low, max, 0, true},
 				{beforeLow, 0, 0, false},
-				{low[:3], 0xFF, 0xD3, true},
-				{low[:2], 0xFF, 0x72, true},
-				{low[:1], 0xFF, 0x99, true},
+				{low[:3], max, low[3], true},
+				{low[:2], max, low[2], true},
+				{low[:1], max, low[1], true},
 				{before, 0, 0, false},
 				{afterEmpty, 0, 0, false},
-				{empty, 0x42, 0x04, true},
+				{empty, high[0], low[0], true},
 			},
 		},
 		{
@@ -394,13 +398,13 @@ func TestChildBounds(t *testing.T) {
 				{within, 0, 0, false},
 				{afterLow, 0, 0, false},
 				{low, 0, 0, false},
-				{beforeLow, 0xFF, 0, true},
-				{low[:3], 0xD3, 0, true},
-				{low[:2], 0x72, 0, true},
-				{low[:1], 0x99, 0, true},
-				{before, 0xFF, 0, true},
-				{afterEmpty, 0xFF, 0, true},
-				{empty, 0x04, 0, true},
+				{beforeLow, max, 0, true},
+				{low[:3], low[3], 0, true},
+				{low[:2], low[2], 0, true},
+				{low[:1], low[1], 0, true},
+				{before, max, 0, true},
+				{afterEmpty, max, 0, true},
+				{empty, low[0], 0, true},
 			},
 		},
 		{
@@ -410,13 +414,13 @@ func TestChildBounds(t *testing.T) {
 				{within, 0, 0, false},
 				{afterLow, 0, 0, false},
 				{low, 0, 0, false},
-				{beforeLow, 0xFF, 0, true},
-				{low[:3], 0xD3, 0, true},
-				{low[:2], 0x72, 0, true},
-				{low[:1], 0x99, 0, true},
-				{before, 0xFF, 0, true},
-				{afterEmpty, 0xFF, 0, true},
-				{empty, 0x04, 0, true},
+				{beforeLow, max, 0, true},
+				{low[:3], low[3], 0, true},
+				{low[:2], low[2], 0, true},
+				{low[:1], low[1], 0, true},
+				{before, max, 0, true},
+				{afterEmpty, max, 0, true},
+				{empty, low[0], 0, true},
 			},
 		},
 		{
@@ -428,45 +432,45 @@ func TestChildBounds(t *testing.T) {
 			},
 		},
 
-		// forward, common prefix
+		// forward, 2 byte common prefix
 		{
 			From(low).To(low2),
 			[]expectedChildBounds{
-				{empty, 0x04, 0x04, true},
+				{empty, low[0], low[0], true},
 				{afterEmpty, 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], 0x99, 0x99, true},
-				{low[:2], 0x72, 0x9E, true},
-				{low[:3], 0xD3, 0xFF, true},
+				{low[:1], low[1], low[1], true},
+				{low[:2], low[2], low2[2], true},
+				{low[:3], low[3], max, true},
 				{beforeLow, 0, 0, false},
-				{low, 0, 0xFF, true},
-				{afterLow, 0, 0xFF, true},
-				{low2[:3], 0, 0x27, true},
-				{beforeLow2, 0, 0xFF, true},
+				{low, 0, max, true},
+				{afterLow, 0, max, true},
+				{low2[:3], 0, low2[3], true},
+				{beforeLow2, 0, max, true},
 				{low2, 0, 0, false},
 				{afterLow2, 0, 0, false},
 				{after, 0, 0, false},
 			},
 		},
 
-		// reverse, common prefix
+		// reverse, 2 byte common prefix
 		{
 			From(low2).DownTo(low),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
 				{afterLow2, 0, 0, false},
 				{low2, 0, 0, false},
-				{beforeLow2, 0xFF, 0, true},
-				{low2[:3], 0x27, 0, true},
-				{afterLow, 0xFF, 0, true},
-				{low, 0xFF, 0, true},
+				{beforeLow2, max, 0, true},
+				{low2[:3], low2[3], 0, true},
+				{afterLow, max, 0, true},
+				{low, max, 0, true},
 				{beforeLow, 0, 0, false},
-				{low[:3], 0xFF, 0xD3, true},
-				{low[:2], 0x9E, 0x72, true},
-				{low[:1], 0x99, 0x99, true},
+				{low[:3], max, low[3], true},
+				{low[:2], low2[2], low[2], true},
+				{low[:1], low[1], low[1], true},
 				{before, 0, 0, false},
 				{afterEmpty, 0, 0, false},
-				{empty, 0x04, 0x04, true},
+				{empty, low[0], low[0], true},
 			},
 		},
 
@@ -474,13 +478,13 @@ func TestChildBounds(t *testing.T) {
 		{
 			From(low[:2]).To(low),
 			[]expectedChildBounds{
-				{empty, 0x04, 0x04, true},
+				{empty, low[0], low[0], true},
 				{afterEmpty, 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], 0x99, 0x99, true},
-				{low[:2], 0, 0x72, true},
-				{low[:3], 0, 0xD3, true},
-				{beforeLow, 0, 0xFF, true},
+				{low[:1], low[1], low[1], true},
+				{low[:2], 0, low[2], true},
+				{low[:3], 0, low[3], true},
+				{beforeLow, 0, max, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
 				{after, 0, 0, false},
@@ -489,19 +493,18 @@ func TestChildBounds(t *testing.T) {
 
 		// reverse, DownTo is a prefix of From
 		{
-			// {0x04, 0x99, 0x72, 0xD3} DOWN TO {0x04, 0x99}
 			From(low).DownTo(low[:2]),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
 				{afterLow, 0, 0, false},
 				{low, 0, 0, false},
-				{beforeLow, 0xFF, 0, true},
-				{low[:3], 0xD3, 0, true},
-				{low[:2], 0x72, 0, true},
-				{low[:1], 0x99, 0x99, true},
+				{beforeLow, max, 0, true},
+				{low[:3], low[3], 0, true},
+				{low[:2], low[2], 0, true},
+				{low[:1], low[1], low[1], true},
 				{before, 0, 0, false},
 				{afterEmpty, 0, 0, false},
-				{empty, 0x04, 0x04, true},
+				{empty, low[0], low[0], true},
 			},
 		},
 	} {
