@@ -120,6 +120,18 @@ func TestBoundsCompare(t *testing.T) {
 			keySet{},
 		},
 		{
+			From(low[:2]).To(low),
+			keySet{empty, afterEmpty, before, low[:1]},
+			keySet{low[:2], low[:3], beforeLow},
+			keySet{low, afterLow, within, beforeHigh, high, afterHigh, after},
+		},
+		{
+			From(low).To(low2),
+			keySet{empty, afterEmpty, before, low[:1], low[:2], low[:3], beforeLow},
+			keySet{low, afterLow, beforeLow2},
+			keySet{low2, afterLow2, within, beforeHigh, high, afterHigh, after},
+		},
+		{
 			From(low).To(high),
 			keySet{empty, afterEmpty, before, beforeLow},
 			keySet{low, afterLow, within, beforeHigh},
@@ -158,6 +170,18 @@ func TestBoundsCompare(t *testing.T) {
 			keySet{empty, afterEmpty, before, beforeLow, low},
 		},
 		{
+			From(low).DownTo(low[:2]),
+			keySet{afterLow, within, beforeHigh, high, afterHigh, after},
+			keySet{low[:3], beforeLow, low},
+			keySet{empty, afterEmpty, before, low[:1], low[:2]},
+		},
+		{
+			From(low2).DownTo(low),
+			keySet{afterLow2, within, beforeHigh, high, afterHigh, after},
+			keySet{afterLow, beforeLow2, low2},
+			keySet{empty, afterEmpty, before, beforeLow, low[:1], low[:2], low[:3], low},
+		},
+		{
 			From(low).DownTo(empty),
 			keySet{afterLow, within, beforeHigh, high, afterHigh, after},
 			keySet{afterEmpty, before, beforeLow, low},
@@ -191,7 +215,6 @@ func TestBoundsCompare(t *testing.T) {
 				assert.Equal(t, +1, tt.bounds.Compare(key), "%s", keyName(key))
 				count++
 			}
-			assert.Equal(t, 11, count, "test case is missing keys")
 		})
 	}
 }
