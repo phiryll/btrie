@@ -15,14 +15,19 @@ var (
 	empty      = []byte{}
 	afterEmpty = []byte{0}
 	before     = []byte{0x02, 0x27}
-	beforeLow  = []byte{0x04, 0x99, 0x71, 0xFF}
-	low        = []byte{0x04, 0x99, 0x72}
-	afterLow   = []byte{0x04, 0x99, 0x72, 0x00}
+	beforeLow  = []byte{0x04, 0x99, 0x72, 0xD2, 0xFF}
+	low        = []byte{0x04, 0x99, 0x72, 0xD3}
+	afterLow   = []byte{0x04, 0x99, 0x72, 0xD3, 0x00}
 	within     = []byte{0x27, 0x83, 0x02}
-	beforeHigh = []byte{0x42, 0x12, 0x59, 0xFF}
-	high       = []byte{0x42, 0x12, 0x60}
-	afterHigh  = []byte{0x42, 0x12, 0x60, 0x00}
+	beforeHigh = []byte{0x42, 0x12, 0xBC, 0x5F, 0xFF}
+	high       = []byte{0x42, 0x12, 0xBC, 0x60}
+	afterHigh  = []byte{0x42, 0x12, 0xBC, 0x60, 0x00}
 	after      = []byte{0xA5, 0x00}
+
+	// low < low2, they share a common prefix of 2 bytes.
+	beforeLow2 = []byte{0x04, 0x99, 0x9E, 0x26, 0xFF}
+	low2       = []byte{0x04, 0x99, 0x9E, 0x27}
+	afterLow2  = []byte{0x04, 0x99, 0x9E, 0x27, 0x00}
 )
 
 func TestBoundsBuilderPanics(t *testing.T) {
@@ -226,6 +231,7 @@ func TestChildBounds(t *testing.T) {
 				{before, 0, 0xFF, true},
 				{low[:1], 0, 0x99, true},
 				{low[:2], 0, 0x72, true},
+				{low[:3], 0, 0xD3, true},
 				{beforeLow, 0, 0xFF, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
@@ -248,6 +254,7 @@ func TestChildBounds(t *testing.T) {
 				{before, 0, 0xFF, true},
 				{low[:1], 0, 0x99, true},
 				{low[:2], 0, 0x72, true},
+				{low[:3], 0, 0xD3, true},
 				{beforeLow, 0, 0xFF, true},
 				{low, 0, 0, false},
 				{afterLow, 0, 0, false},
@@ -270,12 +277,14 @@ func TestChildBounds(t *testing.T) {
 				{before, 0, 0, false},
 				{low[:1], 0x99, 0xFF, true},
 				{low[:2], 0x72, 0xFF, true},
+				{low[:3], 0xD3, 0xFF, true},
 				{beforeLow, 0, 0, false},
 				{low, 0, 0xFF, true},
 				{afterLow, 0, 0xFF, true},
 				{within, 0, 0xFF, true},
 				{high[:1], 0, 0x12, true},
-				{high[:2], 0, 0x60, true},
+				{high[:2], 0, 0xBC, true},
+				{high[:3], 0, 0x60, true},
 				{beforeHigh, 0, 0xFF, true},
 				{high, 0, 0, false},
 				{afterHigh, 0, 0, false},
@@ -290,6 +299,7 @@ func TestChildBounds(t *testing.T) {
 				{before, 0, 0, false},
 				{low[:1], 0x99, 0xFF, true},
 				{low[:2], 0x72, 0xFF, true},
+				{low[:3], 0xD3, 0xFF, true},
 				{beforeLow, 0, 0, false},
 				{low, 0, 0xFF, true},
 				{afterLow, 0, 0xFF, true},
@@ -306,6 +316,7 @@ func TestChildBounds(t *testing.T) {
 				{afterLow, 0xFF, 0, true},
 				{low, 0xFF, 0, true},
 				{beforeLow, 0, 0, false},
+				{low[:3], 0xFF, 0xD3, true},
 				{low[:2], 0xFF, 0x72, true},
 				{low[:1], 0xFF, 0x99, true},
 				{before, 0, 0, false},
@@ -338,12 +349,14 @@ func TestChildBounds(t *testing.T) {
 				{afterHigh, 0, 0, false},
 				{high, 0, 0, false},
 				{beforeHigh, 0xFF, 0, true},
-				{high[:2], 0x60, 0, true},
+				{high[:3], 0x60, 0, true},
+				{high[:2], 0xBC, 0, true},
 				{high[:1], 0x12, 0, true},
 				{within, 0xFF, 0, true},
 				{afterLow, 0xFF, 0, true},
 				{low, 0xFF, 0, true},
 				{beforeLow, 0, 0, false},
+				{low[:3], 0xFF, 0xD3, true},
 				{low[:2], 0xFF, 0x72, true},
 				{low[:1], 0xFF, 0x99, true},
 				{before, 0, 0, false},
@@ -359,6 +372,7 @@ func TestChildBounds(t *testing.T) {
 				{afterLow, 0, 0, false},
 				{low, 0, 0, false},
 				{beforeLow, 0xFF, 0, true},
+				{low[:3], 0xD3, 0, true},
 				{low[:2], 0x72, 0, true},
 				{low[:1], 0x99, 0, true},
 				{before, 0xFF, 0, true},
@@ -374,6 +388,7 @@ func TestChildBounds(t *testing.T) {
 				{afterLow, 0, 0, false},
 				{low, 0, 0, false},
 				{beforeLow, 0xFF, 0, true},
+				{low[:3], 0xD3, 0, true},
 				{low[:2], 0x72, 0, true},
 				{low[:1], 0x99, 0, true},
 				{before, 0xFF, 0, true},
@@ -392,95 +407,78 @@ func TestChildBounds(t *testing.T) {
 
 		// forward, common prefix
 		{
-			From([]byte{0x04, 0x05, 0x06, 0x83}).To([]byte{0x04, 0x05, 0x71, 0x12}),
+			From(low).To(low2),
 			[]expectedChildBounds{
-				// From/To prefixes
-				{[]byte{0x04}, 0x05, 0x05, true},
-				{[]byte{0x04, 0x05}, 0x06, 0x71, true},
-				{[]byte{0x04, 0x05, 0x06}, 0x83, 0xFF, true},
-				{[]byte{0x04, 0x05, 0x06, 0x83}, 0, 0xFF, true},
-				{[]byte{0x04, 0x05, 0x71}, 0x00, 0x12, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12}, 0, 0, false},
-
-				// From before/after
-				{[]byte{0x04, 0x05, 0x06, 0x82}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x06, 0x82, 0xFF}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x06, 0x83, 0x00}, 0, 0xFF, true},
-
-				// To before/after
-				{[]byte{0x04, 0x05, 0x71, 0x11, 0xFF}, 0, 0xFF, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12, 0x00}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x71, 0x13}, 0, 0, false},
+				{empty, 0x04, 0x04, true},
+				{afterEmpty, 0, 0, false},
+				{before, 0, 0, false},
+				{low[:1], 0x99, 0x99, true},
+				{low[:2], 0x72, 0x9E, true},
+				{low[:3], 0xD3, 0xFF, true},
+				{beforeLow, 0, 0, false},
+				{low, 0, 0xFF, true},
+				{afterLow, 0, 0xFF, true},
+				{low2[:3], 0, 0x27, true},
+				{beforeLow2, 0, 0xFF, true},
+				{low2, 0, 0, false},
+				{afterLow2, 0, 0, false},
+				{after, 0, 0, false},
 			},
 		},
 
 		// reverse, common prefix
 		{
-			From([]byte{0x04, 0x05, 0x71, 0x12}).DownTo([]byte{0x04, 0x05, 0x06, 0x83}),
+			From(low2).DownTo(low),
 			[]expectedChildBounds{
-				// From/DownTo prefixes
-				{[]byte{0x04}, 0x05, 0x05, true},
-				{[]byte{0x04, 0x05}, 0x71, 0x06, true},
-				{[]byte{0x04, 0x05, 0x71}, 0x12, 0, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x06}, 0xFF, 0x83, true},
-				{[]byte{0x04, 0x05, 0x06, 0x83}, 0xFF, 0, true},
-
-				// From before/after
-				{[]byte{0x04, 0x05, 0x71, 0x11, 0xFF}, 0xFF, 0, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12, 0x00}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x71, 0x13}, 0, 0, false},
-
-				// DownTo before/after
-				{[]byte{0x04, 0x05, 0x06, 0x82}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x06, 0x82, 0xFF}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x06, 0x83, 0x00}, 0xFF, 0, true},
+				{after, 0, 0, false},
+				{afterLow2, 0, 0, false},
+				{low2, 0, 0, false},
+				{beforeLow2, 0xFF, 0, true},
+				{low2[:3], 0x27, 0, true},
+				{afterLow, 0xFF, 0, true},
+				{low, 0xFF, 0, true},
+				{beforeLow, 0, 0, false},
+				{low[:3], 0xFF, 0xD3, true},
+				{low[:2], 0x9E, 0x72, true},
+				{low[:1], 0x99, 0x99, true},
+				{before, 0, 0, false},
+				{afterEmpty, 0, 0, false},
+				{empty, 0x04, 0x04, true},
 			},
 		},
 
 		// forward, From is a prefix of To
 		{
-			From([]byte{0x04, 0x05}).To([]byte{0x04, 0x05, 0x71, 0x12}),
+			From(low[:2]).To(low),
 			[]expectedChildBounds{
-				// From/To prefixes
-				{[]byte{0x04}, 0x05, 0x05, true},
-				{[]byte{0x04, 0x05}, 0x00, 0x71, true},
-				{[]byte{0x04, 0x05, 0x71}, 0x00, 0x12, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12}, 0, 0, false},
-
-				// From before/after
-				{[]byte{0x04, 0x04}, 0, 0, false},
-				{[]byte{0x04, 0x04, 0xFF}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x00}, 0, 0xFF, true},
-				{[]byte{0x04, 0x06}, 0, 0, false},
-
-				// To before/after
-				{[]byte{0x04, 0x05, 0x71, 0x11, 0xFF}, 0, 0xFF, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12, 0x00}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x71, 0x13}, 0, 0, false},
+				{empty, 0x04, 0x04, true},
+				{afterEmpty, 0, 0, false},
+				{before, 0, 0, false},
+				{low[:1], 0x99, 0x99, true},
+				{low[:2], 0, 0x72, true},
+				{low[:3], 0, 0xD3, true},
+				{beforeLow, 0, 0xFF, true},
+				{low, 0, 0, false},
+				{afterLow, 0, 0, false},
+				{after, 0, 0, false},
 			},
 		},
 
 		// reverse, DownTo is a prefix of From
 		{
-			From([]byte{0x04, 0x05, 0x71, 0x12}).DownTo([]byte{0x04, 0x05}),
+			// {0x04, 0x99, 0x72, 0xD3} DOWN TO {0x04, 0x99}
+			From(low).DownTo(low[:2]),
 			[]expectedChildBounds{
-				// From/To prefixes
-				{[]byte{0x04}, 0x05, 0x05, true},
-				{[]byte{0x04, 0x05}, 0x71, 0x00, true},
-				{[]byte{0x04, 0x05, 0x71}, 0x12, 0x00, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12}, 0, 0, false},
-
-				// From before/after
-				{[]byte{0x04, 0x05, 0x71, 0x11, 0xFF}, 0xFF, 0, true},
-				{[]byte{0x04, 0x05, 0x71, 0x12, 0x00}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x71, 0x13}, 0, 0, false},
-
-				// DownTo before/after
-				{[]byte{0x04, 0x04}, 0, 0, false},
-				{[]byte{0x04, 0x04, 0xFF}, 0, 0, false},
-				{[]byte{0x04, 0x05, 0x00}, 0xFF, 0, true},
-				{[]byte{0x04, 0x06}, 0, 0, false},
+				{after, 0, 0, false},
+				{afterLow, 0, 0, false},
+				{low, 0, 0, false},
+				{beforeLow, 0xFF, 0, true},
+				{low[:3], 0xD3, 0, true},
+				{low[:2], 0x72, 0, true},
+				{low[:1], 0x99, 0x99, true},
+				{before, 0, 0, false},
+				{afterEmpty, 0, 0, false},
+				{empty, 0x04, 0x04, true},
 			},
 		},
 	} {
