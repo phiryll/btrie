@@ -34,6 +34,37 @@ var (
 	afterLow2  = []byte{0x04, 0x99, 0x9E, 0x27, 0x00}
 )
 
+func next(key []byte) []byte {
+	if key == nil {
+		panic("key cannot be nil")
+	}
+	return append(key, 0x00)
+}
+
+// This may not return the immediate predecessor, since a unique one might not exist.
+// For example, {A, B, 0xFF} < {A, B, 0xFF, 0xFF} < ... < {A, B+1}
+func prev(key []byte) []byte {
+	baseKeyLen := len(key) - 1
+	baseKey, lastByte := key[:baseKeyLen], key[baseKeyLen]
+	if lastByte == 0x00 {
+		return baseKey
+	}
+	return append(baseKey, lastByte-1, max)
+}
+
+func TestPrev(t *testing.T) {
+	assert.Panics(t, func() {
+		prev(nil)
+	})
+	assert.Panics(t, func() {
+		prev([]byte{})
+	})
+	assert.Equal(t, []byte{}, prev([]byte{0}))
+	assert.Equal(t, []byte{0x23, 0x87, 0x00}, prev([]byte{0x23, 0x87, 0x00, 0x00}))
+	assert.Equal(t, []byte{0x23, 0x87, 0x00, 0x00, 0xFF}, prev([]byte{0x23, 0x87, 0x00, 0x1}))
+	assert.Equal(t, []byte{0x23, 0x87, 0x00, 0x11, 0xFF}, prev([]byte{0x23, 0x87, 0x00, 0x12}))
+}
+
 func TestBoundsBuilderPanics(t *testing.T) {
 	t.Parallel()
 	assert.Panics(t, func() {
