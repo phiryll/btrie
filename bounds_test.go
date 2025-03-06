@@ -29,18 +29,38 @@ func next(key []byte) []byte {
 	if key == nil {
 		panic("key cannot be nil")
 	}
-	return append(key, 0x00)
+	return append(append([]byte{}, key...), 0x00)
 }
 
 // This may not return the immediate predecessor, since a unique one might not exist.
 // For example, {A, B, 0xFF} < {A, B, 0xFF, 0xFF} < ... < {A, B+1}
 func prev(key []byte) []byte {
 	baseKeyLen := len(key) - 1
-	baseKey, lastByte := key[:baseKeyLen], key[baseKeyLen]
+	baseKey := append([]byte{}, key[:baseKeyLen]...)
+	lastByte := key[baseKeyLen]
 	if lastByte == 0x00 {
 		return baseKey
 	}
 	return append(baseKey, lastByte-1, max)
+}
+
+func TestNext(t *testing.T) {
+	assert.Panics(t, func() {
+		next(nil)
+	})
+	for _, tt := range []struct {
+		key     []byte
+		nextKey []byte
+	}{
+		{[]byte{}, []byte{0}},
+		{[]byte{0x23, 0x87, 0x00}, []byte{0x23, 0x87, 0x00, 0x00}},
+		{[]byte{0x23, 0x87, 0x12}, []byte{0x23, 0x87, 0x12, 0x00}},
+		{[]byte{0x23, 0x87, 0xFF}, []byte{0x23, 0x87, 0xFF, 0x00}},
+	} {
+		copyKey := append([]byte{}, tt.key...)
+		assert.Equal(t, tt.nextKey, next(tt.key))
+		assert.Equal(t, copyKey, tt.key)
+	}
 }
 
 func TestPrev(t *testing.T) {
@@ -50,10 +70,20 @@ func TestPrev(t *testing.T) {
 	assert.Panics(t, func() {
 		prev([]byte{})
 	})
-	assert.Equal(t, []byte{}, prev([]byte{0}))
-	assert.Equal(t, []byte{0x23, 0x87, 0x00}, prev([]byte{0x23, 0x87, 0x00, 0x00}))
-	assert.Equal(t, []byte{0x23, 0x87, 0x00, 0x00, 0xFF}, prev([]byte{0x23, 0x87, 0x00, 0x1}))
-	assert.Equal(t, []byte{0x23, 0x87, 0x00, 0x11, 0xFF}, prev([]byte{0x23, 0x87, 0x00, 0x12}))
+	for _, tt := range []struct {
+		key     []byte
+		prevKey []byte
+	}{
+		{[]byte{0}, []byte{}},
+		{[]byte{0x23, 0x87, 0x00, 0x00}, []byte{0x23, 0x87, 0x00}},
+		{[]byte{0x23, 0x87, 0x00}, []byte{0x23, 0x87}},
+		{[]byte{0x23, 0x87, 0x12}, []byte{0x23, 0x87, 0x11, 0xFF}},
+		{[]byte{0x23, 0x87, 0xFF}, []byte{0x23, 0x87, 0xFE, 0xFF}},
+	} {
+		copyKey := append([]byte{}, tt.key...)
+		assert.Equal(t, tt.prevKey, prev(tt.key))
+		assert.Equal(t, copyKey, tt.key)
+	}
 }
 
 func TestBoundsBuilderPanics(t *testing.T) {
@@ -147,8 +177,8 @@ func TestBoundsCompare(t *testing.T) {
 		},
 		{
 			From(low[:2]).To(low),
-			keySet{empty, next(empty), before, low[:1]},
-			keySet{low[:2], low[:3], prev(low)},
+			keySet{empty, next(empty), before, low[:1], prev(low[:2])},
+			keySet{low[:2], next(low[:2]), low[:3], prev(low)},
 			keySet{low, next(low), within, prev(high), high, next(high), after},
 		},
 		{
@@ -198,8 +228,8 @@ func TestBoundsCompare(t *testing.T) {
 		{
 			From(low).DownTo(low[:2]),
 			keySet{next(low), within, prev(high), high, next(high), after},
-			keySet{low[:3], prev(low), low},
-			keySet{empty, next(empty), before, low[:1], low[:2]},
+			keySet{next(low[:2]), low[:3], prev(low), low},
+			keySet{empty, next(empty), before, low[:1], low[:2], prev(low[:2])},
 		},
 		{
 			From(low2).DownTo(low),
@@ -504,7 +534,9 @@ func TestChildBounds(t *testing.T) {
 				{next(empty), 0, 0, false},
 				{before, 0, 0, false},
 				{low[:1], low[1], low[1], true},
+				{prev(low[:2]), 0, 0, false},
 				{low[:2], 0, low[2], true},
+				{next(low[:2]), 0, max, true},
 				{low[:3], 0, low[3], true},
 				{prev(low), 0, max, true},
 				{low, 0, 0, false},
@@ -522,7 +554,9 @@ func TestChildBounds(t *testing.T) {
 				{low, 0, 0, false},
 				{prev(low), max, 0, true},
 				{low[:3], low[3], 0, true},
+				{next(low[:2]), max, 0, true},
 				{low[:2], low[2], 0, true},
+				{prev(low[:2]), 0, 0, false},
 				{low[:1], low[1], low[1], true},
 				{before, 0, 0, false},
 				{next(empty), 0, 0, false},
