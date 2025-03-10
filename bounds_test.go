@@ -22,7 +22,8 @@ var (
 	after  = []byte{0xA5, 0x02}
 
 	// low < low2, they share a common prefix of 2 bytes.
-	low2 = []byte{0x04, 0x99, 0x9E, 0x27}
+	low2    = []byte{0x04, 0x99, 0x9E, 0x27}
+	midLows = []byte{0x04, 0x99, 0x85}
 )
 
 func next(key []byte) []byte {
@@ -184,7 +185,7 @@ func TestBoundsCompare(t *testing.T) {
 		{
 			From(low).To(low2),
 			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low)},
-			keySet{low, next(low), prev(low2)},
+			keySet{low, next(low), midLows, prev(low2)},
 			keySet{low2, next(low2), within, prev(high), high, next(high), after},
 		},
 		{
@@ -234,7 +235,7 @@ func TestBoundsCompare(t *testing.T) {
 		{
 			From(low2).DownTo(low),
 			keySet{next(low2), within, prev(high), high, next(high), after},
-			keySet{next(low), prev(low2), low2},
+			keySet{next(low), midLows, prev(low2), low2},
 			keySet{empty, next(empty), before, prev(low), low[:1], low[:2], low[:3], low},
 		},
 		{
@@ -497,6 +498,7 @@ func TestChildBounds(t *testing.T) {
 				{prev(low), 0, 0, false},
 				{low, 0, max, true},
 				{next(low), 0, max, true},
+				{midLows, 0, max, true},
 				{low2[:3], 0, low2[3], true},
 				{prev(low2), 0, max, true},
 				{low2, 0, 0, false},
@@ -514,6 +516,7 @@ func TestChildBounds(t *testing.T) {
 				{low2, 0, 0, false},
 				{prev(low2), max, 0, true},
 				{low2[:3], low2[3], 0, true},
+				{midLows, max, 0, true},
 				{next(low), max, 0, true},
 				{low, max, 0, true},
 				{prev(low), 0, 0, false},

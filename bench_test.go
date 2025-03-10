@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"iter"
 	"maps"
 	"math/rand"
 	"os"
@@ -53,19 +52,6 @@ var (
 
 	benchTrieConfigs = createBenchTrieConfigs()
 )
-
-// Does not work for single-use iterators.
-func repeat2[K, V any](itr iter.Seq2[K, V]) iter.Seq2[K, V] {
-	return func(yield func(K, V) bool) {
-		for {
-			for k, v := range itr {
-				if !yield(k, v) {
-					return
-				}
-			}
-		}
-	}
-}
 
 func BenchmarkTraverser(b *testing.B) {
 	benchTraverser(b, "kind=pre-order", btrie.TestingPreOrder)
@@ -132,44 +118,90 @@ func benchTraverserPaths(b *testing.B, name string, pathTraverser btrie.TestingP
 }
 
 func BenchmarkChildBounds(b *testing.B) {
-	// Max key length for this benchmark.
-	const maxKeyLen = 4
+	for _, tt := range []struct {
+		bounds *Bounds
+		keys   keySet
+	}{
+		// no common prefix
+		{
+			From(nil).To(empty),
+			keySet{empty, next(empty), after},
+		},
+		{
+			From(nil).To(next(empty)),
+			keySet{empty, next(empty), next(next(empty)), after},
+		},
+		{
+			From(nil).To(high),
+			keySet{empty, next(empty), before, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
+		},
+		{
+			From(nil).To(nil),
+			keySet{empty, next(empty), within},
+		},
+		{
+			From(empty).To(next(empty)),
+			keySet{empty, next(empty), next(next(empty)), after},
+		},
+		{
+			From(empty).To(high),
+			keySet{empty, next(empty), before, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
+		},
+		{
+			From(empty).To(nil),
+			keySet{empty, next(empty), within},
+		},
+		{
+			From(next(empty)).To(high),
+			keySet{empty, next(empty), next(next(empty)), before, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
+		},
+		{
+			From(next(empty)).To(nil),
+			keySet{empty, next(empty), next(next(empty)), within},
+		},
+		{
+			From(low).To(high),
+			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low),
+				within, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
+		},
+		{
+			From(low).To(nil),
+			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low), after},
+		},
 
-	// Reuse bounds from the biggest trieConfig, but create new (partial) keys.
-	config := benchTrieConfigs[len(benchTrieConfigs)-1]
-	forward := config.forward
-	reverse := config.reverse
-	random := rand.New(rand.NewSource(239057752))
-	keys := make(keySet, 1024)
-	for i := range keys {
-		keys[i] = randomKey(maxKeyLen, random)
+		// 2 byte common prefix
+		{
+			From(low).To(low2),
+			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low), midLows, low2[:3], prev(low2), low2, next(low2), after},
+		},
+
+		// From is a prefix of To
+		{
+			From(low[:2]).To(low),
+			keySet{empty, next(empty), before, low[:1], prev(low[:2]), low[:2], next(low[:2]), low[:3], prev(low), low, next(low), after},
+		},
+	} {
+		b.Run(fmt.Sprintf("bounds=%s", tt.bounds), func(b *testing.B) {
+			forward := tt.bounds
+			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
+			for _, key := range tt.keys {
+				b.Run(fmt.Sprintf("key=%s", keyName(key)), func(b *testing.B) {
+					b.Run("dir=forward", func(b *testing.B) {
+						b.ResetTimer()
+						for range b.N {
+							btrie.TestingChildBounds(forward, key)
+						}
+					})
+					b.Run("dir=reverse", func(b *testing.B) {
+						b.ResetTimer()
+						for range b.N {
+							btrie.TestingChildBounds(reverse, key)
+						}
+					})
+				})
+			}
+		})
 	}
-	b.Run("dir=forward", func(b *testing.B) {
-		count := 0
-		b.ResetTimer()
-		for _, bounds := range repeat2(slices.All(forward)) {
-			for _, key := range keys {
-				btrie.TestingChildBounds(&bounds, key)
-				count++
-				if count == b.N {
-					return
-				}
-			}
-		}
-	})
-	b.Run("dir=reverse", func(b *testing.B) {
-		count := 0
-		b.ResetTimer()
-		for _, bounds := range repeat2(slices.All(reverse)) {
-			for _, key := range keys {
-				btrie.TestingChildBounds(&bounds, key)
-				count++
-				if count == b.N {
-					return
-				}
-			}
-		}
-	})
 }
 
 func randomEntries(numEntries int) map[string]byte {
