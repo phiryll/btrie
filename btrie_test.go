@@ -2,10 +2,12 @@ package btrie_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"iter"
+	"math"
 	"math/bits"
-	"math/rand"
+	rand "math/rand/v2"
 	"reflect"
 	"slices"
 	"testing"
@@ -41,7 +43,7 @@ type (
 		entries map[string]byte
 
 		// present/absent[i] = a set of keys of length i that are present/absent.
-		// For denser tries, there may be no absent keys of length 0 or 1.
+		// For denser tries, there may be no absent keys of shorter lengths.
 		present, absent []keySet
 
 		// forward/reverse Bounds instances to test Range.
@@ -187,31 +189,32 @@ func collect(itr iter.Seq2[[]byte, byte]) []entry {
 }
 
 func randomBytes(n int, random *rand.Rand) []byte {
-	b := make([]byte, n)
-	_, _ = random.Read(b)
-	return b
+	if n == 0 {
+		return []byte{}
+	}
+	k := (n-1)/8 + 1
+	b := make([]byte, k*8)
+	for i := range k {
+		binary.BigEndian.PutUint64(b[i*8:], random.Uint64())
+	}
+	return b[:n]
 }
 
 func randomByte(random *rand.Rand) byte {
-	b := []byte{0}
-	_, _ = random.Read(b)
-	return b[0]
+	return byte(random.UintN(256))
 }
 
-// Returns a random key length with distribution:
-//
-//	50% of maxLen
-//	25% of maxLen-1
-//	...
-//	2 of length 2
-//	1 of length 1
-//	1 of length 0
-func randomKeyLen(maxLen int, random *rand.Rand) int {
-	return bits.Len(uint(random.Intn(1 << maxLen)))
-}
-
-func randomKey(maxLen int, random *rand.Rand) []byte {
-	return randomBytes(randomKeyLen(maxLen, random), random)
+// Returns a random key of with length chosen from a roughly normal distribution
+// with the given mean. Lengths will range from 0 to 2*mean.
+func randomKey(meanLen int, random *rand.Rand) []byte {
+	const bound = 4.0 // chosen experimentally
+	val := random.NormFloat64()
+	for val < -bound || val > +bound {
+		val = random.NormFloat64()
+	}
+	// val is in [-bound, +bound], translate that to [0, 2*mean]
+	val = (val + bound) * float64(meanLen) / bound
+	return randomBytes(int(math.Round(val)), random)
 }
 
 func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {

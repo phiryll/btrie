@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"maps"
-	"math/rand"
+	rand "math/rand/v2"
 	"os"
 	"reflect"
 	"slices"
@@ -27,15 +27,14 @@ import (
 // To minimize this, all the tries are constructed only once, and they all implement a non-public-API Clone() method.
 // That said, extensive benchmarking (not checked in) has shown that neither the frequency nor duration of timer pauses
 // to clone a trie have a significant effect on reported timings, at most about 8 ns/op in my current setup.
+// However, each clone can take a significant amount of time even though it isn't measured,
+// so these benchmarks take steps to reduce that impact.
 
 const (
-	// Don't benchmark keys shorter than this.
-	benchMinKeyLen = 3
-
-	// The maximum length of keys for randomly generated tries.
-	benchMaxRandomKeyLen = 5
+	benchMeanRandomKeyLen = 8
 
 	// The minimum number of keys to benchmark when tries must be cloned after exhausting the keys.
+	// i.e., don't benchmark if we will need to clone the trie every N operations and N < benchMinNumMutableKeys.
 	benchMinNumMutableKeys = 1 << 10
 
 	// The maximum size of created absent and bounds slices, 64K.
@@ -46,9 +45,8 @@ const (
 )
 
 var (
-	// How many entries randomly generated benchmarked tries will have,
-	// with keys of random length up to benchMaxKeyLen.
-	benchRandomTrieSizes = []int{1 << 12, 1 << 16, 1 << 20}
+	// How many entries randomly generated benchmarked tries will have.
+	benchRandomTrieSizes = []int{1 << 16, 1 << 18, 1 << 20}
 
 	benchTrieConfigs = createBenchTrieConfigs()
 )
@@ -205,12 +203,12 @@ func BenchmarkChildBounds(b *testing.B) {
 }
 
 func randomEntries(numEntries int) map[string]byte {
-	random := rand.New(rand.NewSource(int64(numEntries) + 83741074321))
+	random := rand.New(rand.NewPCG(uint64(numEntries), 83741074321))
 	entries := map[string]byte{}
 	for count := 0; count < numEntries; {
-		key := randomKey(benchMaxRandomKeyLen, random)
-		if _, ok := entries[string(key)]; !ok {
-			entries[string(key)] = randomByte(random)
+		key := string(randomKey(benchMeanRandomKeyLen, random))
+		if _, ok := entries[key]; !ok {
+			entries[key] = randomByte(random)
 			count++
 		}
 	}
@@ -274,7 +272,7 @@ func createAbsent(entries map[string]byte, maxKeyLen int, random *rand.Rand) []k
 	// set absent for key lengths 3+, randomly generated
 	// keep adding until each absent[keyLen] has maxGenSize keys
 	for keyLen := range absent {
-		if keyLen < benchMinKeyLen {
+		if keyLen < 3 {
 			continue
 		}
 		for len(absent[keyLen]) < genMaxSize {
@@ -324,7 +322,7 @@ func createFixedBounds(step int, random *rand.Rand) ([]Bounds, []Bounds) {
 }
 
 func createBenchTrieConfig(corpusName string, entries map[string]byte) *trieConfig {
-	random := rand.New(rand.NewSource(int64(len(entries)) + 4839028453))
+	random := rand.New(rand.NewPCG(uint64(len(entries)), 4839028453))
 	present := createPresent(entries, random)
 	absent := createAbsent(entries, len(present)-1, random)
 	keys := append(slices.Concat(present...), slices.Concat(absent...)...)
@@ -433,7 +431,7 @@ func BenchmarkFactory(b *testing.B) {
 // This benchmark is for memory allocations, not time.
 // Creates one trie and puts many keys per benchmark iteration.
 func BenchmarkSparseTries(b *testing.B) {
-	random := rand.New(rand.NewSource(12337405))
+	random := rand.New(rand.NewPCG(12337405, 432843980))
 	var keys keySet
 	for key := range 1 << 8 {
 		keyByte := byte(key)
@@ -456,7 +454,7 @@ func BenchmarkSparseTries(b *testing.B) {
 // This benchmark is for memory allocations, not time.
 // Creates one trie and puts many keys per benchmark iteration.
 func BenchmarkDenseTries(b *testing.B) {
-	random := rand.New(rand.NewSource(9321075532))
+	random := rand.New(rand.NewPCG(9321075532, 1293487543289))
 	oneKeys := make(keySet, 1<<8)
 	twoKeys := make(keySet, 1<<16)
 	threeKeys := make(keySet, 1<<24)
@@ -502,14 +500,7 @@ func BenchmarkPut(b *testing.B) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
-			for keyLen := range len(bench.config.present) {
-				if keyLen < benchMinKeyLen {
-					continue
-				}
-				if keyLen > benchMaxRandomKeyLen && keyLen%4 != 0 {
-					// Don't benchmark every key length, it isn't that useful.
-					continue
-				}
+			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
 					present := bench.config.present[keyLen]
 					if len(present) == 0 {
@@ -525,9 +516,6 @@ func BenchmarkPut(b *testing.B) {
 					absent := bench.config.absent[keyLen]
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
-					}
-					if len(absent) < benchMinNumMutableKeys {
-						b.Skipf("insufficient absent keys of length %d: %d", keyLen, len(absent))
 					}
 					trie := original.Clone()
 					b.ResetTimer()
@@ -550,14 +538,7 @@ func BenchmarkGet(b *testing.B) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
-			for keyLen := range len(bench.config.present) {
-				if keyLen < benchMinKeyLen {
-					continue
-				}
-				if keyLen > benchMaxRandomKeyLen && keyLen%4 != 0 {
-					// Don't benchmark every key length, it isn't that useful.
-					continue
-				}
+			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
 					present := bench.config.present[keyLen]
 					if len(present) == 0 {
@@ -590,14 +571,7 @@ func BenchmarkDelete(b *testing.B) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
 		original := bench.trie
 		b.Run(bench.name, func(b *testing.B) {
-			for keyLen := range len(bench.config.present) {
-				if keyLen < benchMinKeyLen {
-					continue
-				}
-				if keyLen > benchMaxRandomKeyLen && keyLen%4 != 0 {
-					// Don't benchmark every key length, it isn't that useful.
-					continue
-				}
+			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
 					present := bench.config.present[keyLen]
 					if len(present) == 0 {
@@ -682,7 +656,7 @@ func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 }
 
 func BenchmarkShortRange(b *testing.B) {
-	random := rand.New(rand.NewSource(74320567))
+	random := rand.New(rand.NewPCG(74320567, 6234982127))
 	forward, reverse := createFixedBounds(0x00_00_00_83, random)
 	benchRange(b, func(_ *testTrie) ([]Bounds, []Bounds) {
 		return forward, reverse
@@ -690,7 +664,7 @@ func BenchmarkShortRange(b *testing.B) {
 }
 
 func BenchmarkLongRange(b *testing.B) {
-	random := rand.New(rand.NewSource(48239752))
+	random := rand.New(rand.NewPCG(48239752, 80321318701))
 	forward, reverse := createFixedBounds(0x00_02_13_13, random)
 	benchRange(b, func(_ *testTrie) ([]Bounds, []Bounds) {
 		return forward, reverse
