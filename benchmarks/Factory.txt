@@ -1,0 +1,66 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/phiryll/btrie
+cpu: Apple M1 Max
+BenchmarkFactory/impl=reference-10         	24774001	        47.80 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26973868	        48.83 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	27033267	        50.73 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26836982	        51.90 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26337038	        51.82 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	27111649	        50.18 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	27030247	        51.38 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26960686	        51.16 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26936832	        51.88 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26773089	        51.82 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	27021802	        51.40 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	27021625	        51.20 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26974348	        51.75 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26952940	        51.12 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26742609	        49.87 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26985292	        50.26 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	27051218	        50.95 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	26570348	        51.80 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	25485620	        51.99 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=reference-10         	24910262	        51.53 ns/op	      56 B/op	       2 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52435329	        25.17 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52833952	        25.54 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52613886	        25.15 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52954608	        25.57 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52069208	        25.21 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52646490	        25.49 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	53031934	        25.32 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52437048	        25.66 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52484064	        25.52 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52458252	        25.20 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52546114	        25.43 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52732476	        25.63 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52002453	        25.68 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52679232	        25.57 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	50743712	        25.63 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52964443	        25.36 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	53372966	        25.61 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52307619	        25.56 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52181190	        25.36 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=pointer-trie-10      	52706805	        25.59 ns/op	      32 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59111238	        21.72 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59054631	        22.24 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	57063828	        22.18 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	57571788	        22.04 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59074136	        22.07 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	58772270	        21.77 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59072682	        22.07 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	58289330	        21.66 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	58146458	        21.86 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59008653	        21.77 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59134783	        21.83 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59162845	        21.76 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59085165	        21.89 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	58799268	        21.83 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	58014339	        21.84 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59101534	        21.96 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59084922	        21.67 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	58670980	        21.74 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59123616	        21.89 ns/op	      16 B/op	       1 allocs/op
+BenchmarkFactory/impl=array-trie-10        	59194582	        21.85 ns/op	      16 B/op	       1 allocs/op
+PASS
+ok  	github.com/phiryll/btrie	345.259s

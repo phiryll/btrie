@@ -3,9 +3,8 @@ package btrie_test
 import (
 	"bytes"
 	"encoding/binary"
-	"math/rand"
+	rand "math/rand/v2"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,7 +17,7 @@ import (
 const (
 	fuzzTrieSize      = 1 << 20
 	fuzzRangeTrieSize = 1 << 16 // because Range is an expensive operation
-	fuzzMaxKeyLen     = 4
+	fuzzMeanKeyLen    = 4
 )
 
 var (
@@ -51,12 +50,12 @@ func keyForFuzzInputs(fuzzKey uint32, fuzzKeyLen byte) []byte {
 
 func createFuzzTrieConfigs(trieSize int) []*trieConfig {
 	var config trieConfig
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	random := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 	config.name = "fuzz"
 	config.trieSize = trieSize
 	config.entries = map[string]byte{}
 	for count := 0; count < trieSize; {
-		key := string(randomKey(fuzzMaxKeyLen, random))
+		key := string(randomKey(fuzzMeanKeyLen, random))
 		if _, ok := config.entries[key]; !ok {
 			config.entries[key] = randomByte(random)
 			count++
