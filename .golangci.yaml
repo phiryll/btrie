@@ -284,6 +284,11 @@ linters-settings:
     # Do not allow non-required aliases.
     # Default: false
     no-extra-aliases: true
+    # List of aliases
+    # Default: []
+    alias:
+      - pkg: math/rand/v2
+        alias: rand
 
   ireturn:
     # keywords:
