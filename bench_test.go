@@ -115,6 +115,7 @@ func benchTraverserPaths(b *testing.B, name string, pathTraverser btrie.TestingP
 	})
 }
 
+//nolint:funlen
 func BenchmarkChildBounds(b *testing.B) {
 	for _, tt := range []struct {
 		bounds *Bounds
@@ -194,7 +195,7 @@ func BenchmarkChildBounds(b *testing.B) {
 			forward := tt.bounds
 			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
 			for _, key := range tt.keys {
-				b.Run(fmt.Sprintf("key=%s", keyName(key)), func(b *testing.B) {
+				b.Run("key="+keyName(key), func(b *testing.B) {
 					b.Run("dir=forward", func(b *testing.B) {
 						b.ResetTimer()
 						for range b.N {

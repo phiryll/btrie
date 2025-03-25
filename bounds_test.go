@@ -34,7 +34,7 @@ func next(key []byte) []byte {
 }
 
 // This may not return the immediate predecessor, since a unique one might not exist.
-// For example, {A, B, 0xFF} < {A, B, 0xFF, 0xFF} < ... < {A, B+1}
+// For example, {A, B, 0xFF} < {A, B, 0xFF, 0xFF} < ... < {A, B+1}.
 func prev(key []byte) []byte {
 	baseKeyLen := len(key) - 1
 	baseKey := append([]byte{}, key[:baseKeyLen]...)
@@ -46,6 +46,7 @@ func prev(key []byte) []byte {
 }
 
 func TestNext(t *testing.T) {
+	t.Parallel()
 	assert.Panics(t, func() {
 		next(nil)
 	})
@@ -65,6 +66,7 @@ func TestNext(t *testing.T) {
 }
 
 func TestPrev(t *testing.T) {
+	t.Parallel()
 	assert.Panics(t, func() {
 		prev(nil)
 	})
@@ -138,7 +140,7 @@ func TestBoundsComparePanics(t *testing.T) {
 	})
 }
 
-//nolint:funlen
+//nolint:funlen,maintidx
 func TestBoundsCompare(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
