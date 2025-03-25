@@ -151,7 +151,10 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(next(empty)).To(high),
-			keySet{empty, next(empty), next(next(empty)), before, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
+			keySet{
+				empty, next(empty), next(next(empty)), before, high[:1], high[:2], high[:3],
+				prev(high), high, next(high), after,
+			},
 		},
 		{
 			From(next(empty)).To(nil),
@@ -159,8 +162,10 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(low).To(high),
-			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low),
-				within, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
+			keySet{
+				empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low),
+				within, high[:1], high[:2], high[:3], prev(high), high, next(high), after,
+			},
 		},
 		{
 			From(low).To(nil),
@@ -170,13 +175,19 @@ func BenchmarkChildBounds(b *testing.B) {
 		// 2 byte common prefix
 		{
 			From(low).To(low2),
-			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low), midLows, low2[:3], prev(low2), low2, next(low2), after},
+			keySet{
+				empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low),
+				midLows, low2[:3], prev(low2), low2, next(low2), after,
+			},
 		},
 
 		// From is a prefix of To
 		{
 			From(low[:2]).To(low),
-			keySet{empty, next(empty), before, low[:1], prev(low[:2]), low[:2], next(low[:2]), low[:3], prev(low), low, next(low), after},
+			keySet{
+				empty, next(empty), before, low[:1], prev(low[:2]), low[:2], next(low[:2]), low[:3],
+				prev(low), low, next(low), after,
+			},
 		},
 	} {
 		b.Run(fmt.Sprintf("bounds=%s", tt.bounds), func(b *testing.B) {
