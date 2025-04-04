@@ -16,8 +16,7 @@ type arrayTrieNode[V any] struct {
 
 // NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
 func NewArrayTrie[V any]() BTrie[V] {
-	var zero V
-	return &arrayTrieNode[V]{nil, zero, 0, false}
+	return &arrayTrieNode[V]{}
 }
 
 func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {

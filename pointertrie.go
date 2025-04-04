@@ -19,8 +19,7 @@ type ptrTrieNode[V any] struct {
 // Pointers to children are stored densely in slices.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 func NewPointerTrie[V any]() BTrie[V] {
-	var zero V
-	return &ptrTrieNode[V]{nil, zero, 0, false}
+	return &ptrTrieNode[V]{}
 }
 
 func (n *ptrTrieNode[V]) Get(key []byte) (V, bool) {

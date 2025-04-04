@@ -88,6 +88,7 @@ linters:
     # not needed/wanted in this project
     - exportloopref     # not needed with Go 1.22+
     - execinquery       # SQL not used
+    - exhaustruct       # zero values should be reasonable and useful
     - ginkgolinter      # not using this testing framework
     - gochecknoglobals  # no config options to limit to exported elements
     - goheader          # no headers in source files. LICENSE is enough

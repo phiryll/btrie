@@ -413,6 +413,32 @@ func TestBenchTrieConfigRepeatability(t *testing.T) {
 	}
 }
 
+// This helps to understand how factory() can impact other benchmarks which use it.
+func BenchmarkFactory(b *testing.B) {
+	for _, def := range implDefs {
+		b.Run("impl="+def.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				_ = def.factory()
+			}
+		})
+	}
+}
+
+func BenchmarkCreate(b *testing.B) {
+	for _, bench := range createTestTries(benchTrieConfigs) {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ResetTimer()
+			for range b.N {
+				trie := bench.def.factory()
+				for k, v := range bench.config.entries {
+					trie.Put([]byte(k), v)
+				}
+			}
+		})
+	}
+}
+
 // For mutable implementations, Clone() should be efficient, but not absurdly efficient.
 // If it is, that's a sign it's sharing storage instead of creating new storage.
 // This also helps to understand how Clone() can impact other benchmarks which use it.
@@ -423,18 +449,6 @@ func BenchmarkClone(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
 				_ = original.Clone()
-			}
-		})
-	}
-}
-
-// This helps to understand how factory() can impact other benchmarks which use it.
-func BenchmarkFactory(b *testing.B) {
-	for _, def := range implDefs {
-		b.Run("impl="+def.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
-				_ = def.factory()
 			}
 		})
 	}
