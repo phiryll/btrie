@@ -68,7 +68,7 @@ func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	entries := []entry{}
 	for k, v := range r.m {
 		key := []byte(k)
-		if bounds.Compare(key) != 0 {
+		if bounds.CompareKey(key) != 0 {
 			continue
 		}
 		entries = append(entries, entry{key, v})

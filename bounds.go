@@ -64,10 +64,10 @@ func (b *Bounds) DownTo(end []byte) *Bounds {
 	return &Bounds{b.Begin, end, true}
 }
 
-// Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
-// Compare will panic if key is nil.
+// CompareKey returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
+// CompareKey will panic if key is nil.
 // -Inf < {} < {0}.
-func (b *Bounds) Compare(key []byte) int {
+func (b *Bounds) CompareKey(key []byte) int {
 	if key == nil {
 		panic("key cannot be nil")
 	}

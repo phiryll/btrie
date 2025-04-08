@@ -128,7 +128,7 @@ func (n *ptrTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 	}
 	return func(yield func([]byte, V) bool) {
 		for path := range pathItr {
-			cmp := bounds.Compare(path.key)
+			cmp := bounds.CompareKey(path.key)
 			if cmp < 0 {
 				continue
 			}
