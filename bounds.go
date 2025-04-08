@@ -20,11 +20,11 @@ type Bounds struct {
 	// Begin is the [From] argument used to construct this Bounds.
 	Begin []byte
 
-	// End is the [BoundsBuilder.To] or [BoundsBuilder.DownTo] argument used to construct this Bounds.
+	// End is the [Bounds.To] or [Bounds.DownTo] argument used to construct this Bounds.
 	End []byte
 
-	// IsReverse is false if this Bounds was created by [BoundsBuilder.To],
-	// and true if it was created by [BoundsBuilder.DownTo].
+	// IsReverse is false if this Bounds was created by [Bounds.To],
+	// and true if it was created by [Bounds.DownTo].
 	IsReverse bool
 }
 
