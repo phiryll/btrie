@@ -130,18 +130,18 @@ func TestBoundsBuilder(t *testing.T) {
 	}
 }
 
-func TestBoundsComparePanics(t *testing.T) {
+func TestBoundsCompareKeyPanics(t *testing.T) {
 	t.Parallel()
 	assert.Panics(t, func() {
-		forwardAll.Compare(nil)
+		forwardAll.CompareKey(nil)
 	})
 	assert.Panics(t, func() {
-		reverseAll.Compare(nil)
+		reverseAll.CompareKey(nil)
 	})
 }
 
 //nolint:funlen,maintidx
-func TestBoundsCompare(t *testing.T) {
+func TestBoundsCompareKey(t *testing.T) {
 	t.Parallel()
 	for _, tt := range []struct {
 		bounds                *Bounds
@@ -263,15 +263,15 @@ func TestBoundsCompare(t *testing.T) {
 			t.Parallel()
 			count := 0
 			for _, key := range tt.before {
-				assert.Equal(t, -1, tt.bounds.Compare(key), "%s", keyName(key))
+				assert.Equal(t, -1, tt.bounds.CompareKey(key), "%s", keyName(key))
 				count++
 			}
 			for _, key := range tt.within {
-				assert.Equal(t, 0, tt.bounds.Compare(key), "%s", keyName(key))
+				assert.Equal(t, 0, tt.bounds.CompareKey(key), "%s", keyName(key))
 				count++
 			}
 			for _, key := range tt.after {
-				assert.Equal(t, +1, tt.bounds.Compare(key), "%s", keyName(key))
+				assert.Equal(t, +1, tt.bounds.CompareKey(key), "%s", keyName(key))
 				count++
 			}
 		})

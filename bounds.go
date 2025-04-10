@@ -20,11 +20,11 @@ type Bounds struct {
 	// Begin is the [From] argument used to construct this Bounds.
 	Begin []byte
 
-	// End is the [BoundsBuilder.To] or [BoundsBuilder.DownTo] argument used to construct this Bounds.
+	// End is the [Bounds.To] or [Bounds.DownTo] argument used to construct this Bounds.
 	End []byte
 
-	// IsReverse is false if this Bounds was created by [BoundsBuilder.To],
-	// and true if it was created by [BoundsBuilder.DownTo].
+	// IsReverse is false if this Bounds was created by [Bounds.To],
+	// and true if it was created by [Bounds.DownTo].
 	IsReverse bool
 }
 
@@ -64,10 +64,10 @@ func (b *Bounds) DownTo(end []byte) *Bounds {
 	return &Bounds{b.Begin, end, true}
 }
 
-// Compare returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
-// Compare will panic if key is nil.
+// CompareKey returns 0 if key is within this Bounds, -1 if beyond Begin, and +1 if beyond End.
+// CompareKey will panic if key is nil.
 // -Inf < {} < {0}.
-func (b *Bounds) Compare(key []byte) int {
+func (b *Bounds) CompareKey(key []byte) int {
 	if key == nil {
 		panic("key cannot be nil")
 	}
