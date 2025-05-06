@@ -69,7 +69,7 @@ func (b *Bounds) DownTo(end []byte) *Bounds {
 // -Inf < {} < {0}.
 func (b *Bounds) CompareKey(key []byte) int {
 	if key == nil {
-		panic("key cannot be nil")
+		panic("key must be non-nil")
 	}
 	if b.IsReverse {
 		if b.Begin != nil && bytes.Compare(key, b.Begin) > 0 {

@@ -28,7 +28,7 @@ var (
 
 func next(key []byte) []byte {
 	if key == nil {
-		panic("key cannot be nil")
+		panic("key must be non-nil")
 	}
 	return append(append([]byte{}, key...), 0x00)
 }
