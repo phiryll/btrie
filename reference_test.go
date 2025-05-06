@@ -51,7 +51,6 @@ func (r reference) Delete(key []byte) (byte, bool) {
 	return value, ok
 }
 
-//nolint:revive
 func (r reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")

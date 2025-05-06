@@ -18,6 +18,8 @@ type ptrTrieNode[V any] struct {
 // NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
 // Pointers to children are stored densely in slices.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
+//
+//nolint:iface
 func NewPointerTrie[V any]() BTrie[V] {
 	return &ptrTrieNode[V]{}
 }
@@ -204,7 +206,6 @@ func (n *ptrTrieNode[V]) String() string {
 	return s.String()
 }
 
-//nolint:revive
 func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
 	if indent == "" {
 		s.WriteString("[]")
