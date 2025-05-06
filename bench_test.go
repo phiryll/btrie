@@ -298,8 +298,8 @@ func createAbsent(entries map[string]byte, maxKeyLen int, random *rand.Rand) []k
 	return absent
 }
 
-func createBounds(keys keySet) ([]Bounds, []Bounds) {
-	var forward, reverse []Bounds
+//nolint:nonamedreturns
+func createBounds(keys keySet) (forward, reverse []Bounds) {
 	for i := range genMaxSize {
 		begin := keys[(2*i)%len(keys)]
 		end := keys[(2*i+1)%len(keys)]
@@ -317,8 +317,8 @@ func createBounds(keys keySet) ([]Bounds, []Bounds) {
 	return forward, reverse
 }
 
-func createFixedBounds(step int, random *rand.Rand) ([]Bounds, []Bounds) {
-	var forward, reverse []Bounds
+//nolint:nonamedreturns
+func createFixedBounds(step int, random *rand.Rand) (forward, reverse []Bounds) {
 	for low := step / 2; low < 1<<24-step; low += step {
 		high := low + step
 		keyBytes := binary.BigEndian.AppendUint32(nil, uint32(low))

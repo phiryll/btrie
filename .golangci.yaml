@@ -1,9 +1,5 @@
 # output configuration options
 output:
-  # Make issues output unique by line.
-  # Default: true
-  uniq-by-line: false
-
   # Show statistics per linter.
   # Default: false
   show-stats: true
@@ -47,6 +43,10 @@ issues:
   # Default: 3
   max-same-issues: 0
 
+  # Make issues output unique by line.
+  # Default: true
+  uniq-by-line: false
+
   # cmdline option: -n, --new
   #
   # Show only new issues: if there are unstaged changes or untracked files,
@@ -83,11 +83,7 @@ linters:
   # Disable specific linter
   # https://golangci-lint.run/usage/linters/#disabled-by-default
   disable:
-    # causes problems if golangci-lint is compiled with a different version of go
-    - typecheck
     # not needed/wanted in this project
-    - exportloopref     # not needed with Go 1.22+
-    - execinquery       # SQL not used
     - exhaustruct       # zero values should be reasonable and useful
     - ginkgolinter      # not using this testing framework
     - gochecknoglobals  # no config options to limit to exported elements
@@ -105,7 +101,6 @@ linters:
     - wsl               # might be able to configure this well, but it'll take effort
     # replaced or duplicated
     - gocyclo           # by cyclop
-    - gomnd             # by mnd
 
 # Settings for specific linters.
 #
@@ -281,6 +276,14 @@ linters-settings:
     # Default: false
     enable-all: true
 
+  iface:
+    # List of analyzers.
+    # Default: ["identical"]
+    enable:
+      - identical # Identifies interfaces in the same package that have identical method sets.
+      - unused # Identifies interfaces that are not used anywhere in the same package where the interface is defined.
+      - opaque # Identifies functions that return interfaces, but the actual returned value is always a single concrete implementation.
+
   importas:
     # Do not allow non-required aliases.
     # Default: false
@@ -408,20 +411,10 @@ linters-settings:
           - "fmt.Printf"
           - "fmt.Println"
 
-  tenv:
-    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
-    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
-    # Default: false
-    all: true
-
   testifylint:
     # Enable all checkers (https://github.com/Antonboom/testifylint#checkers).
     # Default: false
     enable-all: true
-
-    disable:
-      - float-compare
-      - require-error
 
   testpackage:
     # List of packages that don't end with _test that tests are allowed to be in.
@@ -438,6 +431,11 @@ linters-settings:
     # Suggest the use of constant.Kind.String().
     # Default: false
     constant-kind: true
+
+  usetesting:
+    # Enable/disable `os.TempDir()` detections.
+    # Default: false
+    os-temp-dir: true
 
   unconvert:
     # Remove conversions that force intermediate rounding.

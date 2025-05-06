@@ -15,6 +15,8 @@ type arrayTrieNode[V any] struct {
 }
 
 // NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
+//
+//nolint:iface
 func NewArrayTrie[V any]() BTrie[V] {
 	return &arrayTrieNode[V]{}
 }
@@ -205,7 +207,6 @@ func (n *arrayTrieNode[V]) String() string {
 	return s.String()
 }
 
-//nolint:revive
 func (n *arrayTrieNode[V]) printNode(s *strings.Builder, keyByte byte, indent string) {
 	if indent == "" {
 		s.WriteString("[]")

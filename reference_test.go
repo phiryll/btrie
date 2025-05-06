@@ -9,52 +9,49 @@ import (
 )
 
 func newReference() TestBTrie {
-	return &reference{map[string]byte{}}
+	return reference{}
 }
 
 // reference implements the TestBTrie interface, but it is not a trie.
 // This serves as an expected value to compare against a BTrie[byte] implementation while testing.
-type reference struct {
-	m map[string]byte
+type reference map[string]byte
+
+func (r reference) Clone() TestBTrie {
+	return maps.Clone(r)
 }
 
-func (r *reference) Clone() TestBTrie {
-	return &reference{maps.Clone(r.m)}
-}
-
-func (r *reference) Put(key []byte, value byte) (byte, bool) {
+func (r reference) Put(key []byte, value byte) (byte, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}
 	index := string(key)
-	prev, ok := r.m[index]
-	r.m[index] = value
+	prev, ok := r[index]
+	r[index] = value
 	if ok {
 		return prev, true
 	}
 	return 0, false
 }
 
-func (r *reference) Get(key []byte) (byte, bool) {
+func (r reference) Get(key []byte) (byte, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}
-	value, ok := r.m[string(key)]
+	value, ok := r[string(key)]
 	return value, ok
 }
 
-func (r *reference) Delete(key []byte) (byte, bool) {
+func (r reference) Delete(key []byte) (byte, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}
 	index := string(key)
-	value, ok := r.m[index]
-	delete(r.m, index)
+	value, ok := r[index]
+	delete(r, index)
 	return value, ok
 }
 
-//nolint:revive
-func (r *reference) String() string {
+func (r reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	for k, v := range r.Range(forwardAll) {
@@ -64,14 +61,13 @@ func (r *reference) String() string {
 	return s.String()
 }
 
-func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
+func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	entries := []entry{}
-	for k, v := range r.m {
+	for k, v := range r {
 		key := []byte(k)
-		if bounds.CompareKey(key) != 0 {
-			continue
+		if bounds.CompareKey(key) == 0 {
+			entries = append(entries, entry{key, v})
 		}
-		entries = append(entries, entry{key, v})
 	}
 	if bounds.IsReverse {
 		slices.SortFunc(entries, cmpEntryReverse)
