@@ -3,7 +3,9 @@ package btrie
 
 import (
 	"fmt"
+	"io"
 	"iter"
+	"strings"
 )
 
 // BTrie is essentially an ordered map[[]byte]V.
@@ -46,3 +48,49 @@ func KeyName(key []byte) string {
 }
 
 func emptySeq[V any](_ func(V) bool) {}
+
+// Sprint returns a pretty-printed representation of bt.
+// Values are printed using the `%v` format specifier.
+// Returns an empty string if bt is empty.
+func Sprint[V any](bt BTrie[V]) string {
+	var s strings.Builder
+	if _, err := Fprint(&s, bt); err != nil {
+		panic(err)
+	}
+	return s.String()
+}
+
+func indent(n int) string {
+	const (
+		// must be 2 characters to align with hex-formatted bytes
+		indent         = ". "
+		repeatedIndent = ". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . "
+	)
+	if 2*n > len(repeatedIndent) {
+		return strings.Repeat(indent, n)
+	}
+	return repeatedIndent[:2*n]
+}
+
+// Fprint writes a pretty-printed representation of bt to w.
+// Values are printed using the `%v` format specifier.
+// Writes nothing to w if bt is empty.
+func Fprint[V any](w io.Writer, bt BTrie[V]) (int, error) {
+	n := 0
+	prevKey := []byte{}
+	for key, value := range bt.Range(From(nil).To(nil)) {
+		limit := min(len(key), len(prevKey))
+		i := 0
+		for i < limit && key[i] == prevKey[i] {
+			i++
+		}
+		k, err := fmt.Fprintf(w, "%s%X: %v\n", indent(i), key[i:], value)
+		n += k
+		if err != nil {
+			//nolint:wrapcheck
+			return n, err
+		}
+		prevKey = key
+	}
+	return n, nil
+}
