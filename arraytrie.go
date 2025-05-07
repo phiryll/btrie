@@ -203,27 +203,17 @@ func arrayTrieReverseAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[
 
 func (n *arrayTrieNode[V]) String() string {
 	var s strings.Builder
-	n.printNode(&s, 0, "")
-	return s.String()
-}
-
-func (n *arrayTrieNode[V]) printNode(s *strings.Builder, keyByte byte, indent string) {
-	if indent == "" {
-		s.WriteString("[]")
-	} else {
-		fmt.Fprintf(s, "%s%02X", indent, keyByte)
-	}
+	s.WriteString("{")
 	if n.isTerminal {
-		fmt.Fprintf(s, ": %v\n", n.value)
-	} else {
-		s.WriteString("\n")
+		fmt.Fprintf(&s, ":%v, ", n.value)
 	}
-	if n.children == nil {
-		return
-	}
-	for i, child := range n.children {
-		if child != nil {
-			child.printNode(s, byte(i), indent+"  ")
+	if n.children != nil {
+		for i, child := range n.children {
+			if child != nil {
+				fmt.Fprintf(&s, "%02X:%s, ", byte(i), child)
+			}
 		}
 	}
+	s.WriteString("}")
+	return s.String()
 }

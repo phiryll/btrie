@@ -78,8 +78,8 @@ func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 func (r reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
-	for k, v := range r.Range(forwardAll) {
-		fmt.Fprintf(&s, "%s:%v, ", btrie.KeyName(k), v)
+	for _, key := range slices.Sorted(maps.Keys(r)) {
+		fmt.Fprintf(&s, "%s:%v, ", btrie.KeyName([]byte(key)), r[key])
 	}
 	s.WriteString("}")
 	return s.String()
