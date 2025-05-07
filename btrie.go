@@ -12,6 +12,8 @@ import (
 // Implementations must clearly document if any methods accept or return references to its internal storage.
 // Implementations must clearly document if the iterator returned by Range is single-use.
 // Although nothing in this interface mandates it, all BTrie implementations in this package are tries.
+// If an implemention implements [fmt.Stringer], it should produce a value appropriate for debugging,
+// how verbose is up to the implementer.
 type BTrie[V any] interface {
 	// Get returns the value for key and whether or not it exists.
 	Get(key []byte) (value V, ok bool)
@@ -31,9 +33,9 @@ type BTrie[V any] interface {
 	Range(bounds *Bounds) iter.Seq2[[]byte, V]
 }
 
-func emptySeq[V any](_ func(V) bool) {}
-
-func keyName(key []byte) string {
+// KeyName returns a user-friendly string for key,
+// one of "nil", "empty", or the key bytes as a hex string.
+func KeyName(key []byte) string {
 	if key == nil {
 		return "nil"
 	}
@@ -42,3 +44,5 @@ func keyName(key []byte) string {
 	}
 	return fmt.Sprintf("%X", key)
 }
+
+func emptySeq[V any](_ func(V) bool) {}

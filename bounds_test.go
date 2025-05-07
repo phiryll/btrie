@@ -115,7 +115,7 @@ func TestBoundsBuilder(t *testing.T) {
 		{low, nil},
 		{nil, nil},
 	} {
-		t.Run(fmt.Sprintf("(%s,%s)", keyName(tt.first), keyName(tt.second)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("(%s,%s)", btrie.KeyName(tt.first), btrie.KeyName(tt.second)), func(t *testing.T) {
 			t.Parallel()
 			bounds := From(tt.first).To(tt.second)
 			assert.Equal(t, tt.first, bounds.Begin)
@@ -263,15 +263,15 @@ func TestBoundsCompareKey(t *testing.T) {
 			t.Parallel()
 			count := 0
 			for _, key := range tt.before {
-				assert.Equal(t, -1, tt.bounds.CompareKey(key), "%s", keyName(key))
+				assert.Equal(t, -1, tt.bounds.CompareKey(key), "%s", btrie.KeyName(key))
 				count++
 			}
 			for _, key := range tt.within {
-				assert.Equal(t, 0, tt.bounds.CompareKey(key), "%s", keyName(key))
+				assert.Equal(t, 0, tt.bounds.CompareKey(key), "%s", btrie.KeyName(key))
 				count++
 			}
 			for _, key := range tt.after {
-				assert.Equal(t, +1, tt.bounds.CompareKey(key), "%s", keyName(key))
+				assert.Equal(t, +1, tt.bounds.CompareKey(key), "%s", btrie.KeyName(key))
 				count++
 			}
 		})
@@ -573,9 +573,9 @@ func TestChildBounds(t *testing.T) {
 			t.Parallel()
 			for _, exp := range tt.expected {
 				start, stop, ok := btrie.TestingChildBounds(tt.bounds, exp.key)
-				assert.Equal(t, exp.start, start, "%s", keyName(exp.key))
-				assert.Equal(t, exp.stop, stop, "%s", keyName(exp.key))
-				assert.Equal(t, exp.ok, ok, "%s", keyName(exp.key))
+				assert.Equal(t, exp.start, start, "%s", btrie.KeyName(exp.key))
+				assert.Equal(t, exp.stop, stop, "%s", btrie.KeyName(exp.key))
+				assert.Equal(t, exp.ok, ok, "%s", btrie.KeyName(exp.key))
 			}
 		})
 	}

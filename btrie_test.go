@@ -84,8 +84,6 @@ var (
 	forwardAll = From(nil).To(nil)
 	reverseAll = From(nil).DownTo(nil)
 
-	keyName = btrie.TestingKeyName
-
 	// Keys used to build test tries.
 	// These are in lexicographical order.
 	testPresentKeys = keySet{
@@ -455,7 +453,7 @@ func TestTrie(t *testing.T) {
 			trie := test.def.factory()
 			existing := map[string]byte{}
 			for key, value := range test.config.entries {
-				t.Run("op=put/key="+keyName([]byte(key)), func(t *testing.T) {
+				t.Run("op=put/key="+btrie.KeyName([]byte(key)), func(t *testing.T) {
 					assertAbsent(t, []byte(key), trie)
 					assertSame(t, existing, trie)
 
@@ -469,7 +467,7 @@ func TestTrie(t *testing.T) {
 
 			for _, keys := range test.config.absent {
 				for _, key := range keys {
-					t.Run("op=absent/key="+keyName(key), func(t *testing.T) {
+					t.Run("op=absent/key="+btrie.KeyName(key), func(t *testing.T) {
 						assertAbsent(t, key, trie)
 					})
 				}

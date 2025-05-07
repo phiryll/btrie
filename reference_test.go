@@ -6,6 +6,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/phiryll/btrie"
 )
 
 func newReference() TestBTrie {
@@ -51,16 +53,6 @@ func (r reference) Delete(key []byte) (byte, bool) {
 	return value, ok
 }
 
-func (r reference) String() string {
-	var s strings.Builder
-	s.WriteString("{")
-	for k, v := range r.Range(forwardAll) {
-		fmt.Fprintf(&s, "%s:%v, ", keyName(k), v)
-	}
-	s.WriteString("}")
-	return s.String()
-}
-
 func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	entries := []entry{}
 	for k, v := range r {
@@ -81,4 +73,14 @@ func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 			}
 		}
 	}
+}
+
+func (r reference) String() string {
+	var s strings.Builder
+	s.WriteString("{")
+	for k, v := range r.Range(forwardAll) {
+		fmt.Fprintf(&s, "%s:%v, ", btrie.KeyName(k), v)
+	}
+	s.WriteString("}")
+	return s.String()
 }
