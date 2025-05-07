@@ -35,9 +35,9 @@ func (b *Bounds) Clone() *Bounds {
 
 func (b *Bounds) String() string {
 	if b.IsReverse {
-		return fmt.Sprintf("[%s down to %s]", keyName(b.Begin), keyName(b.End))
+		return fmt.Sprintf("[%s down to %s]", KeyName(b.Begin), KeyName(b.End))
 	}
-	return fmt.Sprintf("[%s to %s]", keyName(b.Begin), keyName(b.End))
+	return fmt.Sprintf("[%s to %s]", KeyName(b.Begin), KeyName(b.End))
 }
 
 // From returns a Bounds with the given Begin, nil End, and IsReverse false.
@@ -69,7 +69,7 @@ func (b *Bounds) DownTo(end []byte) *Bounds {
 // -Inf < {} < {0}.
 func (b *Bounds) CompareKey(key []byte) int {
 	if key == nil {
-		panic("key cannot be nil")
+		panic("key must be non-nil")
 	}
 	if b.IsReverse {
 		if b.Begin != nil && bytes.Compare(key, b.Begin) > 0 {

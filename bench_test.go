@@ -195,7 +195,7 @@ func BenchmarkChildBounds(b *testing.B) {
 			forward := tt.bounds
 			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
 			for _, key := range tt.keys {
-				b.Run("key="+keyName(key), func(b *testing.B) {
+				b.Run("key="+btrie.KeyName(key), func(b *testing.B) {
 					b.Run("dir=forward", func(b *testing.B) {
 						b.ResetTimer()
 						for range b.N {

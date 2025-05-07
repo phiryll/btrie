@@ -6,6 +6,7 @@ import (
 	rand "math/rand/v2"
 	"testing"
 
+	"github.com/phiryll/btrie"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -87,8 +88,8 @@ func FuzzGet(f *testing.F) {
 		expected, expectedOk := ref.Get(key)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Get(key)
-			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
-			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, btrie.KeyName(key))
+			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, btrie.KeyName(key))
 		}
 	})
 }
@@ -101,11 +102,11 @@ func FuzzPut(f *testing.F) {
 		expected, expectedOk := ref.Put(key, value)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Put(key, value)
-			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, keyName(key), value)
-			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
+			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
 			actual, ok := fuzz.trie.Get(key)
-			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, keyName(key), value)
-			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
+			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
 		}
 	})
 }
@@ -118,11 +119,11 @@ func FuzzDelete(f *testing.F) {
 		expected, expectedOk := ref.Delete(key)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Delete(key)
-			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
-			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, btrie.KeyName(key))
+			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, btrie.KeyName(key))
 			actual, ok := fuzz.trie.Get(key)
-			assert.False(t, ok, "%s: %s", fuzz.def.name, keyName(key))
-			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, keyName(key))
+			assert.False(t, ok, "%s: %s", fuzz.def.name, btrie.KeyName(key))
+			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, btrie.KeyName(key))
 		}
 	})
 }
@@ -158,22 +159,22 @@ func FuzzMixed(f *testing.F) {
 		expected, expectedOk := ref.Put(key, value)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Put(key, value)
-			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, keyName(key), value)
-			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
+			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
 			actual, ok := fuzz.trie.Get(key)
-			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, keyName(key), value)
-			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, keyName(key), value)
+			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
+			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, btrie.KeyName(key), value)
 		}
 
 		key = keyForFuzzInputs(fuzzDeleteKey, fuzzDeleteKeyLen)
 		expected, expectedOk = ref.Delete(key)
 		for _, fuzz := range fuzzTries {
 			actual, actualOk := fuzz.trie.Delete(key)
-			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, keyName(key))
-			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, keyName(key))
+			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, btrie.KeyName(key))
+			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, btrie.KeyName(key))
 			actual, ok := fuzz.trie.Get(key)
-			assert.False(t, ok, "%s: %s", fuzz.def.name, keyName(key))
-			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, keyName(key))
+			assert.False(t, ok, "%s: %s", fuzz.def.name, btrie.KeyName(key))
+			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, btrie.KeyName(key))
 		}
 	})
 }

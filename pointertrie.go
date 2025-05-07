@@ -200,28 +200,6 @@ func ptrTrieReverseAdj[V any](bounds *Bounds) adjFunction[*ptrTrieRangePath[V]] 
 	}
 }
 
-func (n *ptrTrieNode[V]) String() string {
-	var s strings.Builder
-	n.printNode(&s, "")
-	return s.String()
-}
-
-func (n *ptrTrieNode[V]) printNode(s *strings.Builder, indent string) {
-	if indent == "" {
-		s.WriteString("[]")
-	} else {
-		fmt.Fprintf(s, "%s%02X", indent, n.keyByte)
-	}
-	if n.isTerminal {
-		fmt.Fprintf(s, ": %v\n", n.value)
-	} else {
-		s.WriteString("\n")
-	}
-	for _, child := range n.children {
-		child.printNode(s, indent+"  ")
-	}
-}
-
 func (n *ptrTrieNode[V]) search(byt byte) (int, bool) {
 	// Copied and tweaked from sort.Search. Inlining this is much, much faster.
 	// Invariant: child[i-1] < byt <= child[j]
@@ -241,4 +219,17 @@ func (n *ptrTrieNode[V]) search(byt byte) (int, bool) {
 		}
 	}
 	return i, false
+}
+
+func (n *ptrTrieNode[V]) String() string {
+	var s strings.Builder
+	s.WriteString("{")
+	if n.isTerminal {
+		fmt.Fprintf(&s, ":%v, ", n.value)
+	}
+	for _, child := range n.children {
+		fmt.Fprintf(&s, "%02X:%s, ", child.keyByte, child)
+	}
+	s.WriteString("}")
+	return s.String()
 }

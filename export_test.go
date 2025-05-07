@@ -5,7 +5,6 @@ package btrie
 // preventing their inclusion in the public API.
 
 var (
-	TestingKeyName        = keyName
 	TestingChildBounds    = (*Bounds).childBounds
 	TestingPreOrder       = preOrder[int]
 	TestingPostOrder      = postOrder[int]
