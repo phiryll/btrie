@@ -1,6 +1,7 @@
 package btrie_test
 
 import (
+	"cmp"
 	"fmt"
 	"iter"
 	"maps"
@@ -53,22 +54,33 @@ func (r reference) Delete(key []byte) (byte, bool) {
 	return value, ok
 }
 
+// Does not work with NaN.
+func negCompare[T cmp.Ordered](x, y T) int {
+	if x < y {
+		return +1
+	}
+	if x > y {
+		return -1
+	}
+	return 0
+}
+
 func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
-	entries := []entry{}
-	for k, v := range r {
-		key := []byte(k)
-		if bounds.CompareKey(key) == 0 {
-			entries = append(entries, entry{key, v})
-		}
-	}
-	if bounds.IsReverse {
-		slices.SortFunc(entries, cmpEntryReverse)
-	} else {
-		slices.SortFunc(entries, cmpEntryForward)
-	}
+	bounds = bounds.Clone()
 	return func(yield func([]byte, byte) bool) {
-		for _, entry := range entries {
-			if !yield(entry.key, entry.value) {
+		var keys []string
+		for key := range r {
+			if bounds.CompareKey([]byte(key)) == 0 {
+				keys = append(keys, key)
+			}
+		}
+		if bounds.IsReverse {
+			slices.SortFunc(keys, negCompare)
+		} else {
+			slices.Sort(keys)
+		}
+		for _, key := range keys {
+			if !yield([]byte(key), r[key]) {
 				return
 			}
 		}
