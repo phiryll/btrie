@@ -9,13 +9,13 @@ import (
 // Bounds is the argument type for [BTrie.Range].
 // A nil value for [Bounds.Begin] or [Bounds.End] represents +/-Inf;
 // which one depends on the value of [Bounds.IsReverse].
-// Note that an empty begin/end value is not nil; -Inf < []byte{} < []byte{0}.
+// Note that an empty value is not nil; -Inf < []byte{} < []byte{0}.
 // For non-nil values, Begin is inclusive and End is exclusive regardless of the direction.
 // [Bounds.Begin] and [Bounds.End] return references to internal slices.
 // Ways to construct a Bounds instance:
 //
-//	From(begin).To(end)      // IsReverse() is false
-//	From(begin).DownTo(end)  // IsReverse() is true
+//	From(begin).To(end)      // IsReverse is false
+//	From(begin).DownTo(end)  // IsReverse is true
 type Bounds struct {
 	// Begin is the [From] argument used to construct this Bounds.
 	Begin []byte
