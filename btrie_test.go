@@ -10,6 +10,7 @@ import (
 	rand "math/rand/v2"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/phiryll/btrie"
@@ -431,13 +432,63 @@ func TestTrieString(t *testing.T) {
 			t.Parallel()
 			trie := def.factory()
 			if sTrie, ok := trie.(fmt.Stringer); ok {
-				_ = sTrie.String()
+				assert.NotPanics(t, func() { _ = sTrie.String() })
 				trie.Put([]byte{}, 73)
-				_ = sTrie.String()
+				assert.NotPanics(t, func() { _ = sTrie.String() })
 				trie.Put([]byte{43, 15}, 94)
 				trie.Put([]byte{126, 73, 12}, 45)
-				_ = sTrie.String()
+				assert.NotPanics(t, func() { _ = sTrie.String() })
 			}
+		})
+	}
+}
+
+func checkFprint[V any](t *testing.T, expected string, seq iter.Seq2[[]byte, V]) {
+	var s strings.Builder
+	n, err := btrie.Fprint(&s, seq)
+	require.NoError(t, err)
+	assert.Equal(t, n, s.Len())
+	assert.Equal(t, expected, s.String())
+}
+
+func TestFprint(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			trie := def.factory()
+			checkFprint(t, "", trie.Range(From(nil).To(nil)))
+			checkFprint(t, "", trie.Range(From(nil).DownTo(nil)))
+
+			trie.Put([]byte{8, 6, 2}, 45)
+			trie.Put([]byte{1, 2}, 47)
+			trie.Put([]byte{8, 6, 5}, 53)
+			trie.Put([]byte{}, 35)
+			trie.Put([]byte{1, 1, 7, 3, 12}, 16)
+			trie.Put([]byte{8, 6, 4, 2}, 71)
+			trie.Put([]byte{1, 1}, 83)
+
+			checkFprint(t, `: 35
+0101: 83
+. . 07030C: 16
+. 02: 47
+080602: 45
+. . 0402: 71
+. . 05: 53
+`, trie.Range(From(nil).To(nil)))
+
+			checkFprint(t, `080605: 53
+. . 0402: 71
+. . 02: 45
+0102: 47
+. 0107030C: 16
+. . : 83
+: 35
+`, trie.Range(From(nil).DownTo(nil)))
+
+			// no keys in range
+			checkFprint(t, "", trie.Range(From([]byte{1, 3}).To([]byte{8, 6, 1})))
+			checkFprint(t, "", trie.Range(From([]byte{8, 6, 1}).DownTo([]byte{1, 3})))
 		})
 	}
 }
