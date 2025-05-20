@@ -636,10 +636,6 @@ func BenchmarkDelete(b *testing.B) {
 //nolint:gocognit
 func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 	for _, bench := range createTestTries(benchTrieConfigs) {
-		if _, ok := bench.trie.(*reference); ok {
-			// reference.Range() creation is grossly inefficient
-			continue
-		}
 		forward, reverse := getBounds(bench)
 		original := bench.trie
 		trie := original.Clone()

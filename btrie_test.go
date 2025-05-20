@@ -477,11 +477,11 @@ func TestTrie(t *testing.T) {
 				ref := createReferenceTrie(test.config)
 				for _, bounds := range test.config.forward {
 					assert.Equal(t, collect(ref.Range(&bounds)), collect(trie.Range(&bounds)),
-						"%s", bounds)
+						"%s", &bounds)
 				}
 				for _, bounds := range test.config.reverse {
 					assert.Equal(t, collect(ref.Range(&bounds)), collect(trie.Range(&bounds)),
-						"%s", bounds)
+						"%s", &bounds)
 				}
 				// need an early yield for test coverage
 				count := 0
