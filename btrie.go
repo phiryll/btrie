@@ -96,3 +96,36 @@ func Fprint[V any](w io.Writer, seq iter.Seq2[[]byte, V]) (int, error) {
 	}
 	return n, nil
 }
+
+// Optional is a helper type for implementations, at the expense of some efficiency if methods are not inlined.
+// This is not intended to be a general Optional implementation.
+// The zero value `Optional[someType]{}` will create a new empty instance.
+type Optional[T any] struct {
+	value T
+	ok    bool
+}
+
+// IsEmpty returns whether o contains a valid value.
+func (o *Optional[T]) IsEmpty() bool {
+	return !o.ok
+}
+
+// Get returns the value contained by o and whether or not it exists.
+func (o *Optional[T]) Get() (T, bool) {
+	return o.value, o.ok
+}
+
+// Set sets the value contained by o, returning the previous value and whether or not it existed.
+func (o *Optional[T]) Set(value T) (T, bool) {
+	prev, ok := o.value, o.ok
+	o.value, o.ok = value, true
+	return prev, ok
+}
+
+// Clear removes the value contained by o, returning the previous value and whether or not it existed.
+func (o *Optional[T]) Clear() (T, bool) {
+	prev, ok := o.value, o.ok
+	var zero T
+	o.value, o.ok = zero, false
+	return prev, ok
+}
