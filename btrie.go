@@ -49,12 +49,13 @@ func KeyName(key []byte) string {
 
 func emptySeq[V any](_ func(V) bool) {}
 
-// Sprint returns a pretty-printed representation of bt.
+// Sprint returns a pretty-printed representation of a key/value sequence.
+// Note that the value is only "pretty" if the sequence is ordered by key.
 // Values are printed using the `%v` format specifier.
-// Returns an empty string if bt is empty.
-func Sprint[V any](bt BTrie[V]) string {
+// Returns an empty string if the sequence is empty.
+func Sprint[V any](seq iter.Seq2[[]byte, V]) string {
 	var s strings.Builder
-	if _, err := Fprint(&s, bt); err != nil {
+	if _, err := Fprint(&s, seq); err != nil {
 		panic(err)
 	}
 	return s.String()
@@ -72,13 +73,14 @@ func indent(n int) string {
 	return repeatedIndent[:2*n]
 }
 
-// Fprint writes a pretty-printed representation of bt to w.
+// Fprint writes a pretty-printed representation of a key/value sequence to w.
+// Note that the value is only "pretty" if the sequence is ordered by key.
 // Values are printed using the `%v` format specifier.
-// Writes nothing to w if bt is empty.
-func Fprint[V any](w io.Writer, bt BTrie[V]) (int, error) {
+// Writes nothing to w if the sequence is empty.
+func Fprint[V any](w io.Writer, seq iter.Seq2[[]byte, V]) (int, error) {
 	n := 0
 	prevKey := []byte{}
-	for key, value := range bt.Range(From(nil).To(nil)) {
+	for key, value := range seq {
 		limit := min(len(key), len(prevKey))
 		i := 0
 		for i < limit && key[i] == prevKey[i] {
