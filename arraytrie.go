@@ -48,7 +48,7 @@ func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
 			n.children = &[256]*arrayTrieNode[V]{}
 		}
 		if n.children[keyByte] == nil {
-			child := &arrayTrieNode[V]{nil, Optional[V]{value, true}, 0}
+			child := &arrayTrieNode[V]{nil, OptionalOf(value), 0}
 			for k := len(key) - 1; k > i; k-- {
 				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, Optional[V]{}, 1}
 				parent.children[key[k]] = child

@@ -48,7 +48,7 @@ func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
 		index, found := n.search(keyByte)
 		if !found {
 			k := len(key) - 1
-			child := &ptrTrieNode[V]{nil, Optional[V]{value, true}, key[k]}
+			child := &ptrTrieNode[V]{nil, OptionalOf(value), key[k]}
 			for k--; k >= i; k-- {
 				child = &ptrTrieNode[V]{[]*ptrTrieNode[V]{child}, Optional[V]{}, key[k]}
 			}

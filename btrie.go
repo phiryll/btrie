@@ -105,6 +105,11 @@ type Optional[T any] struct {
 	ok    bool
 }
 
+// OptionalOf returns a new Optional containing value.
+func OptionalOf[T any](value T) Optional[T] {
+	return Optional[T]{value, true}
+}
+
 // IsEmpty returns whether o contains a valid value.
 func (o *Optional[T]) IsEmpty() bool {
 	return !o.ok
