@@ -7,12 +7,11 @@ import (
 	"strings"
 )
 
-//nolint:govet  // govet wants V first, but that doesn't give the best alignment
+//nolint:govet
 type ptrTrieNode[V any] struct {
-	children   []*ptrTrieNode[V]
-	value      V // valid only if isTerminal is true
-	keyByte    byte
-	isTerminal bool
+	children []*ptrTrieNode[V]
+	root     Optional[V]
+	keyByte  byte
 }
 
 // NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
@@ -37,10 +36,7 @@ func (n *ptrTrieNode[V]) Get(key []byte) (V, bool) {
 		n = n.children[index]
 	}
 	// n = found key
-	if n.isTerminal {
-		return n.value, true
-	}
-	return zero, false
+	return n.root.Get()
 }
 
 func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
@@ -52,9 +48,9 @@ func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
 		index, found := n.search(keyByte)
 		if !found {
 			k := len(key) - 1
-			child := &ptrTrieNode[V]{nil, value, key[k], true}
+			child := &ptrTrieNode[V]{nil, Optional[V]{value, true}, key[k]}
 			for k--; k >= i; k-- {
-				child = &ptrTrieNode[V]{[]*ptrTrieNode[V]{child}, zero, key[k], false}
+				child = &ptrTrieNode[V]{[]*ptrTrieNode[V]{child}, Optional[V]{}, key[k]}
 			}
 			n.children = append(n.children, child)
 			copy(n.children[index+1:], n.children[index:])
@@ -64,14 +60,7 @@ func (n *ptrTrieNode[V]) Put(key []byte, value V) (V, bool) {
 		n = n.children[index]
 	}
 	// n = found key, replace value
-	if n.isTerminal {
-		prev := n.value
-		n.value = value
-		return prev, true
-	}
-	n.value = value
-	n.isTerminal = true
-	return zero, false
+	return n.root.Set(value)
 }
 
 func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
@@ -89,25 +78,20 @@ func (n *ptrTrieNode[V]) Delete(key []byte) (V, bool) {
 		}
 		// If either n is the root, or n has a value, or n has more than one child, then n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if i == 0 || n.isTerminal || len(n.children) > 1 {
+		if i == 0 || !n.root.IsEmpty() || len(n.children) > 1 {
 			prune, pruneIndex = n, index
 		}
 		n = n.children[index]
 	}
 	// n = found key
-	if !n.isTerminal {
-		return zero, false
-	}
-	prev := n.value
-	n.value = zero
-	n.isTerminal = false
-	if len(key) > 0 && len(n.children) == 0 {
+	value, ok := n.root.Clear()
+	if ok && len(key) > 0 && len(n.children) == 0 {
 		children := prune.children
 		copy(children[pruneIndex:], children[pruneIndex+1:])
 		children[len(children)-1] = nil
 		prune.children = children[:len(children)-1]
 	}
-	return prev, true
+	return value, ok
 }
 
 // An iter.Seq of these is returned from the adjFunction used internally by Range.
@@ -137,7 +121,7 @@ func (n *ptrTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 			if cmp > 0 {
 				return
 			}
-			if path.node.isTerminal && !yield(bytes.Clone(path.key), path.node.value) {
+			if value, ok := path.node.root.Get(); ok && !yield(bytes.Clone(path.key), value) {
 				return
 			}
 		}
@@ -224,8 +208,8 @@ func (n *ptrTrieNode[V]) search(byt byte) (int, bool) {
 func (n *ptrTrieNode[V]) String() string {
 	var s strings.Builder
 	s.WriteString("{")
-	if n.isTerminal {
-		fmt.Fprintf(&s, ":%v, ", n.value)
+	if value, ok := n.root.Get(); ok {
+		fmt.Fprintf(&s, ":%v, ", value)
 	}
 	for _, child := range n.children {
 		fmt.Fprintf(&s, "%02X:%s, ", child.keyByte, child)
