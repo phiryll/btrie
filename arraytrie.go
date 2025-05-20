@@ -9,9 +9,8 @@ import (
 
 type arrayTrieNode[V any] struct {
 	children    *[256]*arrayTrieNode[V] // only non-nil if there are children
-	value       V                       // valid only if isTerminal is true
-	numChildren uint16                  // possible values 0-256, so need the extra byte
-	isTerminal  bool                    // whether value is valid
+	root        Optional[V]
+	numChildren uint16 // possible values 0-256, so need the extra byte
 }
 
 // NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
@@ -36,10 +35,7 @@ func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {
 		}
 	}
 	// n = found key
-	if n.isTerminal {
-		return n.value, true
-	}
-	return zero, false
+	return n.root.Get()
 }
 
 func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
@@ -52,9 +48,9 @@ func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
 			n.children = &[256]*arrayTrieNode[V]{}
 		}
 		if n.children[keyByte] == nil {
-			child := &arrayTrieNode[V]{nil, value, 0, true}
+			child := &arrayTrieNode[V]{nil, OptionalOf(value), 0}
 			for k := len(key) - 1; k > i; k-- {
-				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, zero, 1, false}
+				parent := &arrayTrieNode[V]{&[256]*arrayTrieNode[V]{}, Optional[V]{}, 1}
 				parent.children[key[k]] = child
 				child = parent
 			}
@@ -65,14 +61,7 @@ func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
 		n = n.children[keyByte]
 	}
 	// n = found key, replace value
-	if n.isTerminal {
-		prev := n.value
-		n.value = value
-		return prev, true
-	}
-	n.value = value
-	n.isTerminal = true
-	return zero, false
+	return n.root.Set(value)
 }
 
 func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
@@ -89,23 +78,18 @@ func (n *arrayTrieNode[V]) Delete(key []byte) (V, bool) {
 		}
 		// If either n is the root, or n has a value, or n has more than one child, then n itself cannot be pruned.
 		// If so, move the maybe-pruned subtree to n.children[index].
-		if i == 0 || n.isTerminal || n.numChildren > 1 {
+		if i == 0 || !n.root.IsEmpty() || n.numChildren > 1 {
 			prune, pruneIndex = n, keyByte
 		}
 		n = n.children[keyByte]
 	}
 	// n = found key
-	if !n.isTerminal {
-		return zero, false
-	}
-	prev := n.value
-	n.value = zero
-	n.isTerminal = false
-	if len(key) > 0 && n.children == nil {
+	value, ok := n.root.Clear()
+	if ok && len(key) > 0 && n.children == nil {
 		prune.children[pruneIndex] = nil
 		prune.numChildren--
 	}
-	return prev, true
+	return value, ok
 }
 
 // An iter.Seq of these is returned from the adjFunction used internally by Range.
@@ -135,7 +119,7 @@ func (n *arrayTrieNode[V]) Range(bounds *Bounds) iter.Seq2[[]byte, V] {
 			if cmp > 0 {
 				return
 			}
-			if path.node.isTerminal && !yield(bytes.Clone(path.key), path.node.value) {
+			if value, ok := path.node.root.Get(); ok && !yield(bytes.Clone(path.key), value) {
 				return
 			}
 		}
@@ -204,8 +188,8 @@ func arrayTrieReverseAdj[V any](bounds *Bounds) adjFunction[*arrayTrieRangePath[
 func (n *arrayTrieNode[V]) String() string {
 	var s strings.Builder
 	s.WriteString("{")
-	if n.isTerminal {
-		fmt.Fprintf(&s, ":%v, ", n.value)
+	if value, ok := n.root.Get(); ok {
+		fmt.Fprintf(&s, ":%v, ", value)
 	}
 	if n.children != nil {
 		for i, child := range n.children {
