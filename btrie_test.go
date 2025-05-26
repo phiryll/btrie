@@ -1,4 +1,4 @@
-package btrie_test
+package kv_test
 
 import (
 	"bytes"
@@ -13,14 +13,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/phiryll/btrie"
+	"github.com/phiryll/kv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type (
-	TestBTrie = btrie.Cloneable[byte]
-	Bounds    = btrie.Bounds
+	TestBTrie = kv.Cloneable[byte]
+	Bounds    = kv.Bounds
 	keySet    = [][]byte // instances will generally have unique keys
 
 	implDef struct {
@@ -77,11 +77,11 @@ const (
 var (
 	implDefs = []*implDef{
 		{"reference", newReference},
-		{"pointer-trie", asCloneable(btrie.NewPointerTrie[byte])},
-		{"array-trie", asCloneable(btrie.NewArrayTrie[byte])},
+		{"pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
+		{"array-trie", asCloneable(kv.NewArrayTrie[byte])},
 	}
 
-	From       = btrie.From
+	From       = kv.From
 	forwardAll = From(nil).To(nil)
 	reverseAll = From(nil).DownTo(nil)
 
@@ -150,7 +150,7 @@ var (
 	testTrieConfigs = createTestTrieConfigs()
 )
 
-func asCloneable(factory func() btrie.BTrie[byte]) func() TestBTrie {
+func asCloneable(factory func() kv.BTrie[byte]) func() TestBTrie {
 	return func() TestBTrie {
 		trie := factory()
 		cloneable, ok := trie.(TestBTrie)
@@ -445,7 +445,7 @@ func TestTrieString(t *testing.T) {
 
 func checkFprint[V any](t *testing.T, expected string, seq iter.Seq2[[]byte, V]) {
 	var s strings.Builder
-	n, err := btrie.Fprint(&s, seq)
+	n, err := kv.Fprint(&s, seq)
 	require.NoError(t, err)
 	assert.Equal(t, n, s.Len())
 	assert.Equal(t, expected, s.String())
@@ -504,7 +504,7 @@ func TestTrie(t *testing.T) {
 			trie := test.def.factory()
 			existing := map[string]byte{}
 			for key, value := range test.config.entries {
-				t.Run("op=put/key="+btrie.KeyName([]byte(key)), func(t *testing.T) {
+				t.Run("op=put/key="+kv.KeyName([]byte(key)), func(t *testing.T) {
 					assertAbsent(t, []byte(key), trie)
 					assertSame(t, existing, trie)
 
@@ -518,7 +518,7 @@ func TestTrie(t *testing.T) {
 
 			for _, keys := range test.config.absent {
 				for _, key := range keys {
-					t.Run("op=absent/key="+btrie.KeyName(key), func(t *testing.T) {
+					t.Run("op=absent/key="+kv.KeyName(key), func(t *testing.T) {
 						assertAbsent(t, key, trie)
 					})
 				}

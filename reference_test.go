@@ -1,4 +1,4 @@
-package btrie_test
+package kv_test
 
 import (
 	"cmp"
@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/phiryll/btrie"
+	"github.com/phiryll/kv"
 )
 
 func newReference() TestBTrie {
@@ -91,7 +91,7 @@ func (r reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	for _, key := range slices.Sorted(maps.Keys(r)) {
-		fmt.Fprintf(&s, "%s:%v, ", btrie.KeyName([]byte(key)), r[key])
+		fmt.Fprintf(&s, "%s:%v, ", kv.KeyName([]byte(key)), r[key])
 	}
 	s.WriteString("}")
 	return s.String()

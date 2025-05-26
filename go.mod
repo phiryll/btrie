@@ -1,4 +1,4 @@
-module github.com/phiryll/btrie
+module github.com/phiryll/kv
 
 go 1.24
 

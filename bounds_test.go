@@ -1,10 +1,10 @@
-package btrie_test
+package kv_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/phiryll/btrie"
+	"github.com/phiryll/kv"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -115,7 +115,7 @@ func TestBoundsBuilder(t *testing.T) {
 		{low, nil},
 		{nil, nil},
 	} {
-		t.Run(fmt.Sprintf("(%s,%s)", btrie.KeyName(tt.first), btrie.KeyName(tt.second)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("(%s,%s)", kv.KeyName(tt.first), kv.KeyName(tt.second)), func(t *testing.T) {
 			t.Parallel()
 			bounds := From(tt.first).To(tt.second)
 			assert.Equal(t, tt.first, bounds.Begin)
@@ -263,15 +263,15 @@ func TestBoundsCompareKey(t *testing.T) {
 			t.Parallel()
 			count := 0
 			for _, key := range tt.before {
-				assert.Equal(t, -1, tt.bounds.CompareKey(key), "%s", btrie.KeyName(key))
+				assert.Equal(t, -1, tt.bounds.CompareKey(key), "%s", kv.KeyName(key))
 				count++
 			}
 			for _, key := range tt.within {
-				assert.Equal(t, 0, tt.bounds.CompareKey(key), "%s", btrie.KeyName(key))
+				assert.Equal(t, 0, tt.bounds.CompareKey(key), "%s", kv.KeyName(key))
 				count++
 			}
 			for _, key := range tt.after {
-				assert.Equal(t, +1, tt.bounds.CompareKey(key), "%s", btrie.KeyName(key))
+				assert.Equal(t, +1, tt.bounds.CompareKey(key), "%s", kv.KeyName(key))
 				count++
 			}
 		})
@@ -572,10 +572,10 @@ func TestChildBounds(t *testing.T) {
 		t.Run(tt.bounds.String(), func(t *testing.T) {
 			t.Parallel()
 			for _, exp := range tt.expected {
-				start, stop, ok := btrie.TestingChildBounds(tt.bounds, exp.key)
-				assert.Equal(t, exp.start, start, "%s", btrie.KeyName(exp.key))
-				assert.Equal(t, exp.stop, stop, "%s", btrie.KeyName(exp.key))
-				assert.Equal(t, exp.ok, ok, "%s", btrie.KeyName(exp.key))
+				start, stop, ok := kv.TestingChildBounds(tt.bounds, exp.key)
+				assert.Equal(t, exp.start, start, "%s", kv.KeyName(exp.key))
+				assert.Equal(t, exp.stop, stop, "%s", kv.KeyName(exp.key))
+				assert.Equal(t, exp.ok, ok, "%s", kv.KeyName(exp.key))
 			}
 		})
 	}

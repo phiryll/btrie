@@ -1,6 +1,6 @@
 goos: darwin
 goarch: arm64
-pkg: github.com/phiryll/btrie
+pkg: github.com/phiryll/kv
 cpu: Apple M1 Max
 BenchmarkFactory/impl=reference-10         	24774001	        47.80 ns/op	      56 B/op	       2 allocs/op
 BenchmarkFactory/impl=reference-10         	26973868	        48.83 ns/op	      56 B/op	       2 allocs/op
@@ -63,4 +63,4 @@ BenchmarkFactory/impl=array-trie-10        	58670980	        21.74 ns/op	      1
 BenchmarkFactory/impl=array-trie-10        	59123616	        21.89 ns/op	      16 B/op	       1 allocs/op
 BenchmarkFactory/impl=array-trie-10        	59194582	        21.85 ns/op	      16 B/op	       1 allocs/op
 PASS
-ok  	github.com/phiryll/btrie	345.259s
+ok  	github.com/phiryll/kv	345.259s

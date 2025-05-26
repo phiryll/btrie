@@ -12,7 +12,7 @@
 set -e
 
 cd "$(dirname "$0")"
-rm -f btrie.test
+rm -f kv.test
 go test -c
 
 tests=${1:-Get}

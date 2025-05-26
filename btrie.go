@@ -1,5 +1,5 @@
-// Package btrie defines interfaces for and provides multiple implementations of a binary trie.
-package btrie
+// Package kv defines interfaces for a key-value store and provides multiple implementations.
+package kv
 
 import (
 	"fmt"

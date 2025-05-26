@@ -1,4 +1,4 @@
-package btrie_test
+package kv_test
 
 import (
 	"bufio"
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/phiryll/btrie"
+	"github.com/phiryll/kv"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,13 +52,13 @@ var (
 )
 
 func BenchmarkTraverser(b *testing.B) {
-	benchTraverser(b, "kind=pre-order", btrie.TestingPreOrder)
-	benchTraverser(b, "kind=post-order", btrie.TestingPostOrder)
+	benchTraverser(b, "kind=pre-order", kv.TestingPreOrder)
+	benchTraverser(b, "kind=post-order", kv.TestingPostOrder)
 }
 
-func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser) {
+func benchTraverser(b *testing.B, name string, traverser kv.TestingTraverser) {
 	b.Run(name, func(b *testing.B) {
-		for _, adj := range []btrie.TestingAdjFunction{
+		for _, adj := range []kv.TestingAdjFunction{
 			emptyAdjInt,
 			adjInt(0),
 			adjInt(1 << 4),
@@ -84,13 +84,13 @@ func benchTraverser(b *testing.B, name string, traverser btrie.TestingTraverser)
 }
 
 func BenchmarkTraverserPaths(b *testing.B) {
-	benchTraverserPaths(b, "kind=pre-order", btrie.TestingPreOrderPaths)
-	benchTraverserPaths(b, "kind=post-order", btrie.TestingPostOrderPaths)
+	benchTraverserPaths(b, "kind=pre-order", kv.TestingPreOrderPaths)
+	benchTraverserPaths(b, "kind=post-order", kv.TestingPostOrderPaths)
 }
 
-func benchTraverserPaths(b *testing.B, name string, pathTraverser btrie.TestingPathTraverser) {
+func benchTraverserPaths(b *testing.B, name string, pathTraverser kv.TestingPathTraverser) {
 	b.Run(name, func(b *testing.B) {
-		for _, pathAdj := range []btrie.TestingPathAdjFunction{
+		for _, pathAdj := range []kv.TestingPathAdjFunction{
 			emptyPathAdjInt,
 			pathAdjInt(0),
 			pathAdjInt(1 << 4),
@@ -195,17 +195,17 @@ func BenchmarkChildBounds(b *testing.B) {
 			forward := tt.bounds
 			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
 			for _, key := range tt.keys {
-				b.Run("key="+btrie.KeyName(key), func(b *testing.B) {
+				b.Run("key="+kv.KeyName(key), func(b *testing.B) {
 					b.Run("dir=forward", func(b *testing.B) {
 						b.ResetTimer()
 						for range b.N {
-							btrie.TestingChildBounds(forward, key)
+							kv.TestingChildBounds(forward, key)
 						}
 					})
 					b.Run("dir=reverse", func(b *testing.B) {
 						b.ResetTimer()
 						for range b.N {
-							btrie.TestingChildBounds(reverse, key)
+							kv.TestingChildBounds(reverse, key)
 						}
 					})
 				})

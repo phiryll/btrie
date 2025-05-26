@@ -1,11 +1,11 @@
-package btrie_test
+package kv_test
 
 import (
 	"iter"
 	"slices"
 	"testing"
 
-	"github.com/phiryll/btrie"
+	"github.com/phiryll/kv"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,12 +114,12 @@ var expectedPostOrderPaths = [][]int{
 	{0},
 }
 
-func preOrder(root int, adj btrie.TestingAdjFunction) []int {
-	return slices.Collect(btrie.TestingPreOrder(root, adj))
+func preOrder(root int, adj kv.TestingAdjFunction) []int {
+	return slices.Collect(kv.TestingPreOrder(root, adj))
 }
 
-func postOrder(root int, adj btrie.TestingAdjFunction) []int {
-	return slices.Collect(btrie.TestingPostOrder(root, adj))
+func postOrder(root int, adj kv.TestingAdjFunction) []int {
+	return slices.Collect(kv.TestingPostOrder(root, adj))
 }
 
 func endNodes(paths [][]int) []int {
@@ -139,7 +139,7 @@ func TestPreOrder(t *testing.T) {
 	assert.Equal(t, endNodes(expectedPreOrderPaths), preOrder(0, adjInt(10)))
 
 	// need an early yield for test coverage
-	for node := range btrie.TestingPreOrder(0, adjInt(10)) {
+	for node := range kv.TestingPreOrder(0, adjInt(10)) {
 		if node == 7 {
 			break
 		}
@@ -155,24 +155,24 @@ func TestPostOrder(t *testing.T) {
 	assert.Equal(t, endNodes(expectedPostOrderPaths), postOrder(0, adjInt(10)))
 
 	// need an early yield for test coverage
-	for node := range btrie.TestingPostOrder(0, adjInt(10)) {
+	for node := range kv.TestingPostOrder(0, adjInt(10)) {
 		if node == 7 {
 			break
 		}
 	}
 }
 
-func preOrderPaths(root int, pathAdj btrie.TestingPathAdjFunction) [][]int {
+func preOrderPaths(root int, pathAdj kv.TestingPathAdjFunction) [][]int {
 	paths := [][]int{}
-	for path := range btrie.TestingPreOrderPaths(root, pathAdj) {
+	for path := range kv.TestingPreOrderPaths(root, pathAdj) {
 		paths = append(paths, slices.Clone(path))
 	}
 	return paths
 }
 
-func postOrderPaths(root int, pathAdj btrie.TestingPathAdjFunction) [][]int {
+func postOrderPaths(root int, pathAdj kv.TestingPathAdjFunction) [][]int {
 	paths := [][]int{}
-	for path := range btrie.TestingPostOrderPaths(root, pathAdj) {
+	for path := range kv.TestingPostOrderPaths(root, pathAdj) {
 		paths = append(paths, slices.Clone(path))
 	}
 	return paths
@@ -187,7 +187,7 @@ func TestPreOrderPaths(t *testing.T) {
 	assert.Equal(t, expectedPreOrderPaths, preOrderPaths(0, pathAdjInt(10)))
 
 	// need an early yield for test coverage
-	for path := range btrie.TestingPreOrderPaths(0, pathAdjInt(10)) {
+	for path := range kv.TestingPreOrderPaths(0, pathAdjInt(10)) {
 		if path[len(path)-1] == 7 {
 			break
 		}
@@ -203,7 +203,7 @@ func TestPostOrderPaths(t *testing.T) {
 	assert.Equal(t, expectedPostOrderPaths, postOrderPaths(0, pathAdjInt(10)))
 
 	// need an early yield for test coverage
-	for path := range btrie.TestingPostOrderPaths(0, pathAdjInt(10)) {
+	for path := range kv.TestingPostOrderPaths(0, pathAdjInt(10)) {
 		if path[len(path)-1] == 7 {
 			break
 		}

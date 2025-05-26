@@ -145,7 +145,7 @@ linters-settings:
         allow:
           - $gostd
           - github.com/stretchr/testify
-          - github.com/phiryll/btrie
+          - github.com/phiryll/kv
 
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
@@ -256,7 +256,7 @@ linters-settings:
     # A comma-separated list of prefixes, which, if set, checks import paths
     # with the given prefixes are grouped after 3rd-party packages.
     # Default: ""
-    local-prefixes: github.com/phyrill/btrie
+    local-prefixes: github.com/phyrill/kv
 
   gosec:
     # To specify the configuration of rules.

@@ -1,4 +1,4 @@
-package btrie
+package kv
 
 import (
 	"bytes"
