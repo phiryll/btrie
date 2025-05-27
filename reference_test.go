@@ -1,4 +1,4 @@
-package btrie_test
+package kv_test
 
 import (
 	"cmp"
@@ -8,18 +8,18 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/phiryll/btrie"
+	"github.com/phiryll/kv"
 )
 
-func newReference() TestBTrie {
+func newReference() TestStore {
 	return reference{}
 }
 
-// reference implements the TestBTrie interface, but it is not a trie.
-// This serves as an expected value to compare against a BTrie[byte] implementation while testing.
+// reference implements the TestStore interface, but it is not a trie.
+// This serves as an expected value to compare against a Store[byte] implementation while testing.
 type reference map[string]byte
 
-func (r reference) Clone() TestBTrie {
+func (r reference) Clone() TestStore {
 	return maps.Clone(r)
 }
 
@@ -91,7 +91,7 @@ func (r reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
 	for _, key := range slices.Sorted(maps.Keys(r)) {
-		fmt.Fprintf(&s, "%s:%v, ", btrie.KeyName([]byte(key)), r[key])
+		fmt.Fprintf(&s, "%s:%v, ", kv.KeyName([]byte(key)), r[key])
 	}
 	s.WriteString("}")
 	return s.String()

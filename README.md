@@ -1,12 +1,13 @@
-# btrie
+# kv
 
-Binary Tries
+Key-Value Stores
 
 **UNDER DEVELOPMENT, IT WILL CHANGE**
 
-Btrie is a library with a few binary trie implementations.
-These are roughly equivalent to an ordered `map[[]byte]<value type>`,
+kv is a library with a few key-value store implementations.
+These are roughly equivalent to a `map[[]byte]<value type>`,
 but without a `map`'s syntax or its full semantics.
+Most implementations are ordered tries.
 Some implementations are persistent,
 in [this sense](https://en.wikipedia.org/wiki/Persistent_data_structure).
 These are the tentative implementations, all in-memory only:

@@ -11,4 +11,4 @@ jobs:
       contents: read
     steps:
       - name: Publish to pkg.go.dev
-        run: GOPROXY=proxy.golang.org go list -m github.com/phiryll/btrie@${{ github.ref_name }}
+        run: GOPROXY=proxy.golang.org go list -m github.com/phiryll/kv@${{ github.ref_name }}

@@ -18,7 +18,7 @@
 set -e
 
 cd "$(dirname "$0")"
-rm -f btrie.test
+rm -f kv.test
 go test -c
 
 files=$(ggrep -r --include='**_test.go' -l 'func Bench' .)

@@ -1,6 +1,6 @@
 goos: darwin
 goarch: arm64
-pkg: github.com/phiryll/btrie
+pkg: github.com/phiryll/kv
 cpu: Apple M1 Max
 BenchmarkTraverserPaths/kind=pre-order/size=1-10  	 9416619	       132.3 ns/op	     168 B/op	       8 allocs/op
 BenchmarkTraverserPaths/kind=pre-order/size=1-10  	 9485162	       130.8 ns/op	     168 B/op	       8 allocs/op
@@ -283,4 +283,4 @@ BenchmarkTraverserPaths/kind=post-order/size=265720-10     	      61	  19977165 
 BenchmarkTraverserPaths/kind=post-order/size=265720-10     	      62	  19871520 ns/op	29897442 B/op	 1158111 allocs/op
 BenchmarkTraverserPaths/kind=post-order/size=265720-10     	      61	  19766174 ns/op	29897441 B/op	 1158111 allocs/op
 PASS
-ok  	github.com/phiryll/btrie	702.292s
+ok  	github.com/phiryll/kv	702.292s

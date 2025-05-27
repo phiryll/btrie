@@ -1,6 +1,6 @@
 goos: darwin
 goarch: arm64
-pkg: github.com/phiryll/btrie
+pkg: github.com/phiryll/kv
 cpu: Apple M1 Max
 BenchmarkChildBounds/bounds=[nil_to_empty]/key=empty/dir=forward-10         	290921814	         4.119 ns/op	       0 B/op	       0 allocs/op
 BenchmarkChildBounds/bounds=[nil_to_empty]/key=empty/dir=forward-10         	291365032	         4.114 ns/op	       0 B/op	       0 allocs/op
@@ -4243,4 +4243,4 @@ BenchmarkChildBounds/bounds=[0499_to_049972D3]/key=A502/dir=reverse-10          
 BenchmarkChildBounds/bounds=[0499_to_049972D3]/key=A502/dir=reverse-10                	148506205	         8.085 ns/op	       0 B/op	       0 allocs/op
 BenchmarkChildBounds/bounds=[0499_to_049972D3]/key=A502/dir=reverse-10                	148594887	         8.080 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/phiryll/btrie	10294.229s
+ok  	github.com/phiryll/kv	10294.229s
