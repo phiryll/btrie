@@ -13,7 +13,6 @@ import (
 // Implementations must clearly document any additional constraints on keys and values.
 // Implementations must clearly document if any methods accept or return references to its internal storage.
 // Implementations must clearly document if the iterator returned by Range is single-use.
-// Although nothing in this interface mandates it, all Store implementations in this package are tries.
 // If an implemention implements [fmt.Stringer], it should produce a value appropriate for debugging,
 // how verbose is up to the implementer.
 type Store[V any] interface {

@@ -7,7 +7,7 @@ Key-Value Stores
 kv is a library with a few key-value store implementations.
 These are roughly equivalent to a `map[[]byte]<value type>`,
 but without a `map`'s syntax or its full semantics.
-Most implementations are ordered.
+Most implementations are ordered tries.
 Some implementations are persistent,
 in [this sense](https://en.wikipedia.org/wiki/Persistent_data_structure).
 These are the tentative implementations, all in-memory only:

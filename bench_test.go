@@ -22,19 +22,19 @@ import (
 // Because these are stateful data structures, accurately benchmarking mutating methods is difficult.
 // Using the B.Start/StopTimer methods inside the B.N loops can result in erratic stats,
 // and sometimes it just hangs forever.
-// So it's not possible to create a new non-trivial trie fixture inside the B.N loop
-// without the trie's creation also being measured, or at least the B.Start/Stop methods interfering.
-// To minimize this, all the tries are constructed only once, and they all implement a non-public-API Clone() method.
+// So it's not possible to create a new non-trivial store fixture inside the B.N loop
+// without the store's creation also being measured, or at least the B.Start/Stop methods interfering.
+// To minimize this, all the stores are constructed only once, and they all implement a non-public-API Clone() method.
 // That said, extensive benchmarking (not checked in) has shown that neither the frequency nor duration of timer pauses
-// to clone a trie have a significant effect on reported timings, at most about 8 ns/op in my current setup.
+// to clone a store have a significant effect on reported timings, at most about 8 ns/op in my current setup.
 // However, each clone can take a significant amount of time even though it isn't measured,
 // so these benchmarks take steps to reduce that impact.
 
 const (
 	benchMeanRandomKeyLen = 8
 
-	// The minimum number of keys to benchmark when tries must be cloned after exhausting the keys.
-	// i.e., don't benchmark if we will need to clone the trie every N operations and N < benchMinNumMutableKeys.
+	// The minimum number of keys to benchmark when stores must be cloned after exhausting the keys.
+	// i.e., don't benchmark if we will need to clone the store every N operations and N < benchMinNumMutableKeys.
 	benchMinNumMutableKeys = 1 << 10
 
 	// The maximum size of created absent and bounds slices, 64K.
@@ -45,10 +45,10 @@ const (
 )
 
 var (
-	// How many entries randomly generated benchmarked tries will have.
-	benchRandomTrieSizes = []int{1 << 16, 1 << 18, 1 << 20}
+	// How many entries randomly generated benchmarked stores will have.
+	benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
 
-	benchTrieConfigs = createBenchTrieConfigs()
+	benchStoreConfigs = createBenchStoreConfigs()
 )
 
 func BenchmarkTraverser(b *testing.B) {
@@ -333,47 +333,47 @@ func createFixedBounds(step int, random *rand.Rand) (forward, reverse []Bounds) 
 	return forward, reverse
 }
 
-func createBenchTrieConfig(corpusName string, entries map[string]byte) *trieConfig {
+func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeConfig {
 	random := rand.New(rand.NewPCG(uint64(len(entries)), 4839028453))
 	present := createPresent(entries, random)
 	absent := createAbsent(entries, len(present)-1, random)
 	keys := append(slices.Concat(present...), slices.Concat(absent...)...)
 	shuffle(keys, random)
 	forward, reverse := createBounds(keys)
-	return &trieConfig{
-		name:     fmt.Sprintf("corpus=%s/trieSize=%d", corpusName, len(entries)),
-		trieSize: len(entries),
-		entries:  entries,
-		present:  present,
-		absent:   absent,
-		forward:  forward,
-		reverse:  reverse,
+	return &storeConfig{
+		name:    fmt.Sprintf("corpus=%s/size=%d", corpusName, len(entries)),
+		size:    len(entries),
+		entries: entries,
+		present: present,
+		absent:  absent,
+		forward: forward,
+		reverse: reverse,
 	}
 }
 
-func createBenchRandomTrieConfigs() []*trieConfig {
-	result := []*trieConfig{}
-	for _, trieSize := range benchRandomTrieSizes {
-		result = append(result, createBenchTrieConfig("random", randomEntries(trieSize)))
+func createBenchRandomStoreConfigs() []*storeConfig {
+	result := []*storeConfig{}
+	for _, size := range benchRandomSizes {
+		result = append(result, createBenchStoreConfig("random", randomEntries(size)))
 	}
 	return result
 }
 
 // Config with lower-case english words, values are all 0.
-func createBenchWordTrieConfigs() []*trieConfig {
-	return []*trieConfig{createBenchTrieConfig("words", entriesFromFile(filenameWords))}
+func createBenchWordStoreConfigs() []*storeConfig {
+	return []*storeConfig{createBenchStoreConfig("words", entriesFromFile(filenameWords))}
 }
 
-func createBenchTrieConfigs() []*trieConfig {
-	return append(createBenchRandomTrieConfigs(), createBenchWordTrieConfigs()...)
+func createBenchStoreConfigs() []*storeConfig {
+	return append(createBenchRandomStoreConfigs(), createBenchWordStoreConfigs()...)
 }
 
-func TestBenchTrieConfigs(t *testing.T) {
+func TestBenchStoreConfigs(t *testing.T) {
 	t.Parallel()
-	for _, config := range benchTrieConfigs {
+	for _, config := range benchStoreConfigs {
 		t.Run(config.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Len(t, config.entries, config.trieSize)
+			assert.Len(t, config.entries, config.size)
 			assert.Equal(t, len(config.present), len(config.absent))
 			assert.Equal(t, 1, len(config.present[0])+len(config.absent[0]))
 			assert.Equal(t, 1<<8, len(config.present[1])+len(config.absent[1]))
@@ -403,12 +403,12 @@ func TestBenchTrieConfigs(t *testing.T) {
 	}
 }
 
-func TestBenchTrieConfigRepeatability(t *testing.T) {
+func TestBenchStoreConfigRepeatability(t *testing.T) {
 	t.Parallel()
-	for i, config := range createBenchTrieConfigs() {
+	for i, config := range createBenchStoreConfigs() {
 		t.Run(config.name, func(t *testing.T) {
 			t.Parallel()
-			assert.True(t, reflect.DeepEqual(benchTrieConfigs[i], config))
+			assert.True(t, reflect.DeepEqual(benchStoreConfigs[i], config))
 		})
 	}
 }
@@ -426,13 +426,13 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
+	for _, bench := range createTestStores(benchStoreConfigs) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
-				trie := bench.def.factory()
+				store := bench.def.factory()
 				for k, v := range bench.config.entries {
-					trie.Put([]byte(k), v)
+					store.Put([]byte(k), v)
 				}
 			}
 		})
@@ -443,8 +443,8 @@ func BenchmarkCreate(b *testing.B) {
 // If it is, that's a sign it's sharing storage instead of creating new storage.
 // This also helps to understand how Clone() can impact other benchmarks which use it.
 func BenchmarkClone(b *testing.B) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
-		original := bench.trie
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
@@ -455,8 +455,8 @@ func BenchmarkClone(b *testing.B) {
 }
 
 // This benchmark is for memory allocations, not time.
-// Creates one trie and puts many keys per benchmark iteration.
-func BenchmarkSparseTries(b *testing.B) {
+// Creates one store and puts many keys per benchmark iteration.
+func BenchmarkSparse(b *testing.B) {
 	random := rand.New(rand.NewPCG(12337405, 432843980))
 	var keys keySet
 	for key := range 1 << 8 {
@@ -468,9 +468,9 @@ func BenchmarkSparseTries(b *testing.B) {
 		b.Run("impl="+def.name, func(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
-				trie := def.factory()
+				store := def.factory()
 				for _, key := range keys {
-					trie.Put(key, 0)
+					store.Put(key, 0)
 				}
 			}
 		})
@@ -478,8 +478,8 @@ func BenchmarkSparseTries(b *testing.B) {
 }
 
 // This benchmark is for memory allocations, not time.
-// Creates one trie and puts many keys per benchmark iteration.
-func BenchmarkDenseTries(b *testing.B) {
+// Creates one store and puts many keys per benchmark iteration.
+func BenchmarkDense(b *testing.B) {
 	random := rand.New(rand.NewPCG(9321075532, 1293487543289))
 	oneKeys := make(keySet, 1<<8)
 	twoKeys := make(keySet, 1<<16)
@@ -511,9 +511,9 @@ func BenchmarkDenseTries(b *testing.B) {
 			b.Run("impl="+def.name+tt.name, func(b *testing.B) {
 				b.ResetTimer()
 				for range b.N {
-					trie := def.factory()
+					store := def.factory()
 					for _, key := range tt.keys {
-						trie.Put(key, 0)
+						store.Put(key, 0)
 					}
 				}
 			})
@@ -523,8 +523,8 @@ func BenchmarkDenseTries(b *testing.B) {
 
 //nolint:gocognit
 func BenchmarkPut(b *testing.B) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
-		original := bench.trie
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
@@ -532,10 +532,10 @@ func BenchmarkPut(b *testing.B) {
 					if len(present) == 0 {
 						b.Skipf("no present keys of length %d", keyLen)
 					}
-					trie := original.Clone()
+					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
-						trie.Put(present[i%len(present)], 42)
+						store.Put(present[i%len(present)], 42)
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -543,15 +543,15 @@ func BenchmarkPut(b *testing.B) {
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
-					trie := original.Clone()
+					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
 						if i%len(absent) == 0 && i > 0 {
 							b.StopTimer()
-							trie = original.Clone()
+							store = original.Clone()
 							b.StartTimer()
 						}
-						trie.Put(absent[i%len(absent)], 42)
+						store.Put(absent[i%len(absent)], 42)
 					}
 				})
 			}
@@ -561,8 +561,8 @@ func BenchmarkPut(b *testing.B) {
 
 //nolint:gocognit
 func BenchmarkGet(b *testing.B) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
-		original := bench.trie
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
@@ -570,10 +570,10 @@ func BenchmarkGet(b *testing.B) {
 					if len(present) == 0 {
 						b.Skipf("no present keys of length %d", keyLen)
 					}
-					trie := original.Clone()
+					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
-						trie.Get(present[i%len(present)])
+						store.Get(present[i%len(present)])
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -581,10 +581,10 @@ func BenchmarkGet(b *testing.B) {
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
-					trie := original.Clone()
+					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
-						trie.Get(absent[i%len(absent)])
+						store.Get(absent[i%len(absent)])
 					}
 				})
 			}
@@ -594,8 +594,8 @@ func BenchmarkGet(b *testing.B) {
 
 //nolint:gocognit
 func BenchmarkDelete(b *testing.B) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
-		original := bench.trie
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
@@ -606,15 +606,15 @@ func BenchmarkDelete(b *testing.B) {
 					if len(present) < benchMinNumMutableKeys {
 						b.Skipf("insufficient present keys of length %d: %d", keyLen, len(present))
 					}
-					trie := original.Clone()
+					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
 						if i%len(present) == 0 && i > 0 {
 							b.StopTimer()
-							trie = original.Clone()
+							store = original.Clone()
 							b.StartTimer()
 						}
-						trie.Delete(present[i%len(present)])
+						store.Delete(present[i%len(present)])
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -622,10 +622,10 @@ func BenchmarkDelete(b *testing.B) {
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
-					trie := original.Clone()
+					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
-						trie.Delete(absent[i%len(absent)])
+						store.Delete(absent[i%len(absent)])
 					}
 				})
 			}
@@ -634,11 +634,11 @@ func BenchmarkDelete(b *testing.B) {
 }
 
 //nolint:gocognit
-func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
-	for _, bench := range createTestTries(benchTrieConfigs) {
+func benchRange(b *testing.B, getBounds func(*testStore) ([]Bounds, []Bounds)) {
+	for _, bench := range createTestStores(benchStoreConfigs) {
 		forward, reverse := getBounds(bench)
-		original := bench.trie
-		trie := original.Clone()
+		original := bench.store
+		store := original.Clone()
 		b.Run(bench.name, func(b *testing.B) {
 			// This is a hack, but good enough for now.
 			// The words corpus is not uniformly random, unlike the forward/reverse ranges being used.
@@ -648,13 +648,13 @@ func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 			b.Run("dir=forward/op=range", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					trie.Range(&forward[i%len(forward)])
+					store.Range(&forward[i%len(forward)])
 				}
 			})
 			b.Run("dir=forward/op=full", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					for k, v := range trie.Range(&forward[i%len(forward)]) {
+					for k, v := range store.Range(&forward[i%len(forward)]) {
 						_, _ = k, v
 					}
 				}
@@ -662,13 +662,13 @@ func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 			b.Run("dir=reverse/op=range", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					trie.Range(&reverse[i%len(reverse)])
+					store.Range(&reverse[i%len(reverse)])
 				}
 			})
 			b.Run("dir=reverse/op=full", func(b *testing.B) {
 				b.ResetTimer()
 				for i := range b.N {
-					for k, v := range trie.Range(&reverse[i%len(reverse)]) {
+					for k, v := range store.Range(&reverse[i%len(reverse)]) {
 						_, _ = k, v
 					}
 				}
@@ -680,7 +680,7 @@ func benchRange(b *testing.B, getBounds func(*testTrie) ([]Bounds, []Bounds)) {
 func BenchmarkShortRange(b *testing.B) {
 	random := rand.New(rand.NewPCG(74320567, 6234982127))
 	forward, reverse := createFixedBounds(0x00_00_00_83, random)
-	benchRange(b, func(_ *testTrie) ([]Bounds, []Bounds) {
+	benchRange(b, func(_ *testStore) ([]Bounds, []Bounds) {
 		return forward, reverse
 	})
 }
@@ -688,13 +688,13 @@ func BenchmarkShortRange(b *testing.B) {
 func BenchmarkLongRange(b *testing.B) {
 	random := rand.New(rand.NewPCG(48239752, 80321318701))
 	forward, reverse := createFixedBounds(0x00_02_13_13, random)
-	benchRange(b, func(_ *testTrie) ([]Bounds, []Bounds) {
+	benchRange(b, func(_ *testStore) ([]Bounds, []Bounds) {
 		return forward, reverse
 	})
 }
 
 func BenchmarkRandomRange(b *testing.B) {
-	benchRange(b, func(tt *testTrie) ([]Bounds, []Bounds) {
+	benchRange(b, func(tt *testStore) ([]Bounds, []Bounds) {
 		return tt.config.forward, tt.config.reverse
 	})
 }
