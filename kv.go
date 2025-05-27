@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Store is essentially an ordered map[[]byte]V.
+// Store is essentially a map[[]byte]V.
 // Keys must be non-nil.
 // Implementations must clearly document any additional constraints on keys and values.
 // Implementations must clearly document if any methods accept or return references to its internal storage.
