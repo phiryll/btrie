@@ -19,13 +19,13 @@ import (
 )
 
 type (
-	TestBTrie = kv.Cloneable[byte]
+	TestStore = kv.Cloneable[byte]
 	Bounds    = kv.Bounds
 	keySet    = [][]byte // instances will generally have unique keys
 
 	implDef struct {
 		name    string
-		factory func() TestBTrie
+		factory func() TestStore
 	}
 
 	// A description of a trie to be tested or benchmarked.
@@ -55,7 +55,7 @@ type (
 	// For some tests, an empty trie might be created and config might be nil.
 	testTrie struct {
 		name   string
-		trie   TestBTrie
+		trie   TestStore
 		def    *implDef
 		config *trieConfig
 	}
@@ -150,10 +150,10 @@ var (
 	testTrieConfigs = createTestTrieConfigs()
 )
 
-func asCloneable(factory func() kv.BTrie[byte]) func() TestBTrie {
-	return func() TestBTrie {
+func asCloneable(factory func() kv.Store[byte]) func() TestStore {
+	return func() TestStore {
 		trie := factory()
-		cloneable, ok := trie.(TestBTrie)
+		cloneable, ok := trie.(TestStore)
 		if !ok {
 			panic(fmt.Sprintf("%T is not Cloneable", trie))
 		}
@@ -277,7 +277,7 @@ func TestTestTrieConfigRepeatability(t *testing.T) {
 	}
 }
 
-func createReferenceTrie(config *trieConfig) TestBTrie {
+func createReferenceTrie(config *trieConfig) TestStore {
 	trie := newReference()
 	for k, v := range config.entries {
 		trie.Put([]byte(k), v)
@@ -301,7 +301,7 @@ func createTestTries(trieConfigs []*trieConfig) []*testTrie {
 }
 
 /*
-func assertPresent(t *testing.T, key []byte, value byte, trie TestBTrie) {
+func assertPresent(t *testing.T, key []byte, value byte, trie TestStore) {
 	actual, ok := trie.Get(key)
 	assert.True(t, ok)
 	assert.Equal(t, value, actual)
@@ -320,7 +320,7 @@ func assertPresent(t *testing.T, key []byte, value byte, trie TestBTrie) {
 }
 */
 
-func assertAbsent(t *testing.T, key []byte, trie TestBTrie) {
+func assertAbsent(t *testing.T, key []byte, trie TestStore) {
 	actual, ok := trie.Get(key)
 	assert.False(t, ok)
 	assert.Equal(t, zero, actual)
@@ -337,7 +337,7 @@ func assertAbsent(t *testing.T, key []byte, trie TestBTrie) {
 
 // Test that trie contains only the key/value pairs in entries,
 // and that Range(forward/reverse) returns them in the correct order.
-func assertSame(t *testing.T, entries map[string]byte, trie TestBTrie) {
+func assertSame(t *testing.T, entries map[string]byte, trie TestStore) {
 	sliceEntries := []entry{}
 	for key, expected := range entries {
 		actual, ok := trie.Get([]byte(key))
@@ -376,7 +376,7 @@ func TestNilArgPanics(t *testing.T) {
 // Tests Get/Put/Delete/Range with a specific key and trie, which should not contain key.
 // The trie should be the same after invoking this function.
 // Assumes trie.Range(forwardAll) works.
-func testKey(t *testing.T, key []byte, trie TestBTrie) {
+func testKey(t *testing.T, key []byte, trie TestStore) {
 	const value = byte(43)
 	const replacement = byte(57)
 	existing := map[string]byte{}
@@ -597,7 +597,7 @@ func TestClone(t *testing.T) {
 
 // Things that failed at one point or another during testing.
 
-func testFail1(t *testing.T, factory func() TestBTrie) {
+func testFail1(t *testing.T, factory func() TestStore) {
 	t.Run("fail 1", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -611,7 +611,7 @@ func testFail1(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail2(t *testing.T, factory func() TestBTrie) {
+func testFail2(t *testing.T, factory func() TestStore) {
 	t.Run("fail 2", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -628,7 +628,7 @@ func testFail2(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail3(t *testing.T, factory func() TestBTrie) {
+func testFail3(t *testing.T, factory func() TestStore) {
 	t.Run("fail 3", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -645,7 +645,7 @@ func testFail3(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail4(t *testing.T, factory func() TestBTrie) {
+func testFail4(t *testing.T, factory func() TestStore) {
 	t.Run("fail 4", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -656,7 +656,7 @@ func testFail4(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail5(t *testing.T, factory func() TestBTrie) {
+func testFail5(t *testing.T, factory func() TestStore) {
 	t.Run("fail 5", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -667,7 +667,7 @@ func testFail5(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail6(t *testing.T, factory func() TestBTrie) {
+func testFail6(t *testing.T, factory func() TestStore) {
 	t.Run("fail 6", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -678,7 +678,7 @@ func testFail6(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail7(t *testing.T, factory func() TestBTrie) {
+func testFail7(t *testing.T, factory func() TestStore) {
 	// Failure is due to continuing iteration past false yield().
 	// Failure requires the second Put.
 	t.Run("fail 7", func(t *testing.T) {
@@ -692,7 +692,7 @@ func testFail7(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail8(t *testing.T, factory func() TestBTrie) {
+func testFail8(t *testing.T, factory func() TestStore) {
 	t.Run("fail 8", func(t *testing.T) {
 		t.Parallel()
 		trie := factory()
@@ -707,7 +707,7 @@ func testFail8(t *testing.T, factory func() TestBTrie) {
 	})
 }
 
-func testFail9(t *testing.T, factory func() TestBTrie) {
+func testFail9(t *testing.T, factory func() TestStore) {
 	// Test that removing the last value on a path removes the path.
 	// Definite hack to detect this one,
 	// but there's no good way to test this using the public API.

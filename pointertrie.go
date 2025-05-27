@@ -14,12 +14,12 @@ type ptrTrieNode[V any] struct {
 	keyByte  byte
 }
 
-// NewPointerTrie returns a new, absurdly simple, and badly coded BTrie.
+// NewPointerTrie returns a new, absurdly simple, and badly coded Store.
 // Pointers to children are stored densely in slices.
 // This is purely for fleshing out the unit tests, benchmarks, and fuzz tests.
 //
 //nolint:iface
-func NewPointerTrie[V any]() BTrie[V] {
+func NewPointerTrie[V any]() Store[V] {
 	return &ptrTrieNode[V]{}
 }
 

@@ -13,10 +13,10 @@ type arrayTrieNode[V any] struct {
 	numChildren uint16 // possible values 0-256, so need the extra byte
 }
 
-// NewArrayTrie returns a new BTrie with pointers to children stored in arrays.
+// NewArrayTrie returns a new Store with pointers to children stored in arrays.
 //
 //nolint:iface
-func NewArrayTrie[V any]() BTrie[V] {
+func NewArrayTrie[V any]() Store[V] {
 	return &arrayTrieNode[V]{}
 }
 

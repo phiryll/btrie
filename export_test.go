@@ -14,7 +14,7 @@ var (
 
 type (
 	Cloneable[V any] interface {
-		BTrie[V]
+		Store[V]
 		Clone() Cloneable[V]
 	}
 

@@ -6,7 +6,7 @@ import (
 	"math"
 )
 
-// Bounds is the argument type for [BTrie.Range].
+// Bounds is the argument type for [Store.Range].
 // A nil value for [Bounds.Begin] or [Bounds.End] represents +/-Inf;
 // which one depends on the value of [Bounds.IsReverse].
 // Note that an empty value is not nil; -Inf < []byte{} < []byte{0}.

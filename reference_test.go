@@ -11,15 +11,15 @@ import (
 	"github.com/phiryll/kv"
 )
 
-func newReference() TestBTrie {
+func newReference() TestStore {
 	return reference{}
 }
 
-// reference implements the TestBTrie interface, but it is not a trie.
-// This serves as an expected value to compare against a BTrie[byte] implementation while testing.
+// reference implements the TestStore interface, but it is not a trie.
+// This serves as an expected value to compare against a Store[byte] implementation while testing.
 type reference map[string]byte
 
-func (r reference) Clone() TestBTrie {
+func (r reference) Clone() TestStore {
 	return maps.Clone(r)
 }
 
