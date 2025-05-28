@@ -8,20 +8,21 @@ import (
 	"strings"
 )
 
-// Store is essentially a map[[]byte]V.
+// Store is essentially a map[[]byte]V, but without a map's syntax or its full semantics.
 // Keys must be non-nil.
 // Implementations must clearly document any additional constraints on keys and values.
-// Implementations must clearly document if any methods accept or return references to its internal storage.
-// Implementations must clearly document if the iterator returned by Range is single-use.
+// Implementations must clearly document if any methods accept or return references to its internal storage
+// (slices, e.g.).
+// Implementations must clearly document if any returned iterator is single-use.
 // If an implemention implements [fmt.Stringer], it should produce a value appropriate for debugging,
 // how verbose is up to the implementer.
 type Store[V any] interface {
 	// Get returns the value for key and whether or not it exists.
 	Get(key []byte) (value V, ok bool)
 
-	// Put sets the value for key, returning the previous value and whether or not the previous value existed.
-	// Put will panic if this Store does not support mutation.
-	Put(key []byte, value V) (previous V, ok bool)
+	// Set sets the value for key, returning the previous value and whether or not the previous value existed.
+	// Set will panic if this Store does not support mutation.
+	Set(key []byte, value V) (previous V, ok bool)
 
 	// Delete removes the value for key, returning the previous value and whether or not the previous value existed.
 	// Delete will panic if this Store does not support mutation.

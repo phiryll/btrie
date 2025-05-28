@@ -432,7 +432,7 @@ func BenchmarkCreate(b *testing.B) {
 			for range b.N {
 				store := bench.def.factory()
 				for k, v := range bench.config.entries {
-					store.Put([]byte(k), v)
+					store.Set([]byte(k), v)
 				}
 			}
 		})
@@ -455,7 +455,7 @@ func BenchmarkClone(b *testing.B) {
 }
 
 // This benchmark is for memory allocations, not time.
-// Creates one store and puts many keys per benchmark iteration.
+// Creates one store and sets many keys per benchmark iteration.
 func BenchmarkSparse(b *testing.B) {
 	random := rand.New(rand.NewPCG(12337405, 432843980))
 	var keys keySet
@@ -470,7 +470,7 @@ func BenchmarkSparse(b *testing.B) {
 			for range b.N {
 				store := def.factory()
 				for _, key := range keys {
-					store.Put(key, 0)
+					store.Set(key, 0)
 				}
 			}
 		})
@@ -478,7 +478,7 @@ func BenchmarkSparse(b *testing.B) {
 }
 
 // This benchmark is for memory allocations, not time.
-// Creates one store and puts many keys per benchmark iteration.
+// Creates one store and sets many keys per benchmark iteration.
 func BenchmarkDense(b *testing.B) {
 	random := rand.New(rand.NewPCG(9321075532, 1293487543289))
 	oneKeys := make(keySet, 1<<8)
@@ -513,7 +513,7 @@ func BenchmarkDense(b *testing.B) {
 				for range b.N {
 					store := def.factory()
 					for _, key := range tt.keys {
-						store.Put(key, 0)
+						store.Set(key, 0)
 					}
 				}
 			})
@@ -522,7 +522,7 @@ func BenchmarkDense(b *testing.B) {
 }
 
 //nolint:gocognit
-func BenchmarkPut(b *testing.B) {
+func BenchmarkSet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
@@ -535,7 +535,7 @@ func BenchmarkPut(b *testing.B) {
 					store := original.Clone()
 					b.ResetTimer()
 					for i := range b.N {
-						store.Put(present[i%len(present)], 42)
+						store.Set(present[i%len(present)], 42)
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -551,7 +551,7 @@ func BenchmarkPut(b *testing.B) {
 							store = original.Clone()
 							b.StartTimer()
 						}
-						store.Put(absent[i%len(absent)], 42)
+						store.Set(absent[i%len(absent)], 42)
 					}
 				})
 			}
