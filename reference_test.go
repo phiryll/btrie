@@ -23,7 +23,7 @@ func (r reference) Clone() TestStore {
 	return maps.Clone(r)
 }
 
-func (r reference) Put(key []byte, value byte) (byte, bool) {
+func (r reference) Set(key []byte, value byte) (byte, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}

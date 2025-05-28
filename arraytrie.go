@@ -38,7 +38,7 @@ func (n *arrayTrieNode[V]) Get(key []byte) (V, bool) {
 	return n.root.Get()
 }
 
-func (n *arrayTrieNode[V]) Put(key []byte, value V) (V, bool) {
+func (n *arrayTrieNode[V]) Set(key []byte, value V) (V, bool) {
 	if key == nil {
 		panic("key must be non-nil")
 	}

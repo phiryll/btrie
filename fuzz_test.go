@@ -94,14 +94,14 @@ func FuzzGet(f *testing.F) {
 	})
 }
 
-func FuzzPut(f *testing.F) {
+func FuzzSet(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	ref := createReferenceStore(fuzzStoreConfigs[0])
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
-		expected, expectedOk := ref.Put(key, value)
+		expected, expectedOk := ref.Set(key, value)
 		for _, fuzz := range fuzzStores {
-			actual, actualOk := fuzz.store.Put(key, value)
+			actual, actualOk := fuzz.store.Set(key, value)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			actual, ok := fuzz.store.Get(key)
@@ -154,11 +154,11 @@ func FuzzRange(f *testing.F) {
 func FuzzMixed(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	ref := createReferenceStore(fuzzStoreConfigs[0])
-	f.Fuzz(func(t *testing.T, fuzzPutKey, fuzzDeleteKey uint32, fuzzPutKeyLen, fuzzDeleteKeyLen, value byte) {
-		key := keyForFuzzInputs(fuzzPutKey, fuzzPutKeyLen)
-		expected, expectedOk := ref.Put(key, value)
+	f.Fuzz(func(t *testing.T, fuzzSetKey, fuzzDeleteKey uint32, fuzzSetKeyLen, fuzzDeleteKeyLen, value byte) {
+		key := keyForFuzzInputs(fuzzSetKey, fuzzSetKeyLen)
+		expected, expectedOk := ref.Set(key, value)
 		for _, fuzz := range fuzzStores {
-			actual, actualOk := fuzz.store.Put(key, value)
+			actual, actualOk := fuzz.store.Set(key, value)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			actual, ok := fuzz.store.Get(key)

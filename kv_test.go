@@ -280,7 +280,7 @@ func TestTestStoreConfigRepeatability(t *testing.T) {
 func createReferenceStore(config *storeConfig) TestStore {
 	store := newReference()
 	for k, v := range config.entries {
-		store.Put([]byte(k), v)
+		store.Set([]byte(k), v)
 	}
 	return store
 }
@@ -291,7 +291,7 @@ func createTestStores(storeConfigs []*storeConfig) []*testStore {
 		for _, config := range storeConfigs {
 			store := def.factory()
 			for k, v := range config.entries {
-				store.Put([]byte(k), v)
+				store.Set([]byte(k), v)
 			}
 			name := fmt.Sprintf("impl=%s/%s", def.name, config.name)
 			result = append(result, &testStore{name, store, def, config})
@@ -358,7 +358,7 @@ func TestNilArgPanics(t *testing.T) {
 			t.Parallel()
 			store := def.factory()
 			assert.Panics(t, func() {
-				store.Put(nil, 0)
+				store.Set(nil, 0)
 			})
 			assert.Panics(t, func() {
 				store.Get(nil)
@@ -373,7 +373,7 @@ func TestNilArgPanics(t *testing.T) {
 	}
 }
 
-// Tests Get/Put/Delete/Range with a specific key and store, which should not contain key.
+// Tests Get/Set/Delete/Range with a specific key and store, which should not contain key.
 // The store should be the same after invoking this function.
 // Assumes store.Range(forwardAll) works.
 func testKey(t *testing.T, key []byte, store TestStore) {
@@ -388,13 +388,13 @@ func testKey(t *testing.T, key []byte, store TestStore) {
 	assertAbsent(t, key, store)
 	assertSame(t, existing, store)
 
-	actual, ok := store.Put(key, value)
+	actual, ok := store.Set(key, value)
 	assert.False(t, ok)
 	assert.Equal(t, zero, actual)
 	existing[string(key)] = value
 	assertSame(t, existing, store)
 
-	actual, ok = store.Put(key, replacement)
+	actual, ok = store.Set(key, replacement)
 	assert.True(t, ok)
 	assert.Equal(t, value, actual)
 	existing[string(key)] = replacement
@@ -417,8 +417,8 @@ func TestEmptyKey(t *testing.T) {
 			t.Parallel()
 			store := def.factory()
 			testKey(t, key, store)
-			store.Put([]byte{43, 15}, 94)
-			store.Put([]byte{126, 73, 12}, 45)
+			store.Set([]byte{43, 15}, 94)
+			store.Set([]byte{126, 73, 12}, 45)
 			testKey(t, key, store)
 		})
 	}
@@ -433,10 +433,10 @@ func TestStoreString(t *testing.T) {
 			store := def.factory()
 			if sStore, ok := store.(fmt.Stringer); ok {
 				assert.NotPanics(t, func() { _ = sStore.String() })
-				store.Put([]byte{}, 73)
+				store.Set([]byte{}, 73)
 				assert.NotPanics(t, func() { _ = sStore.String() })
-				store.Put([]byte{43, 15}, 94)
-				store.Put([]byte{126, 73, 12}, 45)
+				store.Set([]byte{43, 15}, 94)
+				store.Set([]byte{126, 73, 12}, 45)
 				assert.NotPanics(t, func() { _ = sStore.String() })
 			}
 		})
@@ -460,13 +460,13 @@ func TestFprint(t *testing.T) {
 			checkFprint(t, "", store.Range(From(nil).To(nil)))
 			checkFprint(t, "", store.Range(From(nil).DownTo(nil)))
 
-			store.Put([]byte{8, 6, 2}, 45)
-			store.Put([]byte{1, 2}, 47)
-			store.Put([]byte{8, 6, 5}, 53)
-			store.Put([]byte{}, 35)
-			store.Put([]byte{1, 1, 7, 3, 12}, 16)
-			store.Put([]byte{8, 6, 4, 2}, 71)
-			store.Put([]byte{1, 1}, 83)
+			store.Set([]byte{8, 6, 2}, 45)
+			store.Set([]byte{1, 2}, 47)
+			store.Set([]byte{8, 6, 5}, 53)
+			store.Set([]byte{}, 35)
+			store.Set([]byte{1, 1, 7, 3, 12}, 16)
+			store.Set([]byte{8, 6, 4, 2}, 71)
+			store.Set([]byte{1, 1}, 83)
 
 			checkFprint(t, `: 35
 0101: 83
@@ -504,11 +504,11 @@ func TestStores(t *testing.T) {
 			store := test.def.factory()
 			existing := map[string]byte{}
 			for key, value := range test.config.entries {
-				t.Run("op=put/key="+kv.KeyName([]byte(key)), func(t *testing.T) {
+				t.Run("op=set/key="+kv.KeyName([]byte(key)), func(t *testing.T) {
 					assertAbsent(t, []byte(key), store)
 					assertSame(t, existing, store)
 
-					actual, ok := store.Put([]byte(key), value)
+					actual, ok := store.Set([]byte(key), value)
 					assert.False(t, ok)
 					assert.Equal(t, zero, actual)
 					existing[key] = value
@@ -574,7 +574,7 @@ func TestClone(t *testing.T) {
 			assertSame(t, map[string]byte{}, store)
 			for _, keys := range test.config.absent {
 				for i, key := range keys {
-					store.Put(key, byte(i))
+					store.Set(key, byte(i))
 				}
 			}
 			assertSame(t, test.config.entries, original)
@@ -587,7 +587,7 @@ func TestClone(t *testing.T) {
 			assertSame(t, map[string]byte{}, original)
 			for _, keys := range test.config.absent {
 				for i, key := range keys {
-					original.Put(key, byte(i))
+					original.Set(key, byte(i))
 				}
 			}
 			assertSame(t, test.config.entries, store)
@@ -601,7 +601,7 @@ func testFail1(t *testing.T, factory func() TestStore) {
 	t.Run("fail 1", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{5}, 0)
+		store.Set([]byte{5}, 0)
 		assert.Equal(t,
 			[]entry{},
 			collect(store.Range(From([]byte{5, 0}).To([]byte{6}))))
@@ -615,7 +615,7 @@ func testFail2(t *testing.T, factory func() TestStore) {
 	t.Run("fail 2", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{0xB3, 0x9C}, 184)
+		store.Set([]byte{0xB3, 0x9C}, 184)
 
 		// forgot to check isTerminal
 		actual, actualOk := store.Get([]byte{0xB3})
@@ -632,7 +632,7 @@ func testFail3(t *testing.T, factory func() TestStore) {
 	t.Run("fail 3", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{0xB3, 0x9C}, 184)
+		store.Set([]byte{0xB3, 0x9C}, 184)
 
 		actual, actualOk := store.Delete([]byte{0xB3})
 		assert.False(t, actualOk)
@@ -649,7 +649,7 @@ func testFail4(t *testing.T, factory func() TestStore) {
 	t.Run("fail 4", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{0x50, 0xEF}, 45)
+		store.Set([]byte{0x50, 0xEF}, 45)
 		assert.Equal(t,
 			[]entry{},
 			collect(store.Range(From([]byte{0x50}).DownTo([]byte{0x15}))))
@@ -660,7 +660,7 @@ func testFail5(t *testing.T, factory func() TestStore) {
 	t.Run("fail 5", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{0x50, 0xEF}, 45)
+		store.Set([]byte{0x50, 0xEF}, 45)
 		assert.Equal(t,
 			[]entry{{[]byte{0x50, 0xEF}, 45}},
 			collect(store.Range(From([]byte{0xFD}).DownTo([]byte{0x3D}))))
@@ -671,7 +671,7 @@ func testFail6(t *testing.T, factory func() TestStore) {
 	t.Run("fail 6", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{0x50, 0xEF}, 45)
+		store.Set([]byte{0x50, 0xEF}, 45)
 		assert.Equal(t,
 			[]entry{{[]byte{0x50, 0xEF}, 45}},
 			collect(store.Range(From([]byte{0x51}).DownTo([]byte{0x50}))))
@@ -680,12 +680,12 @@ func testFail6(t *testing.T, factory func() TestStore) {
 
 func testFail7(t *testing.T, factory func() TestStore) {
 	// Failure is due to continuing iteration past false yield().
-	// Failure requires the second Put.
+	// Failure requires the second Set.
 	t.Run("fail 7", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{3}, 0)
-		store.Put([]byte{4}, 0)
+		store.Set([]byte{3}, 0)
+		store.Set([]byte{4}, 0)
 		assert.Equal(t,
 			[]entry{},
 			collect(store.Range(From([]byte{1}).To([]byte{2}))))
@@ -696,11 +696,11 @@ func testFail8(t *testing.T, factory func() TestStore) {
 	t.Run("fail 8", func(t *testing.T) {
 		t.Parallel()
 		store := factory()
-		store.Put([]byte{}, 1)
-		store.Put([]byte{0}, 3)
-		store.Put([]byte{0x23}, 4)
-		store.Put([]byte{0x23, 0}, 5)
-		store.Put([]byte{0x23, 0xA5}, 6)
+		store.Set([]byte{}, 1)
+		store.Set([]byte{0}, 3)
+		store.Set([]byte{0x23}, 4)
+		store.Set([]byte{0x23, 0}, 5)
+		store.Set([]byte{0x23, 0xA5}, 6)
 		assert.Equal(t,
 			[]entry{{[]byte{0x23, 0}, 5}},
 			collect(store.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0}))))
@@ -722,7 +722,7 @@ func testFail9(t *testing.T, factory func() TestStore) {
 		}
 		expected := sStore.String()
 		key := []byte{0x23}
-		store.Put(key, 6)
+		store.Set(key, 6)
 		store.Delete(key)
 		assert.Equal(t, expected, sStore.String())
 	})
