@@ -89,7 +89,10 @@ func TestBoundsCompareKey(t *testing.T) {
 			From(nil).To(empty),
 			keySet{},
 			keySet{},
-			keySet{empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{
+				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
+				prevKey(high), high, nextKey(high), after,
+			},
 		},
 		{
 			From(nil).To(low),
@@ -100,7 +103,10 @@ func TestBoundsCompareKey(t *testing.T) {
 		{
 			From(nil).To(nil),
 			keySet{},
-			keySet{empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{
+				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
+				prevKey(high), high, nextKey(high), after,
+			},
 			keySet{},
 		},
 		{
@@ -112,7 +118,10 @@ func TestBoundsCompareKey(t *testing.T) {
 		{
 			From(empty).To(nil),
 			keySet{},
-			keySet{empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{
+				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
+				prevKey(high), high, nextKey(high), after,
+			},
 			keySet{},
 		},
 		{
@@ -150,13 +159,19 @@ func TestBoundsCompareKey(t *testing.T) {
 		{
 			From(nil).DownTo(empty),
 			keySet{},
-			keySet{nextKey(empty), before, prevKey(low), low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{
+				nextKey(empty), before, prevKey(low), low, nextKey(low), within,
+				prevKey(high), high, nextKey(high), after,
+			},
 			keySet{empty},
 		},
 		{
 			From(nil).DownTo(nil),
 			keySet{},
-			keySet{empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{
+				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
+				prevKey(high), high, nextKey(high), after,
+			},
 			keySet{},
 		},
 		{
@@ -191,7 +206,10 @@ func TestBoundsCompareKey(t *testing.T) {
 		},
 		{
 			From(empty).DownTo(nil),
-			keySet{nextKey(empty), before, prevKey(low), low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{
+				nextKey(empty), before, prevKey(low), low, nextKey(low), within,
+				prevKey(high), high, nextKey(high), after,
+			},
 			keySet{empty},
 			keySet{},
 		},

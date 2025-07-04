@@ -132,7 +132,10 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(nil).To(high),
-			keySet{empty, nextKey(empty), before, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
+			keySet{
+				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
+				prevKey(high), high, nextKey(high), after,
+			},
 		},
 		{
 			From(nil).To(nil),
@@ -144,7 +147,10 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(empty).To(high),
-			keySet{empty, nextKey(empty), before, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
+			keySet{
+				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
+				prevKey(high), high, nextKey(high), after,
+			},
 		},
 		{
 			From(empty).To(nil),
