@@ -124,61 +124,67 @@ func BenchmarkChildBounds(b *testing.B) {
 		// no common prefix
 		{
 			From(nil).To(empty),
-			keySet{empty, next(empty), after},
+			keySet{empty, nextKey(empty), after},
 		},
 		{
-			From(nil).To(next(empty)),
-			keySet{empty, next(empty), next(next(empty)), after},
+			From(nil).To(nextKey(empty)),
+			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
 		},
 		{
 			From(nil).To(high),
-			keySet{empty, next(empty), before, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
-		},
-		{
-			From(nil).To(nil),
-			keySet{empty, next(empty), within},
-		},
-		{
-			From(empty).To(next(empty)),
-			keySet{empty, next(empty), next(next(empty)), after},
-		},
-		{
-			From(empty).To(high),
-			keySet{empty, next(empty), before, high[:1], high[:2], high[:3], prev(high), high, next(high), after},
-		},
-		{
-			From(empty).To(nil),
-			keySet{empty, next(empty), within},
-		},
-		{
-			From(next(empty)).To(high),
 			keySet{
-				empty, next(empty), next(next(empty)), before, high[:1], high[:2], high[:3],
-				prev(high), high, next(high), after,
+				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
+				prevKey(high), high, nextKey(high), after,
 			},
 		},
 		{
-			From(next(empty)).To(nil),
-			keySet{empty, next(empty), next(next(empty)), within},
+			From(nil).To(nil),
+			keySet{empty, nextKey(empty), within},
+		},
+		{
+			From(empty).To(nextKey(empty)),
+			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
+		},
+		{
+			From(empty).To(high),
+			keySet{
+				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
+				prevKey(high), high, nextKey(high), after,
+			},
+		},
+		{
+			From(empty).To(nil),
+			keySet{empty, nextKey(empty), within},
+		},
+		{
+			From(nextKey(empty)).To(high),
+			keySet{
+				empty, nextKey(empty), nextKey(nextKey(empty)), before, high[:1], high[:2], high[:3],
+				prevKey(high), high, nextKey(high), after,
+			},
+		},
+		{
+			From(nextKey(empty)).To(nil),
+			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), within},
 		},
 		{
 			From(low).To(high),
 			keySet{
-				empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low),
-				within, high[:1], high[:2], high[:3], prev(high), high, next(high), after,
+				empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
+				within, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after,
 			},
 		},
 		{
 			From(low).To(nil),
-			keySet{empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low), after},
+			keySet{empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low), after},
 		},
 
 		// 2 byte common prefix
 		{
 			From(low).To(low2),
 			keySet{
-				empty, next(empty), before, low[:1], low[:2], low[:3], prev(low), low, next(low),
-				midLows, low2[:3], prev(low2), low2, next(low2), after,
+				empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
+				midLows, low2[:3], prevKey(low2), low2, nextKey(low2), after,
 			},
 		},
 
@@ -186,8 +192,8 @@ func BenchmarkChildBounds(b *testing.B) {
 		{
 			From(low[:2]).To(low),
 			keySet{
-				empty, next(empty), before, low[:1], prev(low[:2]), low[:2], next(low[:2]), low[:3],
-				prev(low), low, next(low), after,
+				empty, nextKey(empty), before, low[:1], prevKey(low[:2]), low[:2], nextKey(low[:2]), low[:3],
+				prevKey(low), low, nextKey(low), after,
 			},
 		},
 	} {
