@@ -1,8 +1,15 @@
 # kv
 
-Key-Value Stores
+Key-Value Store Experimentation
 
-**UNDER DEVELOPMENT, IT WILL CHANGE**
+## Preface
+
+**DO NOT USE! (yet)**
+
+This is still under development, it **will** change. Drastically.
+This is the first attempt, intended be thrown away.
+
+## Goals (eventually)
 
 kv is a library with a few key-value store implementations.
 These are roughly equivalent to a `map[[]byte]<value type>`,
