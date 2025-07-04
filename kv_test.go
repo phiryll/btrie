@@ -150,6 +150,81 @@ var (
 	testStoreConfigs = createTestStoreConfigs()
 )
 
+func nextKey(key []byte) []byte {
+	if key == nil {
+		panic("key must be non-nil")
+	}
+	result := make([]byte, len(key)+1)
+	copy(result, key)
+	result[len(key)] = 0x00
+	return result
+}
+
+// This may not return the immediate predecessor, since a unique one might not exist.
+// For example, {A, B, 0xFF} < {A, B, 0xFF, 0xFF} < ... < {A, B+1}.
+func prevKey(key []byte) []byte {
+	keyLen := len(key)
+	lastByte := key[keyLen-1]
+	if lastByte == 0x00 {
+		// Return the key with the last byte removed.
+		result := make([]byte, keyLen-1)
+		copy(result, key)
+		return result
+	}
+	// Return the key with the last byte decremented and an 0xFF added.
+	result := make([]byte, keyLen+1)
+	copy(result, key[:keyLen-1])
+	result[keyLen-1] = lastByte - 1
+	result[keyLen] = 0xFF
+	return result
+}
+
+func TestNextKey(t *testing.T) {
+	t.Parallel()
+	assert.Panics(t, func() {
+		nextKey(nil)
+	})
+	for _, tt := range []struct {
+		key     []byte
+		nextKey []byte
+	}{
+		{[]byte{}, []byte{0}},
+		{[]byte{0x23, 0x87, 0x00}, []byte{0x23, 0x87, 0x00, 0x00}},
+		{[]byte{0x23, 0x87, 0x12}, []byte{0x23, 0x87, 0x12, 0x00}},
+		{[]byte{0x23, 0x87, 0xFF}, []byte{0x23, 0x87, 0xFF, 0x00}},
+	} {
+		copyKey := append([]byte{}, tt.key...)
+		assert.Equal(t, tt.nextKey, nextKey(tt.key))
+		// make sure nextKey didn't mutate its arg
+		assert.Equal(t, copyKey, tt.key)
+	}
+}
+
+func TestPrevKey(t *testing.T) {
+	t.Parallel()
+	assert.Panics(t, func() {
+		prevKey(nil)
+	})
+	assert.Panics(t, func() {
+		prevKey([]byte{})
+	})
+	for _, tt := range []struct {
+		key     []byte
+		prevKey []byte
+	}{
+		{[]byte{0}, []byte{}},
+		{[]byte{0x23, 0x87, 0x00, 0x00}, []byte{0x23, 0x87, 0x00}},
+		{[]byte{0x23, 0x87, 0x00}, []byte{0x23, 0x87}},
+		{[]byte{0x23, 0x87, 0x12}, []byte{0x23, 0x87, 0x11, 0xFF}},
+		{[]byte{0x23, 0x87, 0xFF}, []byte{0x23, 0x87, 0xFE, 0xFF}},
+	} {
+		copyKey := append([]byte{}, tt.key...)
+		assert.Equal(t, tt.prevKey, prevKey(tt.key))
+		// make sure prevKey didn't mutate its arg
+		assert.Equal(t, copyKey, tt.key)
+	}
+}
+
 func asCloneable(factory func() kv.Store[byte]) func() TestStore {
 	return func() TestStore {
 		store := factory()
