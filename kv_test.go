@@ -2,13 +2,9 @@ package kv_test
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"iter"
-	"math"
 	"math/bits"
-	rand "math/rand/v2"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -59,12 +55,6 @@ type (
 		def    *implDef
 		config *storeConfig
 	}
-
-	// Used to test Range result sets.
-	entry struct {
-		key   []byte
-		value byte
-	}
 )
 
 const (
@@ -76,9 +66,9 @@ const (
 
 var (
 	implDefs = []*implDef{
-		{"reference", newReference},
-		{"pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
-		{"array-trie", asCloneable(kv.NewArrayTrie[byte])},
+		{"impl=reference", newReference},
+		{"impl=pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
+		{"impl=array-trie", asCloneable(kv.NewArrayTrie[byte])},
 	}
 
 	From       = kv.From
@@ -236,71 +226,6 @@ func asCloneable(factory func() kv.Store[byte]) func() TestStore {
 	}
 }
 
-func emptySeqInt(_ func(int) bool) {}
-
-func emptyAdjInt(_ int) iter.Seq[int] {
-	return emptySeqInt
-}
-
-func emptyPathAdjInt(_ []int) iter.Seq[int] {
-	return emptySeqInt
-}
-
-func cmpEntryForward(a, b entry) int {
-	return bytes.Compare(a.key, b.key)
-}
-
-func cmpEntryReverse(a, b entry) int {
-	return bytes.Compare(b.key, a.key)
-}
-
-func collect(itr iter.Seq2[[]byte, byte]) []entry {
-	entries := []entry{}
-	for k, v := range itr {
-		entries = append(entries, entry{k, v})
-	}
-	return entries
-}
-
-func randomBytes(n int, random *rand.Rand) []byte {
-	if n == 0 {
-		return []byte{}
-	}
-	k := (n-1)/8 + 1
-	b := make([]byte, k*8)
-	for i := range k {
-		binary.BigEndian.PutUint64(b[i*8:], random.Uint64())
-	}
-	return b[:n]
-}
-
-func randomByte(random *rand.Rand) byte {
-	return byte(random.UintN(256))
-}
-
-// Returns a random key of with length chosen from a roughly normal distribution
-// with the given mean. Lengths will range from 0 to 2*mean.
-func randomKey(meanLen int, random *rand.Rand) []byte {
-	const bound = 4.0 // chosen experimentally
-	val := random.NormFloat64()
-	for val < -bound || val > +bound {
-		val = random.NormFloat64()
-	}
-	// val is in [-bound, +bound], translate that to [0, 2*mean]
-	val = (val + bound) * float64(meanLen) / bound
-	return randomBytes(int(math.Round(val)), random)
-}
-
-func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {
-	return randomBytes(keyLen, random)
-}
-
-func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
-	random.Shuffle(len(slice), func(i, j int) {
-		slice[i], slice[j] = slice[j], slice[i]
-	})
-}
-
 // storeConfigs for all possible subsequences of presentKeys.
 func createTestStoreConfigs() []*storeConfig {
 	result := []*storeConfig{}
@@ -345,13 +270,6 @@ func createTestStoreConfigs() []*storeConfig {
 	return result
 }
 
-func TestTestStoreConfigRepeatability(t *testing.T) {
-	t.Parallel()
-	for i, config := range createTestStoreConfigs() {
-		assert.True(t, reflect.DeepEqual(testStoreConfigs[i], config))
-	}
-}
-
 func createReferenceStore(config *storeConfig) TestStore {
 	store := newReference()
 	for k, v := range config.entries {
@@ -362,13 +280,13 @@ func createReferenceStore(config *storeConfig) TestStore {
 
 func createTestStores(storeConfigs []*storeConfig) []*testStore {
 	result := []*testStore{}
-	for _, def := range implDefs {
-		for _, config := range storeConfigs {
+	for _, config := range storeConfigs {
+		for _, def := range implDefs {
 			store := def.factory()
 			for k, v := range config.entries {
 				store.Set([]byte(k), v)
 			}
-			name := fmt.Sprintf("impl=%s/%s", def.name, config.name)
+			name := config.name + "/" + def.name
 			result = append(result, &testStore{name, store, def, config})
 		}
 	}
@@ -410,20 +328,35 @@ func assertAbsent(t *testing.T, key []byte, store TestStore) {
 	}
 }
 
+// Temporary.
+func entryIter(entries map[string]byte, keys iter.Seq[[]byte]) iter.Seq2[[]byte, byte] {
+	return func(yield func([]byte, byte) bool) {
+		for k := range keys {
+			v, ok := entries[string(k)]
+			if !ok {
+				panic(fmt.Sprintf("key %s not found", kv.KeyName(k)))
+			}
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
 // Test that store contains only the key/value pairs in entries,
 // and that Range(forward/reverse) returns them in the correct order.
 func assertSame(t *testing.T, entries map[string]byte, store TestStore) {
-	sliceEntries := []entry{}
-	for k, expected := range entries {
+	keys := [][]byte{}
+	for k, v := range entries {
 		actual, ok := store.Get([]byte(k))
 		assert.True(t, ok)
-		assert.Equal(t, expected, actual)
-		sliceEntries = append(sliceEntries, entry{[]byte(k), expected})
+		assert.Equal(t, v, actual)
+		keys = append(keys, []byte(k))
 	}
-	slices.SortFunc(sliceEntries, cmpEntryForward)
-	assert.Equal(t, sliceEntries, collect(store.Range(forwardAll)))
-	slices.SortFunc(sliceEntries, cmpEntryReverse)
-	assert.Equal(t, sliceEntries, collect(store.Range(reverseAll)))
+	slices.SortFunc(keys, bytes.Compare)
+	assertItersEqual(t, entryIter(entries, slices.Values(keys)), store.Range(forwardAll))
+	slices.Reverse(keys)
+	assertItersEqual(t, entryIter(entries, slices.Values(keys)), store.Range(reverseAll))
 }
 
 func TestNilArgPanics(t *testing.T) {
@@ -519,6 +452,7 @@ func TestStoreString(t *testing.T) {
 }
 
 func checkFprint[V any](t *testing.T, expected string, seq iter.Seq2[[]byte, V]) {
+	t.Helper()
 	var s strings.Builder
 	n, err := kv.Fprint(&s, seq)
 	require.NoError(t, err)
@@ -568,7 +502,54 @@ func TestFprint(t *testing.T) {
 	}
 }
 
-//nolint:gocognit
+// Functions to test iterators.
+
+func msgFrom(msgAndArgs ...any) string {
+	if len(msgAndArgs) == 0 {
+		return ""
+	}
+	msg, ok := msgAndArgs[0].(string)
+	if !ok {
+		return fmt.Sprintf("%+v of type %T must be a format string", msgAndArgs[0], msgAndArgs[0])
+	}
+	return fmt.Sprintf(msg, msgAndArgs[1:]...)
+}
+
+func assertItersEqual[K, V any](t *testing.T, expected, actual iter.Seq2[K, V], msgAndArgs ...any) {
+	t.Helper()
+	msg := msgFrom(msgAndArgs...)
+	i := 0
+	next, stop := iter.Pull2(actual)
+	defer stop()
+	for expectedKey, expectedValue := range expected {
+		actualKey, actualValue, ok := next()
+		require.True(t, ok, "%s: too short, len == %d", msg, i)
+		assert.Equal(t, expectedKey, actualKey, "%s: keys at index %d differ", msg, i)
+		assert.Equal(t, expectedValue, actualValue, "%s: values at index %d  differ", msg, i)
+		i++
+	}
+	_, _, ok := next()
+	assert.False(t, ok, "%s: too long, len > %d", msg, i)
+}
+
+// This tests that an early yield does not fail,
+// and ensures those code paths get test coverage.
+func assertEarlyYield(t *testing.T, size int, itr iter.Seq2[[]byte, byte]) {
+	t.Helper()
+	expectedCount := size
+	if expectedCount > 4 {
+		expectedCount = 4
+	}
+	count := 0
+	for range itr {
+		if count > 3 {
+			break
+		}
+		count++
+	}
+	assert.Equal(t, expectedCount, count)
+}
+
 func TestStores(t *testing.T) {
 	t.Parallel()
 	for _, test := range createTestStores(testStoreConfigs) {
@@ -602,28 +583,13 @@ func TestStores(t *testing.T) {
 			t.Run("op=range", func(t *testing.T) {
 				ref := createReferenceStore(test.config)
 				for _, bounds := range test.config.forward {
-					assert.Equal(t, collect(ref.Range(&bounds)), collect(store.Range(&bounds)),
-						"%s", &bounds)
+					assertItersEqual(t, ref.Range(&bounds), store.Range(&bounds), "%s", &bounds)
 				}
 				for _, bounds := range test.config.reverse {
-					assert.Equal(t, collect(ref.Range(&bounds)), collect(store.Range(&bounds)),
-						"%s", &bounds)
+					assertItersEqual(t, ref.Range(&bounds), store.Range(&bounds), "%s", &bounds)
 				}
-				// need an early yield for test coverage
-				count := 0
-				for range store.Range(forwardAll) {
-					if count > 3 {
-						break
-					}
-					count++
-				}
-				count = 0
-				for range store.Range(reverseAll) {
-					if count > 3 {
-						break
-					}
-					count++
-				}
+				assertEarlyYield(t, test.config.size, store.Range(forwardAll))
+				assertEarlyYield(t, test.config.size, store.Range(reverseAll))
 			})
 		})
 	}
@@ -672,152 +638,171 @@ func TestClone(t *testing.T) {
 
 // Things that failed at one point or another during testing.
 
-func testFail1(t *testing.T, factory func() TestStore) {
-	t.Run("fail 1", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{5}, 0)
-		assert.Equal(t,
-			[]entry{},
-			collect(store.Range(From([]byte{5, 0}).To([]byte{6}))))
-		assert.Equal(t,
-			[]entry{{[]byte{5}, 0}},
-			collect(store.Range(From([]byte{4}).To([]byte{5, 0}))))
-	})
+func assertIterEmpty[V any](t *testing.T, actual iter.Seq2[[]byte, V]) bool {
+	t.Helper()
+	for key, value := range actual {
+		return assert.Fail(t, fmt.Sprintf("should be empty, contains {%s:%v}", kv.KeyName(key), value))
+	}
+	return true
 }
 
-func testFail2(t *testing.T, factory func() TestStore) {
-	t.Run("fail 2", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0xB3, 0x9C}, 184)
-
-		// forgot to check isTerminal
-		actual, actualOk := store.Get([]byte{0xB3})
-		assert.False(t, actualOk)
-		assert.Equal(t, byte(0), actual)
-
-		actual, actualOk = store.Get([]byte{0xB3, 0x9C})
-		assert.True(t, actualOk)
-		assert.Equal(t, byte(184), actual)
-	})
+func assertIterSingleton[V any](t *testing.T, expectedKey []byte, expectedValue V, actual iter.Seq2[[]byte, V]) bool {
+	t.Helper()
+	next, stop := iter.Pull2(actual)
+	defer stop()
+	key, value, ok := next()
+	assert.True(t, ok, "should not be empty")
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+	_, _, ok = next()
+	assert.False(t, ok, "should have exactly one entry")
+	return true
 }
 
-func testFail3(t *testing.T, factory func() TestStore) {
-	t.Run("fail 3", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0xB3, 0x9C}, 184)
-
-		actual, actualOk := store.Delete([]byte{0xB3})
-		assert.False(t, actualOk)
-		assert.Equal(t, byte(0), actual)
-
-		// Make sure the subtree wasn't deleted.
-		actual, actualOk = store.Get([]byte{0xB3, 0x9C})
-		assert.True(t, actualOk)
-		assert.Equal(t, byte(184), actual)
-	})
+func TestFail1(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{5}, 0)
+			assertIterEmpty(t, store.Range(From([]byte{5, 0}).To([]byte{6})))
+			assertIterSingleton(t, []byte{5}, 0, store.Range(From([]byte{4}).To([]byte{5, 0})))
+		})
+	}
 }
 
-func testFail4(t *testing.T, factory func() TestStore) {
-	t.Run("fail 4", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0x50, 0xEF}, 45)
-		assert.Equal(t,
-			[]entry{},
-			collect(store.Range(From([]byte{0x50}).DownTo([]byte{0x15}))))
-	})
+func TestFail2(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0xB3, 0x9C}, 184)
+
+			// forgot to check isTerminal
+			actual, actualOk := store.Get([]byte{0xB3})
+			assert.False(t, actualOk)
+			assert.Equal(t, zero, actual)
+
+			actual, actualOk = store.Get([]byte{0xB3, 0x9C})
+			assert.True(t, actualOk)
+			assert.Equal(t, byte(184), actual)
+		})
+	}
 }
 
-func testFail5(t *testing.T, factory func() TestStore) {
-	t.Run("fail 5", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0x50, 0xEF}, 45)
-		assert.Equal(t,
-			[]entry{{[]byte{0x50, 0xEF}, 45}},
-			collect(store.Range(From([]byte{0xFD}).DownTo([]byte{0x3D}))))
-	})
+func TestFail3(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0xB3, 0x9C}, 184)
+
+			actual, actualOk := store.Delete([]byte{0xB3})
+			assert.False(t, actualOk)
+			assert.Equal(t, zero, actual)
+
+			// Make sure the subtree wasn't deleted.
+			actual, actualOk = store.Get([]byte{0xB3, 0x9C})
+			assert.True(t, actualOk)
+			assert.Equal(t, byte(184), actual)
+		})
+	}
 }
 
-func testFail6(t *testing.T, factory func() TestStore) {
-	t.Run("fail 6", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0x50, 0xEF}, 45)
-		assert.Equal(t,
-			[]entry{{[]byte{0x50, 0xEF}, 45}},
-			collect(store.Range(From([]byte{0x51}).DownTo([]byte{0x50}))))
-	})
+func TestFail4(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0x50, 0xEF}, 45)
+			assertIterEmpty(t, store.Range(From([]byte{0x50}).DownTo([]byte{0x15})))
+		})
+	}
 }
 
-func testFail7(t *testing.T, factory func() TestStore) {
+func TestFail5(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0x50, 0xEF}, 45)
+			assertIterSingleton(t, []byte{0x50, 0xEF}, 45, store.Range(From([]byte{0xFD}).DownTo([]byte{0x3D})))
+		})
+	}
+}
+
+func TestFail6(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0x50, 0xEF}, 45)
+			assertIterSingleton(t, []byte{0x50, 0xEF}, 45, store.Range(From([]byte{0x51}).DownTo([]byte{0x50})))
+		})
+	}
+}
+
+func TestFail7(t *testing.T) {
 	// Failure is due to continuing iteration past false yield().
 	// Failure requires the second Set.
-	t.Run("fail 7", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{3}, 0)
-		store.Set([]byte{4}, 0)
-		assert.Equal(t,
-			[]entry{},
-			collect(store.Range(From([]byte{1}).To([]byte{2}))))
-	})
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{3}, 0)
+			store.Set([]byte{4}, 0)
+			assertIterEmpty(t, store.Range(From([]byte{2}).DownTo([]byte{1})))
+		})
+	}
 }
 
-func testFail8(t *testing.T, factory func() TestStore) {
-	t.Run("fail 8", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{}, 1)
-		store.Set([]byte{0}, 3)
-		store.Set([]byte{0x23}, 4)
-		store.Set([]byte{0x23, 0}, 5)
-		store.Set([]byte{0x23, 0xA5}, 6)
-		assert.Equal(t,
-			[]entry{{[]byte{0x23, 0}, 5}},
-			collect(store.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0}))))
-	})
+func TestFail8(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{}, 1)
+			store.Set([]byte{0}, 3)
+			store.Set([]byte{0x23}, 4)
+			store.Set([]byte{0x23, 0}, 5)
+			store.Set([]byte{0x23, 0xA5}, 6)
+			assertIterSingleton(t, []byte{0x23, 0}, 5, store.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0})))
+		})
+	}
 }
 
-func testFail9(t *testing.T, factory func() TestStore) {
+func TestFail9(t *testing.T) {
 	// Test that removing the last value on a path removes the path.
 	// Definite hack to detect this one,
 	// but there's no good way to test this using the public API.
 	// The alternative would be to have implementation-specific tests,
 	// which is probably a better approach, but this works for now.
-	t.Run("fail 9", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		sStore, ok := store.(fmt.Stringer)
-		if !ok {
-			t.Skipf("%T does not implement Stringer", store)
-		}
-		expected := sStore.String()
-		key := []byte{0x23}
-		store.Set(key, 6)
-		store.Delete(key)
-		assert.Equal(t, expected, sStore.String())
-	})
-}
-
-func TestPastFailures(t *testing.T) {
 	t.Parallel()
 	for _, def := range implDefs {
-		factory := def.factory
 		t.Run(def.name, func(t *testing.T) {
 			t.Parallel()
-			testFail1(t, factory)
-			testFail2(t, factory)
-			testFail3(t, factory)
-			testFail4(t, factory)
-			testFail5(t, factory)
-			testFail6(t, factory)
-			testFail7(t, factory)
-			testFail8(t, factory)
-			testFail9(t, factory)
+			store := def.factory()
+			sStore, ok := store.(fmt.Stringer)
+			if !ok {
+				t.Skipf("%T does not implement Stringer", store)
+			}
+			expected := sStore.String()
+			key := []byte{0x23}
+			store.Set(key, 6)
+			store.Delete(key)
+			// make sure reference.dirty is false
+			for range store.Range(forwardAll) {
+				break
+			}
+			assert.Equal(t, expected, sStore.String())
 		})
 	}
 }

@@ -5,16 +5,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"maps"
+	"math"
 	rand "math/rand/v2"
 	"os"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/phiryll/kv"
-	"github.com/stretchr/testify/assert"
 )
 
 // No benchmark can have a truly random element, random seeds must be constants!
@@ -47,6 +45,45 @@ var (
 
 	benchStoreConfigs = createBenchStoreConfigs()
 )
+
+func randomBytes(n int, random *rand.Rand) []byte {
+	if n == 0 {
+		return []byte{}
+	}
+	k := (n-1)/8 + 1
+	b := make([]byte, k*8)
+	for i := range k {
+		binary.BigEndian.PutUint64(b[i*8:], random.Uint64())
+	}
+	return b[:n]
+}
+
+func randomByte(random *rand.Rand) byte {
+	return byte(random.UintN(256))
+}
+
+// Returns a random key of with length chosen from a roughly normal distribution
+// with the given mean. Lengths will range from 0 to 2*mean.
+func randomKey(meanLen int, random *rand.Rand) []byte {
+	const bound = 4.0 // chosen experimentally
+	val := random.NormFloat64()
+	for val < -bound || val > +bound {
+		val = random.NormFloat64()
+	}
+	// val is in [-bound, +bound], translate that to [0, 2*mean]
+	val = (val + bound) * float64(meanLen) / bound
+	return randomBytes(int(math.Round(val)), random)
+}
+
+func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {
+	return randomBytes(keyLen, random)
+}
+
+func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
+	random.Shuffle(len(slice), func(i, j int) {
+		slice[i], slice[j] = slice[j], slice[i]
+	})
+}
 
 func BenchmarkTraverser(b *testing.B) {
 	benchTraverser(b, "kind=pre-order", kv.TestingPreOrder)
@@ -116,6 +153,8 @@ func BenchmarkChildBounds(b *testing.B) {
 		bounds *Bounds
 		keys   keySet
 	}{
+		// No need to benchmark reverse bounds, the code is the same.
+
 		// no common prefix
 		{
 			From(nil).To(empty),
@@ -127,14 +166,11 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(nil).To(high),
-			keySet{
-				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
-				prevKey(high), high, nextKey(high), after,
-			},
+			keySet{empty, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
 		},
 		{
 			From(nil).To(nil),
-			keySet{empty, nextKey(empty), within},
+			keySet{empty, nextKey(empty), after},
 		},
 		{
 			From(empty).To(nextKey(empty)),
@@ -142,36 +178,33 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(empty).To(high),
-			keySet{
-				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
-				prevKey(high), high, nextKey(high), after,
-			},
+			keySet{empty, nextKey(empty), high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
 		},
 		{
 			From(empty).To(nil),
-			keySet{empty, nextKey(empty), within},
+			keySet{empty, nextKey(empty), after},
 		},
 		{
 			From(nextKey(empty)).To(high),
 			keySet{
-				empty, nextKey(empty), nextKey(nextKey(empty)), before, high[:1], high[:2], high[:3],
+				empty, nextKey(empty), nextKey(nextKey(empty)), high[:1], high[:2], high[:3],
 				prevKey(high), high, nextKey(high), after,
 			},
 		},
 		{
 			From(nextKey(empty)).To(nil),
-			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), within},
+			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
 		},
 		{
 			From(low).To(high),
 			keySet{
-				empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
-				within, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
+				high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after,
 			},
 		},
 		{
 			From(low).To(nil),
-			keySet{empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low), after},
+			keySet{empty, nextKey(empty), low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low), after},
 		},
 
 		// 2 byte common prefix
@@ -193,20 +226,11 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 	} {
 		b.Run(fmt.Sprintf("bounds=%s", tt.bounds), func(b *testing.B) {
-			forward := tt.bounds
-			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
 			for _, k := range tt.keys {
 				b.Run("key="+kv.KeyName(k), func(b *testing.B) {
-					b.Run("dir=forward", func(b *testing.B) {
-						for b.Loop() {
-							kv.TestingChildBounds(forward, k)
-						}
-					})
-					b.Run("dir=reverse", func(b *testing.B) {
-						for b.Loop() {
-							kv.TestingChildBounds(reverse, k)
-						}
-					})
+					for b.Loop() {
+						kv.TestingChildBounds(tt.bounds, k)
+					}
 				})
 			}
 		})
@@ -367,55 +391,10 @@ func createBenchStoreConfigs() []*storeConfig {
 	return append(createBenchRandomStoreConfigs(), createBenchWordStoreConfigs()...)
 }
 
-func TestBenchStoreConfigs(t *testing.T) {
-	t.Parallel()
-	for _, config := range benchStoreConfigs {
-		t.Run(config.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Len(t, config.entries, config.size)
-			assert.Equal(t, len(config.present), len(config.absent))
-			assert.Equal(t, 1, len(config.present[0])+len(config.absent[0]))
-			assert.Equal(t, 1<<8, len(config.present[1])+len(config.absent[1]))
-			assert.Equal(t, 1<<16, len(config.present[2])+len(config.absent[2]))
-			assert.Len(t, config.forward, 1<<16)
-			assert.Len(t, config.reverse, 1<<16)
-
-			present := maps.Clone(config.entries)
-			for i := range len(config.present) {
-				if i > 2 {
-					assert.Len(t, config.absent[i], 1<<16)
-				}
-				for _, k := range config.absent[i] {
-					assert.Len(t, k, i)
-					_, ok := present[string(k)]
-					assert.False(t, ok)
-				}
-				for _, k := range config.present[i] {
-					assert.Len(t, k, i)
-					_, ok := present[string(k)]
-					assert.True(t, ok)
-					delete(present, string(k))
-				}
-			}
-			assert.Empty(t, present)
-		})
-	}
-}
-
-func TestBenchStoreConfigRepeatability(t *testing.T) {
-	t.Parallel()
-	for i, config := range createBenchStoreConfigs() {
-		t.Run(config.name, func(t *testing.T) {
-			t.Parallel()
-			assert.True(t, reflect.DeepEqual(benchStoreConfigs[i], config))
-		})
-	}
-}
-
 // This helps to understand how factory() can impact other benchmarks which use it.
 func BenchmarkFactory(b *testing.B) {
 	for _, def := range implDefs {
-		b.Run("impl="+def.name, func(b *testing.B) {
+		b.Run(def.name, func(b *testing.B) {
 			for b.Loop() {
 				_ = def.factory()
 			}
@@ -461,7 +440,7 @@ func BenchmarkSparse(b *testing.B) {
 	}
 	shuffle(keys, random)
 	for _, def := range implDefs {
-		b.Run("impl="+def.name, func(b *testing.B) {
+		b.Run(def.name, func(b *testing.B) {
 			for b.Loop() {
 				store := def.factory()
 				for _, k := range keys {
@@ -503,7 +482,7 @@ func BenchmarkDense(b *testing.B) {
 			{"/keyLen=2", keySets[1]},
 			{"/keyLen=3", keySets[2]},
 		} {
-			b.Run("impl="+def.name+tt.name, func(b *testing.B) {
+			b.Run(def.name+tt.name, func(b *testing.B) {
 				for b.Loop() {
 					store := def.factory()
 					for _, k := range tt.keys {
@@ -558,7 +537,6 @@ func BenchmarkSet(b *testing.B) {
 //nolint:gocognit
 func BenchmarkGet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
-		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
@@ -566,10 +544,9 @@ func BenchmarkGet(b *testing.B) {
 					if len(present) == 0 {
 						b.Skipf("no present keys of length %d", keyLen)
 					}
-					store := original.Clone()
 					i := 0
 					for b.Loop() {
-						store.Get(present[i%len(present)])
+						bench.store.Get(present[i%len(present)])
 						i++
 					}
 				})
@@ -578,10 +555,9 @@ func BenchmarkGet(b *testing.B) {
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
-					store := original.Clone()
 					i := 0
 					for b.Loop() {
-						store.Get(absent[i%len(absent)])
+						bench.store.Get(absent[i%len(absent)])
 						i++
 					}
 				})
