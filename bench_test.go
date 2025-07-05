@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"maps"
+	"math"
 	rand "math/rand/v2"
 	"os"
 	"reflect"
@@ -47,6 +48,45 @@ var (
 
 	benchStoreConfigs = createBenchStoreConfigs()
 )
+
+func randomBytes(n int, random *rand.Rand) []byte {
+	if n == 0 {
+		return []byte{}
+	}
+	k := (n-1)/8 + 1
+	b := make([]byte, k*8)
+	for i := range k {
+		binary.BigEndian.PutUint64(b[i*8:], random.Uint64())
+	}
+	return b[:n]
+}
+
+func randomByte(random *rand.Rand) byte {
+	return byte(random.UintN(256))
+}
+
+// Returns a random key of with length chosen from a roughly normal distribution
+// with the given mean. Lengths will range from 0 to 2*mean.
+func randomKey(meanLen int, random *rand.Rand) []byte {
+	const bound = 4.0 // chosen experimentally
+	val := random.NormFloat64()
+	for val < -bound || val > +bound {
+		val = random.NormFloat64()
+	}
+	// val is in [-bound, +bound], translate that to [0, 2*mean]
+	val = (val + bound) * float64(meanLen) / bound
+	return randomBytes(int(math.Round(val)), random)
+}
+
+func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {
+	return randomBytes(keyLen, random)
+}
+
+func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
+	random.Shuffle(len(slice), func(i, j int) {
+		slice[i], slice[j] = slice[j], slice[i]
+	})
+}
 
 func BenchmarkTraverser(b *testing.B) {
 	benchTraverser(b, "kind=pre-order", kv.TestingPreOrder)
