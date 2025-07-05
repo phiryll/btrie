@@ -156,6 +156,8 @@ func BenchmarkChildBounds(b *testing.B) {
 		bounds *Bounds
 		keys   keySet
 	}{
+		// No need to benchmark reverse bounds, the code is the same.
+
 		// no common prefix
 		{
 			From(nil).To(empty),
@@ -167,14 +169,11 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(nil).To(high),
-			keySet{
-				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
-				prevKey(high), high, nextKey(high), after,
-			},
+			keySet{empty, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
 		},
 		{
 			From(nil).To(nil),
-			keySet{empty, nextKey(empty), within},
+			keySet{empty, nextKey(empty), after},
 		},
 		{
 			From(empty).To(nextKey(empty)),
@@ -182,36 +181,33 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 		{
 			From(empty).To(high),
-			keySet{
-				empty, nextKey(empty), before, high[:1], high[:2], high[:3],
-				prevKey(high), high, nextKey(high), after,
-			},
+			keySet{empty, nextKey(empty), high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
 		},
 		{
 			From(empty).To(nil),
-			keySet{empty, nextKey(empty), within},
+			keySet{empty, nextKey(empty), after},
 		},
 		{
 			From(nextKey(empty)).To(high),
 			keySet{
-				empty, nextKey(empty), nextKey(nextKey(empty)), before, high[:1], high[:2], high[:3],
+				empty, nextKey(empty), nextKey(nextKey(empty)), high[:1], high[:2], high[:3],
 				prevKey(high), high, nextKey(high), after,
 			},
 		},
 		{
 			From(nextKey(empty)).To(nil),
-			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), within},
+			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
 		},
 		{
 			From(low).To(high),
 			keySet{
-				empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
-				within, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
+				high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after,
 			},
 		},
 		{
 			From(low).To(nil),
-			keySet{empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low), after},
+			keySet{empty, nextKey(empty), low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low), after},
 		},
 
 		// 2 byte common prefix
@@ -233,20 +229,11 @@ func BenchmarkChildBounds(b *testing.B) {
 		},
 	} {
 		b.Run(fmt.Sprintf("bounds=%s", tt.bounds), func(b *testing.B) {
-			forward := tt.bounds
-			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
 			for _, k := range tt.keys {
 				b.Run("key="+kv.KeyName(k), func(b *testing.B) {
-					b.Run("dir=forward", func(b *testing.B) {
-						for b.Loop() {
-							kv.TestingChildBounds(forward, k)
-						}
-					})
-					b.Run("dir=reverse", func(b *testing.B) {
-						for b.Loop() {
-							kv.TestingChildBounds(reverse, k)
-						}
-					})
+					for b.Loop() {
+						kv.TestingChildBounds(tt.bounds, k)
+					}
 				})
 			}
 		})
