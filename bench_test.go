@@ -598,7 +598,6 @@ func BenchmarkSet(b *testing.B) {
 //nolint:gocognit
 func BenchmarkGet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
-		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
 				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
@@ -606,10 +605,9 @@ func BenchmarkGet(b *testing.B) {
 					if len(present) == 0 {
 						b.Skipf("no present keys of length %d", keyLen)
 					}
-					store := original.Clone()
 					i := 0
 					for b.Loop() {
-						store.Get(present[i%len(present)])
+						bench.store.Get(present[i%len(present)])
 						i++
 					}
 				})
@@ -618,10 +616,9 @@ func BenchmarkGet(b *testing.B) {
 					if len(absent) == 0 {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
-					store := original.Clone()
 					i := 0
 					for b.Loop() {
-						store.Get(absent[i%len(absent)])
+						bench.store.Get(absent[i%len(absent)])
 						i++
 					}
 				})
