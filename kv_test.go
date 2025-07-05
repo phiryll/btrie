@@ -672,152 +672,167 @@ func TestClone(t *testing.T) {
 
 // Things that failed at one point or another during testing.
 
-func testFail1(t *testing.T, factory func() TestStore) {
-	t.Run("fail 1", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{5}, 0)
-		assert.Equal(t,
-			[]entry{},
-			collect(store.Range(From([]byte{5, 0}).To([]byte{6}))))
-		assert.Equal(t,
-			[]entry{{[]byte{5}, 0}},
-			collect(store.Range(From([]byte{4}).To([]byte{5, 0}))))
-	})
+func assertIterEmpty[V any](t *testing.T, actual iter.Seq2[[]byte, V]) bool {
+	t.Helper()
+	for key, value := range actual {
+		return assert.Fail(t, fmt.Sprintf("should be empty, contains {%s:%v}", kv.KeyName(key), value))
+	}
+	return true
 }
 
-func testFail2(t *testing.T, factory func() TestStore) {
-	t.Run("fail 2", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0xB3, 0x9C}, 184)
-
-		// forgot to check isTerminal
-		actual, actualOk := store.Get([]byte{0xB3})
-		assert.False(t, actualOk)
-		assert.Equal(t, byte(0), actual)
-
-		actual, actualOk = store.Get([]byte{0xB3, 0x9C})
-		assert.True(t, actualOk)
-		assert.Equal(t, byte(184), actual)
-	})
+func assertIterSingleton[V any](t *testing.T, expectedKey []byte, expectedValue V, actual iter.Seq2[[]byte, V]) bool {
+	t.Helper()
+	next, stop := iter.Pull2(actual)
+	defer stop()
+	key, value, ok := next()
+	assert.True(t, ok, "should not be empty")
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+	_, _, ok = next()
+	assert.False(t, ok, "should have exactly one entry")
+	return true
 }
 
-func testFail3(t *testing.T, factory func() TestStore) {
-	t.Run("fail 3", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0xB3, 0x9C}, 184)
-
-		actual, actualOk := store.Delete([]byte{0xB3})
-		assert.False(t, actualOk)
-		assert.Equal(t, byte(0), actual)
-
-		// Make sure the subtree wasn't deleted.
-		actual, actualOk = store.Get([]byte{0xB3, 0x9C})
-		assert.True(t, actualOk)
-		assert.Equal(t, byte(184), actual)
-	})
+func TestFail1(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{5}, 0)
+			assertIterEmpty(t, store.Range(From([]byte{5, 0}).To([]byte{6})))
+			assertIterSingleton(t, []byte{5}, 0, store.Range(From([]byte{4}).To([]byte{5, 0})))
+		})
+	}
 }
 
-func testFail4(t *testing.T, factory func() TestStore) {
-	t.Run("fail 4", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0x50, 0xEF}, 45)
-		assert.Equal(t,
-			[]entry{},
-			collect(store.Range(From([]byte{0x50}).DownTo([]byte{0x15}))))
-	})
+func TestFail2(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0xB3, 0x9C}, 184)
+
+			// forgot to check isTerminal
+			actual, actualOk := store.Get([]byte{0xB3})
+			assert.False(t, actualOk)
+			assert.Equal(t, zero, actual)
+
+			actual, actualOk = store.Get([]byte{0xB3, 0x9C})
+			assert.True(t, actualOk)
+			assert.Equal(t, byte(184), actual)
+		})
+	}
 }
 
-func testFail5(t *testing.T, factory func() TestStore) {
-	t.Run("fail 5", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0x50, 0xEF}, 45)
-		assert.Equal(t,
-			[]entry{{[]byte{0x50, 0xEF}, 45}},
-			collect(store.Range(From([]byte{0xFD}).DownTo([]byte{0x3D}))))
-	})
+func TestFail3(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0xB3, 0x9C}, 184)
+
+			actual, actualOk := store.Delete([]byte{0xB3})
+			assert.False(t, actualOk)
+			assert.Equal(t, zero, actual)
+
+			// Make sure the subtree wasn't deleted.
+			actual, actualOk = store.Get([]byte{0xB3, 0x9C})
+			assert.True(t, actualOk)
+			assert.Equal(t, byte(184), actual)
+		})
+	}
 }
 
-func testFail6(t *testing.T, factory func() TestStore) {
-	t.Run("fail 6", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{0x50, 0xEF}, 45)
-		assert.Equal(t,
-			[]entry{{[]byte{0x50, 0xEF}, 45}},
-			collect(store.Range(From([]byte{0x51}).DownTo([]byte{0x50}))))
-	})
+func TestFail4(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0x50, 0xEF}, 45)
+			assertIterEmpty(t, store.Range(From([]byte{0x50}).DownTo([]byte{0x15})))
+		})
+	}
 }
 
-func testFail7(t *testing.T, factory func() TestStore) {
+func TestFail5(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0x50, 0xEF}, 45)
+			assertIterSingleton(t, []byte{0x50, 0xEF}, 45, store.Range(From([]byte{0xFD}).DownTo([]byte{0x3D})))
+		})
+	}
+}
+
+func TestFail6(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{0x50, 0xEF}, 45)
+			assertIterSingleton(t, []byte{0x50, 0xEF}, 45, store.Range(From([]byte{0x51}).DownTo([]byte{0x50})))
+		})
+	}
+}
+
+func TestFail7(t *testing.T) {
 	// Failure is due to continuing iteration past false yield().
 	// Failure requires the second Set.
-	t.Run("fail 7", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{3}, 0)
-		store.Set([]byte{4}, 0)
-		assert.Equal(t,
-			[]entry{},
-			collect(store.Range(From([]byte{1}).To([]byte{2}))))
-	})
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{3}, 0)
+			store.Set([]byte{4}, 0)
+			assertIterEmpty(t, store.Range(From([]byte{2}).DownTo([]byte{1})))
+		})
+	}
 }
 
-func testFail8(t *testing.T, factory func() TestStore) {
-	t.Run("fail 8", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		store.Set([]byte{}, 1)
-		store.Set([]byte{0}, 3)
-		store.Set([]byte{0x23}, 4)
-		store.Set([]byte{0x23, 0}, 5)
-		store.Set([]byte{0x23, 0xA5}, 6)
-		assert.Equal(t,
-			[]entry{{[]byte{0x23, 0}, 5}},
-			collect(store.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0}))))
-	})
+func TestFail8(t *testing.T) {
+	t.Parallel()
+	for _, def := range implDefs {
+		t.Run(def.name, func(t *testing.T) {
+			t.Parallel()
+			store := def.factory()
+			store.Set([]byte{}, 1)
+			store.Set([]byte{0}, 3)
+			store.Set([]byte{0x23}, 4)
+			store.Set([]byte{0x23, 0}, 5)
+			store.Set([]byte{0x23, 0xA5}, 6)
+			assertIterSingleton(t, []byte{0x23, 0}, 5, store.Range(From([]byte{0x23, 0}).To([]byte{0x23, 0, 0})))
+		})
+	}
 }
 
-func testFail9(t *testing.T, factory func() TestStore) {
+func TestFail9(t *testing.T) {
 	// Test that removing the last value on a path removes the path.
 	// Definite hack to detect this one,
 	// but there's no good way to test this using the public API.
 	// The alternative would be to have implementation-specific tests,
 	// which is probably a better approach, but this works for now.
-	t.Run("fail 9", func(t *testing.T) {
-		t.Parallel()
-		store := factory()
-		sStore, ok := store.(fmt.Stringer)
-		if !ok {
-			t.Skipf("%T does not implement Stringer", store)
-		}
-		expected := sStore.String()
-		key := []byte{0x23}
-		store.Set(key, 6)
-		store.Delete(key)
-		assert.Equal(t, expected, sStore.String())
-	})
-}
-
-func TestPastFailures(t *testing.T) {
 	t.Parallel()
 	for _, def := range implDefs {
-		factory := def.factory
 		t.Run(def.name, func(t *testing.T) {
 			t.Parallel()
-			testFail1(t, factory)
-			testFail2(t, factory)
-			testFail3(t, factory)
-			testFail4(t, factory)
-			testFail5(t, factory)
-			testFail6(t, factory)
-			testFail7(t, factory)
-			testFail8(t, factory)
-			testFail9(t, factory)
+			store := def.factory()
+			sStore, ok := store.(fmt.Stringer)
+			if !ok {
+				t.Skipf("%T does not implement Stringer", store)
+			}
+			expected := sStore.String()
+			key := []byte{0x23}
+			store.Set(key, 6)
+			store.Delete(key)
+			assert.Equal(t, expected, sStore.String())
 		})
 	}
 }
