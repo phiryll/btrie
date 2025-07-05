@@ -459,6 +459,7 @@ func TestStoreString(t *testing.T) {
 }
 
 func checkFprint[V any](t *testing.T, expected string, seq iter.Seq2[[]byte, V]) {
+	t.Helper()
 	var s strings.Builder
 	n, err := kv.Fprint(&s, seq)
 	require.NoError(t, err)
@@ -508,7 +509,24 @@ func TestFprint(t *testing.T) {
 	}
 }
 
-//nolint:gocognit
+// This tests that an early yield does not fail,
+// and ensures those code paths get test coverage.
+func assertEarlyYield(t *testing.T, size int, itr iter.Seq2[[]byte, byte]) {
+	t.Helper()
+	expectedCount := size
+	if expectedCount > 4 {
+		expectedCount = 4
+	}
+	count := 0
+	for range itr {
+		if count > 3 {
+			break
+		}
+		count++
+	}
+	assert.Equal(t, expectedCount, count)
+}
+
 func TestStores(t *testing.T) {
 	t.Parallel()
 	for _, test := range createTestStores(testStoreConfigs) {
@@ -549,21 +567,8 @@ func TestStores(t *testing.T) {
 					assert.Equal(t, collect(ref.Range(&bounds)), collect(store.Range(&bounds)),
 						"%s", &bounds)
 				}
-				// need an early yield for test coverage
-				count := 0
-				for range store.Range(forwardAll) {
-					if count > 3 {
-						break
-					}
-					count++
-				}
-				count = 0
-				for range store.Range(reverseAll) {
-					if count > 3 {
-						break
-					}
-					count++
-				}
+				assertEarlyYield(t, test.config.size, store.Range(forwardAll))
+				assertEarlyYield(t, test.config.size, store.Range(reverseAll))
 			})
 		})
 	}
