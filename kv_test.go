@@ -56,12 +56,6 @@ type (
 		def    *implDef
 		config *storeConfig
 	}
-
-	// Used to test Range result sets.
-	entry struct {
-		key   []byte
-		value byte
-	}
 )
 
 const (
@@ -233,14 +227,6 @@ func asCloneable(factory func() kv.Store[byte]) func() TestStore {
 	}
 }
 
-func collect(itr iter.Seq2[[]byte, byte]) []entry {
-	entries := []entry{}
-	for k, v := range itr {
-		entries = append(entries, entry{k, v})
-	}
-	return entries
-}
-
 // storeConfigs for all possible subsequences of presentKeys.
 func createTestStoreConfigs() []*storeConfig {
 	result := []*storeConfig{}
@@ -350,20 +336,35 @@ func assertAbsent(t *testing.T, key []byte, store TestStore) {
 	}
 }
 
+// Temporary.
+func entryIter(entries map[string]byte, keys iter.Seq[[]byte]) iter.Seq2[[]byte, byte] {
+	return func(yield func([]byte, byte) bool) {
+		for k := range keys {
+			v, ok := entries[string(k)]
+			if !ok {
+				panic(fmt.Sprintf("key %s not found", kv.KeyName(k)))
+			}
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
 // Test that store contains only the key/value pairs in entries,
 // and that Range(forward/reverse) returns them in the correct order.
 func assertSame(t *testing.T, entries map[string]byte, store TestStore) {
-	sliceEntries := []entry{}
-	for k, expected := range entries {
+	keys := [][]byte{}
+	for k, v := range entries {
 		actual, ok := store.Get([]byte(k))
 		assert.True(t, ok)
-		assert.Equal(t, expected, actual)
-		sliceEntries = append(sliceEntries, entry{[]byte(k), expected})
+		assert.Equal(t, v, actual)
+		keys = append(keys, []byte(k))
 	}
-	slices.SortFunc(sliceEntries, func(a, b entry) int { return bytes.Compare(a.key, b.key) })
-	assert.Equal(t, sliceEntries, collect(store.Range(forwardAll)))
-	slices.SortFunc(sliceEntries, func(a, b entry) int { return bytes.Compare(b.key, a.key) })
-	assert.Equal(t, sliceEntries, collect(store.Range(reverseAll)))
+	slices.SortFunc(keys, bytes.Compare)
+	assertItersEqual(t, entryIter(entries, slices.Values(keys)), store.Range(forwardAll))
+	slices.Reverse(keys)
+	assertItersEqual(t, entryIter(entries, slices.Values(keys)), store.Range(reverseAll))
 }
 
 func TestNilArgPanics(t *testing.T) {
@@ -509,6 +510,36 @@ func TestFprint(t *testing.T) {
 	}
 }
 
+// Functions to test iterators.
+
+func msgFrom(msgAndArgs ...any) string {
+	if len(msgAndArgs) == 0 {
+		return ""
+	}
+	msg, ok := msgAndArgs[0].(string)
+	if !ok {
+		return fmt.Sprintf("%+v of type %T must be a format string", msgAndArgs[0], msgAndArgs[0])
+	}
+	return fmt.Sprintf(msg, msgAndArgs[1:]...)
+}
+
+func assertItersEqual[K, V any](t *testing.T, expected, actual iter.Seq2[K, V], msgAndArgs ...any) {
+	t.Helper()
+	msg := msgFrom(msgAndArgs...)
+	i := 0
+	next, stop := iter.Pull2(actual)
+	defer stop()
+	for expectedKey, expectedValue := range expected {
+		actualKey, actualValue, ok := next()
+		require.True(t, ok, "%s: too short, len == %d", msg, i)
+		assert.Equal(t, expectedKey, actualKey, "%s: keys at index %d differ", msg, i)
+		assert.Equal(t, expectedValue, actualValue, "%s: values at index %d  differ", msg, i)
+		i++
+	}
+	_, _, ok := next()
+	assert.False(t, ok, "%s: too long, len > %d", msg, i)
+}
+
 // This tests that an early yield does not fail,
 // and ensures those code paths get test coverage.
 func assertEarlyYield(t *testing.T, size int, itr iter.Seq2[[]byte, byte]) {
@@ -560,12 +591,10 @@ func TestStores(t *testing.T) {
 			t.Run("op=range", func(t *testing.T) {
 				ref := createReferenceStore(test.config)
 				for _, bounds := range test.config.forward {
-					assert.Equal(t, collect(ref.Range(&bounds)), collect(store.Range(&bounds)),
-						"%s", &bounds)
+					assertItersEqual(t, ref.Range(&bounds), store.Range(&bounds), "%s", &bounds)
 				}
 				for _, bounds := range test.config.reverse {
-					assert.Equal(t, collect(ref.Range(&bounds)), collect(store.Range(&bounds)),
-						"%s", &bounds)
+					assertItersEqual(t, ref.Range(&bounds), store.Range(&bounds), "%s", &bounds)
 				}
 				assertEarlyYield(t, test.config.size, store.Range(forwardAll))
 				assertEarlyYield(t, test.config.size, store.Range(reverseAll))

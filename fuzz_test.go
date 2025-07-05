@@ -69,13 +69,13 @@ func TestBaseline(t *testing.T) {
 	t.Parallel()
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	ref := createReferenceStore(fuzzStoreConfigs[0])
-	refForward := collect(ref.Range(forwardAll))
-	refReverse := collect(ref.Range(reverseAll))
+	refForward := ref.Range(forwardAll)
+	refReverse := ref.Range(reverseAll)
 	for _, fuzz := range fuzzStores {
 		t.Run(fuzz.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, refForward, collect(fuzz.store.Range(forwardAll)), "forward")
-			assert.Equal(t, refReverse, collect(fuzz.store.Range(reverseAll)), "reverse")
+			assertItersEqual(t, refForward, fuzz.store.Range(forwardAll), "forward")
+			assertItersEqual(t, refReverse, fuzz.store.Range(reverseAll), "reverse")
 		})
 	}
 }
@@ -142,11 +142,11 @@ func FuzzRange(f *testing.F) {
 		}
 		forward := From(begin).To(end)
 		reverse := From(end).DownTo(begin)
-		refForward := collect(ref.Range(forward))
-		refReverse := collect(ref.Range(reverse))
+		refForward := ref.Range(forward)
+		refReverse := ref.Range(reverse)
 		for _, fuzz := range fuzzStores {
-			assert.Equal(t, refForward, collect(fuzz.store.Range(forward)), "%s: %s", fuzz.def.name, forward)
-			assert.Equal(t, refReverse, collect(fuzz.store.Range(reverse)), "%s: %s", fuzz.def.name, reverse)
+			assertItersEqual(t, refForward, fuzz.store.Range(forward), "%s: %s", fuzz.def.name, forward)
+			assertItersEqual(t, refReverse, fuzz.store.Range(reverse), "%s: %s", fuzz.def.name, reverse)
 		}
 	})
 }
