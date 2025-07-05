@@ -455,7 +455,7 @@ func TestBenchStoreConfigRepeatability(t *testing.T) {
 // This helps to understand how factory() can impact other benchmarks which use it.
 func BenchmarkFactory(b *testing.B) {
 	for _, def := range implDefs {
-		b.Run("impl="+def.name, func(b *testing.B) {
+		b.Run(def.name, func(b *testing.B) {
 			for b.Loop() {
 				_ = def.factory()
 			}
@@ -501,7 +501,7 @@ func BenchmarkSparse(b *testing.B) {
 	}
 	shuffle(keys, random)
 	for _, def := range implDefs {
-		b.Run("impl="+def.name, func(b *testing.B) {
+		b.Run(def.name, func(b *testing.B) {
 			for b.Loop() {
 				store := def.factory()
 				for _, k := range keys {
@@ -543,7 +543,7 @@ func BenchmarkDense(b *testing.B) {
 			{"/keyLen=2", keySets[1]},
 			{"/keyLen=3", keySets[2]},
 		} {
-			b.Run("impl="+def.name+tt.name, func(b *testing.B) {
+			b.Run(def.name+tt.name, func(b *testing.B) {
 				for b.Loop() {
 					store := def.factory()
 					for _, k := range tt.keys {

@@ -67,9 +67,9 @@ const (
 
 var (
 	implDefs = []*implDef{
-		{"reference", newReference},
-		{"pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
-		{"array-trie", asCloneable(kv.NewArrayTrie[byte])},
+		{"impl=reference", newReference},
+		{"impl=pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
+		{"impl=array-trie", asCloneable(kv.NewArrayTrie[byte])},
 	}
 
 	From       = kv.From
@@ -288,13 +288,13 @@ func createReferenceStore(config *storeConfig) TestStore {
 
 func createTestStores(storeConfigs []*storeConfig) []*testStore {
 	result := []*testStore{}
-	for _, def := range implDefs {
-		for _, config := range storeConfigs {
+	for _, config := range storeConfigs {
+		for _, def := range implDefs {
 			store := def.factory()
 			for k, v := range config.entries {
 				store.Set([]byte(k), v)
 			}
-			name := fmt.Sprintf("impl=%s/%s", def.name, config.name)
+			name := config.name + "/" + def.name
 			result = append(result, &testStore{name, store, def, config})
 		}
 	}
