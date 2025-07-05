@@ -200,18 +200,18 @@ func BenchmarkChildBounds(b *testing.B) {
 		b.Run(fmt.Sprintf("bounds=%s", tt.bounds), func(b *testing.B) {
 			forward := tt.bounds
 			reverse := From(tt.bounds.End).DownTo(tt.bounds.Begin)
-			for _, key := range tt.keys {
-				b.Run("key="+kv.KeyName(key), func(b *testing.B) {
+			for _, k := range tt.keys {
+				b.Run("key="+kv.KeyName(k), func(b *testing.B) {
 					b.Run("dir=forward", func(b *testing.B) {
 						b.ResetTimer()
 						for range b.N {
-							kv.TestingChildBounds(forward, key)
+							kv.TestingChildBounds(forward, k)
 						}
 					})
 					b.Run("dir=reverse", func(b *testing.B) {
 						b.ResetTimer()
 						for range b.N {
-							kv.TestingChildBounds(reverse, key)
+							kv.TestingChildBounds(reverse, k)
 						}
 					})
 				})
@@ -253,12 +253,12 @@ func entriesFromFile(filename string) map[string]byte {
 
 func createPresent(entries map[string]byte, random *rand.Rand) []keySet {
 	present := []keySet{}
-	for key := range entries {
-		keyLen := len(key)
+	for k := range entries {
+		keyLen := len(k)
 		for i := len(present); i <= keyLen; i++ {
 			present = append(present, keySet{})
 		}
-		present[keyLen] = append(present[keyLen], []byte(key))
+		present[keyLen] = append(present[keyLen], []byte(k))
 	}
 	for _, keys := range present {
 		slices.SortFunc(keys, bytes.Compare)
@@ -392,16 +392,16 @@ func TestBenchStoreConfigs(t *testing.T) {
 				if i > 2 {
 					assert.Len(t, config.absent[i], 1<<16)
 				}
-				for _, key := range config.absent[i] {
-					assert.Len(t, key, i)
-					_, ok := present[string(key)]
+				for _, k := range config.absent[i] {
+					assert.Len(t, k, i)
+					_, ok := present[string(k)]
 					assert.False(t, ok)
 				}
-				for _, key := range config.present[i] {
-					assert.Len(t, key, i)
-					_, ok := present[string(key)]
+				for _, k := range config.present[i] {
+					assert.Len(t, k, i)
+					_, ok := present[string(k)]
 					assert.True(t, ok)
-					delete(present, string(key))
+					delete(present, string(k))
 				}
 			}
 			assert.Empty(t, present)
@@ -465,8 +465,8 @@ func BenchmarkClone(b *testing.B) {
 func BenchmarkSparse(b *testing.B) {
 	random := rand.New(rand.NewPCG(12337405, 432843980))
 	var keys keySet
-	for key := range 1 << 8 {
-		keyByte := byte(key)
+	for k := range 1 << 8 {
+		keyByte := byte(k)
 		keys = append(keys, []byte{keyByte, keyByte, keyByte, keyByte})
 	}
 	shuffle(keys, random)
@@ -475,8 +475,8 @@ func BenchmarkSparse(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
 				store := def.factory()
-				for _, key := range keys {
-					store.Set(key, 0)
+				for _, k := range keys {
+					store.Set(k, 0)
 				}
 			}
 		})
@@ -490,16 +490,16 @@ func BenchmarkDense(b *testing.B) {
 	oneKeys := make(keySet, 1<<8)
 	twoKeys := make(keySet, 1<<16)
 	threeKeys := make(keySet, 1<<24)
-	for key := range 1 << 8 {
-		oneKeys[key] = []byte{byte(key)}
+	for k := range 1 << 8 {
+		oneKeys[k] = []byte{byte(k)}
 	}
-	for key := range 1 << 16 {
-		keyBytes := binary.LittleEndian.AppendUint16(nil, uint16(key))
-		twoKeys[key] = []byte{keyBytes[0], keyBytes[1]}
+	for k := range 1 << 16 {
+		keyBytes := binary.LittleEndian.AppendUint16(nil, uint16(k))
+		twoKeys[k] = []byte{keyBytes[0], keyBytes[1]}
 	}
-	for key := range 1 << 24 {
-		keyBytes := binary.LittleEndian.AppendUint32(nil, uint32(key))
-		threeKeys[key] = []byte{keyBytes[0], keyBytes[1], keyBytes[2]}
+	for k := range 1 << 24 {
+		keyBytes := binary.LittleEndian.AppendUint32(nil, uint32(k))
+		threeKeys[k] = []byte{keyBytes[0], keyBytes[1], keyBytes[2]}
 	}
 	shuffle(oneKeys, random)
 	shuffle(twoKeys, random)
@@ -518,8 +518,8 @@ func BenchmarkDense(b *testing.B) {
 				b.ResetTimer()
 				for range b.N {
 					store := def.factory()
-					for _, key := range tt.keys {
-						store.Set(key, 0)
+					for _, k := range tt.keys {
+						store.Set(k, 0)
 					}
 				}
 			})

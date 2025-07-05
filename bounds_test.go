@@ -217,16 +217,16 @@ func TestBoundsCompareKey(t *testing.T) {
 		t.Run(tt.bounds.String(), func(t *testing.T) {
 			t.Parallel()
 			count := 0
-			for _, key := range tt.before {
-				assert.Equal(t, -1, tt.bounds.CompareKey(key), "%s", kv.KeyName(key))
+			for _, k := range tt.before {
+				assert.Equal(t, -1, tt.bounds.CompareKey(k), "%s", kv.KeyName(k))
 				count++
 			}
-			for _, key := range tt.within {
-				assert.Equal(t, 0, tt.bounds.CompareKey(key), "%s", kv.KeyName(key))
+			for _, k := range tt.within {
+				assert.Equal(t, 0, tt.bounds.CompareKey(k), "%s", kv.KeyName(k))
 				count++
 			}
-			for _, key := range tt.after {
-				assert.Equal(t, +1, tt.bounds.CompareKey(key), "%s", kv.KeyName(key))
+			for _, k := range tt.after {
+				assert.Equal(t, +1, tt.bounds.CompareKey(k), "%s", kv.KeyName(k))
 				count++
 			}
 		})

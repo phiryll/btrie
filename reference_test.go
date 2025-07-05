@@ -69,9 +69,9 @@ func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	bounds = bounds.Clone()
 	return func(yield func([]byte, byte) bool) {
 		var keys []string
-		for key := range r {
-			if bounds.CompareKey([]byte(key)) == 0 {
-				keys = append(keys, key)
+		for k := range r {
+			if bounds.CompareKey([]byte(k)) == 0 {
+				keys = append(keys, k)
 			}
 		}
 		if bounds.IsReverse {
@@ -79,8 +79,8 @@ func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 		} else {
 			slices.Sort(keys)
 		}
-		for _, key := range keys {
-			if !yield([]byte(key), r[key]) {
+		for _, k := range keys {
+			if !yield([]byte(k), r[k]) {
 				return
 			}
 		}
@@ -90,8 +90,8 @@ func (r reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 func (r reference) String() string {
 	var s strings.Builder
 	s.WriteString("{")
-	for _, key := range slices.Sorted(maps.Keys(r)) {
-		fmt.Fprintf(&s, "%s:%v, ", kv.KeyName([]byte(key)), r[key])
+	for _, k := range slices.Sorted(maps.Keys(r)) {
+		fmt.Fprintf(&s, "%s:%v, ", kv.KeyName([]byte(k)), r[k])
 	}
 	s.WriteString("}")
 	return s.String()

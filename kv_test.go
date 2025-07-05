@@ -315,10 +315,10 @@ func createTestStoreConfigs() []*storeConfig {
 	}
 
 	// Every bit pattern of i defines which keys are present in that config.
-	for i := range 1 << len(testPresentKeys) {
+	for keyBits := range 1 << len(testPresentKeys) {
 		config := storeConfig{
-			fmt.Sprintf("sub-store=%0*b", len(testPresentKeys), i),
-			bits.OnesCount(uint(i)),
+			fmt.Sprintf("sub-store=%0*b", len(testPresentKeys), keyBits),
+			bits.OnesCount(uint(keyBits)),
 			map[string]byte{},
 			make([]keySet, testMaxKeyLen+1),
 			make([]keySet, testMaxKeyLen+1),
@@ -326,19 +326,19 @@ func createTestStoreConfigs() []*storeConfig {
 			reverse,
 		}
 		mask := 0x01
-		for k, key := range testPresentKeys {
-			keyLen := len(key)
-			if i&mask != 0 {
-				config.entries[string(key)] = byte(k)
-				config.present[keyLen] = append(config.present[keyLen], key)
+		for i, k := range testPresentKeys {
+			keyLen := len(k)
+			if keyBits&mask != 0 {
+				config.entries[string(k)] = byte(i)
+				config.present[keyLen] = append(config.present[keyLen], k)
 			} else {
-				config.absent[keyLen] = append(config.absent[keyLen], key)
+				config.absent[keyLen] = append(config.absent[keyLen], k)
 			}
 			mask <<= 1
 		}
-		for _, key := range testAbsentKeys {
-			keyLen := len(key)
-			config.absent[keyLen] = append(config.absent[keyLen], key)
+		for _, k := range testAbsentKeys {
+			keyLen := len(k)
+			config.absent[keyLen] = append(config.absent[keyLen], k)
 		}
 		result = append(result, &config)
 	}
@@ -414,11 +414,11 @@ func assertAbsent(t *testing.T, key []byte, store TestStore) {
 // and that Range(forward/reverse) returns them in the correct order.
 func assertSame(t *testing.T, entries map[string]byte, store TestStore) {
 	sliceEntries := []entry{}
-	for key, expected := range entries {
-		actual, ok := store.Get([]byte(key))
+	for k, expected := range entries {
+		actual, ok := store.Get([]byte(k))
 		assert.True(t, ok)
 		assert.Equal(t, expected, actual)
-		sliceEntries = append(sliceEntries, entry{[]byte(key), expected})
+		sliceEntries = append(sliceEntries, entry{[]byte(k), expected})
 	}
 	slices.SortFunc(sliceEntries, cmpEntryForward)
 	assert.Equal(t, sliceEntries, collect(store.Range(forwardAll)))
@@ -578,23 +578,23 @@ func TestStores(t *testing.T) {
 			// Build the store, testing along the way.
 			store := test.def.factory()
 			existing := map[string]byte{}
-			for key, value := range test.config.entries {
-				t.Run("op=set/key="+kv.KeyName([]byte(key)), func(t *testing.T) {
-					assertAbsent(t, []byte(key), store)
+			for k, v := range test.config.entries {
+				t.Run("op=set/key="+kv.KeyName([]byte(k)), func(t *testing.T) {
+					assertAbsent(t, []byte(k), store)
 					assertSame(t, existing, store)
 
-					actual, ok := store.Set([]byte(key), value)
+					actual, ok := store.Set([]byte(k), v)
 					assert.False(t, ok)
 					assert.Equal(t, zero, actual)
-					existing[key] = value
+					existing[k] = v
 					assertSame(t, existing, store)
 				})
 			}
 
 			for _, keys := range test.config.absent {
-				for _, key := range keys {
-					t.Run("op=absent/key="+kv.KeyName(key), func(t *testing.T) {
-						assertAbsent(t, key, store)
+				for _, k := range keys {
+					t.Run("op=absent/key="+kv.KeyName(k), func(t *testing.T) {
+						assertAbsent(t, k, store)
 					})
 				}
 			}
@@ -643,26 +643,26 @@ func TestClone(t *testing.T) {
 			assertSame(t, test.config.entries, store)
 
 			// mutate the clone and test that original hasn't changed
-			for key := range test.config.entries {
-				store.Delete([]byte(key))
+			for k := range test.config.entries {
+				store.Delete([]byte(k))
 			}
 			assertSame(t, map[string]byte{}, store)
 			for _, keys := range test.config.absent {
-				for i, key := range keys {
-					store.Set(key, byte(i))
+				for i, k := range keys {
+					store.Set(k, byte(i))
 				}
 			}
 			assertSame(t, test.config.entries, original)
 
 			// mutate the original and test that the clone hasn't changed
 			store = original.Clone()
-			for key := range test.config.entries {
-				original.Delete([]byte(key))
+			for k := range test.config.entries {
+				original.Delete([]byte(k))
 			}
 			assertSame(t, map[string]byte{}, original)
 			for _, keys := range test.config.absent {
-				for i, key := range keys {
-					original.Set(key, byte(i))
+				for i, k := range keys {
+					original.Set(k, byte(i))
 				}
 			}
 			assertSame(t, test.config.entries, store)
