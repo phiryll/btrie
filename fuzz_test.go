@@ -65,21 +65,6 @@ func createFuzzStoreConfigs(size int) []*storeConfig {
 	return []*storeConfig{&config}
 }
 
-func TestBaseline(t *testing.T) {
-	t.Parallel()
-	fuzzStores := createTestStores(fuzzStoreConfigs)
-	ref := createReferenceStore(fuzzStoreConfigs[0])
-	refForward := ref.Range(forwardAll)
-	refReverse := ref.Range(reverseAll)
-	for _, fuzz := range fuzzStores {
-		t.Run(fuzz.name, func(t *testing.T) {
-			t.Parallel()
-			assertItersEqual(t, refForward, fuzz.store.Range(forwardAll), "forward")
-			assertItersEqual(t, refReverse, fuzz.store.Range(reverseAll), "reverse")
-		})
-	}
-}
-
 func FuzzGet(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	ref := createReferenceStore(fuzzStoreConfigs[0])

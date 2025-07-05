@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"math/bits"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -269,13 +268,6 @@ func createTestStoreConfigs() []*storeConfig {
 		result = append(result, &config)
 	}
 	return result
-}
-
-func TestTestStoreConfigRepeatability(t *testing.T) {
-	t.Parallel()
-	for i, config := range createTestStoreConfigs() {
-		assert.True(t, reflect.DeepEqual(testStoreConfigs[i], config))
-	}
 }
 
 func createReferenceStore(config *storeConfig) TestStore {

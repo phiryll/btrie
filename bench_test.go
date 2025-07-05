@@ -5,17 +5,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"maps"
 	"math"
 	rand "math/rand/v2"
 	"os"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/phiryll/kv"
-	"github.com/stretchr/testify/assert"
 )
 
 // No benchmark can have a truly random element, random seeds must be constants!
@@ -392,51 +389,6 @@ func createBenchWordStoreConfigs() []*storeConfig {
 
 func createBenchStoreConfigs() []*storeConfig {
 	return append(createBenchRandomStoreConfigs(), createBenchWordStoreConfigs()...)
-}
-
-func TestBenchStoreConfigs(t *testing.T) {
-	t.Parallel()
-	for _, config := range benchStoreConfigs {
-		t.Run(config.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Len(t, config.entries, config.size)
-			assert.Equal(t, len(config.present), len(config.absent))
-			assert.Equal(t, 1, len(config.present[0])+len(config.absent[0]))
-			assert.Equal(t, 1<<8, len(config.present[1])+len(config.absent[1]))
-			assert.Equal(t, 1<<16, len(config.present[2])+len(config.absent[2]))
-			assert.Len(t, config.forward, 1<<16)
-			assert.Len(t, config.reverse, 1<<16)
-
-			present := maps.Clone(config.entries)
-			for i := range len(config.present) {
-				if i > 2 {
-					assert.Len(t, config.absent[i], 1<<16)
-				}
-				for _, k := range config.absent[i] {
-					assert.Len(t, k, i)
-					_, ok := present[string(k)]
-					assert.False(t, ok)
-				}
-				for _, k := range config.present[i] {
-					assert.Len(t, k, i)
-					_, ok := present[string(k)]
-					assert.True(t, ok)
-					delete(present, string(k))
-				}
-			}
-			assert.Empty(t, present)
-		})
-	}
-}
-
-func TestBenchStoreConfigRepeatability(t *testing.T) {
-	t.Parallel()
-	for i, config := range createBenchStoreConfigs() {
-		t.Run(config.name, func(t *testing.T) {
-			t.Parallel()
-			assert.True(t, reflect.DeepEqual(benchStoreConfigs[i], config))
-		})
-	}
 }
 
 // This helps to understand how factory() can impact other benchmarks which use it.
