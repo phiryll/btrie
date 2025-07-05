@@ -236,16 +236,6 @@ func asCloneable(factory func() kv.Store[byte]) func() TestStore {
 	}
 }
 
-func emptySeqInt(_ func(int) bool) {}
-
-func emptyAdjInt(_ int) iter.Seq[int] {
-	return emptySeqInt
-}
-
-func emptyPathAdjInt(_ []int) iter.Seq[int] {
-	return emptySeqInt
-}
-
 func cmpEntryForward(a, b entry) int {
 	return bytes.Compare(a.key, b.key)
 }

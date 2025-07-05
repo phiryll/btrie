@@ -9,6 +9,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func emptySeqInt(_ func(int) bool) {}
+
+func emptyAdjInt(_ int) iter.Seq[int] {
+	return emptySeqInt
+}
+
+func emptyPathAdjInt(_ []int) iter.Seq[int] {
+	return emptySeqInt
+}
+
 // adjInt returns a simple adjFunction[int] for testing traversals.
 // If k <= limit, children(k) == [4*k+1, 4*k+2, 4*k+3].
 // If k > limit, children(k) == [].
