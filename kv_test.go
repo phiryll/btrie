@@ -806,6 +806,10 @@ func TestFail9(t *testing.T) {
 			key := []byte{0x23}
 			store.Set(key, 6)
 			store.Delete(key)
+			// make sure reference.dirty is false
+			for range store.Range(forwardAll) {
+				break
+			}
 			assert.Equal(t, expected, sStore.String())
 		})
 	}
