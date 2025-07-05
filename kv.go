@@ -80,19 +80,19 @@ func indent(n int) string {
 func Fprint[V any](w io.Writer, seq iter.Seq2[[]byte, V]) (int, error) {
 	n := 0
 	prevKey := []byte{}
-	for key, value := range seq {
-		limit := min(len(key), len(prevKey))
+	for k, v := range seq {
+		limit := min(len(k), len(prevKey))
 		i := 0
-		for i < limit && key[i] == prevKey[i] {
+		for i < limit && k[i] == prevKey[i] {
 			i++
 		}
-		k, err := fmt.Fprintf(w, "%s%X: %v\n", indent(i), key[i:], value)
-		n += k
+		bytesWritten, err := fmt.Fprintf(w, "%s%X: %v\n", indent(i), k[i:], v)
+		n += bytesWritten
 		if err != nil {
 			//nolint:wrapcheck
 			return n, err
 		}
-		prevKey = key
+		prevKey = k
 	}
 	return n, nil
 }
