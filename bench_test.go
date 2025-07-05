@@ -19,16 +19,13 @@ import (
 
 // No benchmark can have a truly random element, random seeds must be constants!
 
-// Because these are stateful data structures, accurately benchmarking mutating methods is difficult.
-// Using the B.Start/StopTimer methods inside the B.N loops can result in erratic stats,
-// and sometimes it just hangs forever.
-// So it's not possible to create a new non-trivial store fixture inside the B.N loop
-// without the store's creation also being measured, or at least the B.Start/Stop methods interfering.
-// To minimize this, all the stores are constructed only once, and they all implement a non-public-API Clone() method.
-// That said, extensive benchmarking (not checked in) has shown that neither the frequency nor duration of timer pauses
-// to clone a store have a significant effect on reported timings, at most about 8 ns/op in my current setup.
-// However, each clone can take a significant amount of time even though it isn't measured,
-// so these benchmarks take steps to reduce that impact.
+// Because these are stateful data structures, accurately benchmarking mutating methods (Set, Delete) is cumbersome.
+// The two possible approaches are to recreate the data structure every time through the loop,
+// or when it reaches a state that is no longer useful to benchmark.
+// The latter approach was chosen here, since recreation is expensive.
+// The benchmark timer is paused when the stores are recreated.
+// The measured benchmark timing overhead for pausing the timer is tiny (~8ns on my machine),
+// but the wall clock overhead can be significant.
 
 const (
 	benchMeanRandomKeyLen = 8
@@ -72,8 +69,7 @@ func benchTraverser(b *testing.B, name string, traverser kv.TestingTraverser) {
 				numNodes++
 			}
 			b.Run(fmt.Sprintf("size=%d", numNodes), func(b *testing.B) {
-				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					for node := range traverser(0, adj) {
 						_ = node
 					}
@@ -104,8 +100,7 @@ func benchTraverserPaths(b *testing.B, name string, pathTraverser kv.TestingPath
 				numPaths++
 			}
 			b.Run(fmt.Sprintf("size=%d", numPaths), func(b *testing.B) {
-				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					for path := range pathTraverser(0, pathAdj) {
 						_ = path
 					}
@@ -203,14 +198,12 @@ func BenchmarkChildBounds(b *testing.B) {
 			for _, k := range tt.keys {
 				b.Run("key="+kv.KeyName(k), func(b *testing.B) {
 					b.Run("dir=forward", func(b *testing.B) {
-						b.ResetTimer()
-						for range b.N {
+						for b.Loop() {
 							kv.TestingChildBounds(forward, k)
 						}
 					})
 					b.Run("dir=reverse", func(b *testing.B) {
-						b.ResetTimer()
-						for range b.N {
+						for b.Loop() {
 							kv.TestingChildBounds(reverse, k)
 						}
 					})
@@ -423,8 +416,7 @@ func TestBenchStoreConfigRepeatability(t *testing.T) {
 func BenchmarkFactory(b *testing.B) {
 	for _, def := range implDefs {
 		b.Run("impl="+def.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				_ = def.factory()
 			}
 		})
@@ -434,8 +426,7 @@ func BenchmarkFactory(b *testing.B) {
 func BenchmarkCreate(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		b.Run(bench.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				store := bench.def.factory()
 				for k, v := range bench.config.entries {
 					store.Set([]byte(k), v)
@@ -452,8 +443,7 @@ func BenchmarkClone(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				_ = original.Clone()
 			}
 		})
@@ -472,8 +462,7 @@ func BenchmarkSparse(b *testing.B) {
 	shuffle(keys, random)
 	for _, def := range implDefs {
 		b.Run("impl="+def.name, func(b *testing.B) {
-			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				store := def.factory()
 				for _, k := range keys {
 					store.Set(k, 0)
@@ -515,8 +504,7 @@ func BenchmarkDense(b *testing.B) {
 			{"/keyLen=3", keySets[2]},
 		} {
 			b.Run("impl="+def.name+tt.name, func(b *testing.B) {
-				b.ResetTimer()
-				for range b.N {
+				for b.Loop() {
 					store := def.factory()
 					for _, k := range tt.keys {
 						store.Set(k, 0)
@@ -539,9 +527,10 @@ func BenchmarkSet(b *testing.B) {
 						b.Skipf("no present keys of length %d", keyLen)
 					}
 					store := original.Clone()
-					b.ResetTimer()
-					for i := range b.N {
+					i := 0
+					for b.Loop() {
 						store.Set(present[i%len(present)], 42)
+						i++
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -550,14 +539,15 @@ func BenchmarkSet(b *testing.B) {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
 					store := original.Clone()
-					b.ResetTimer()
-					for i := range b.N {
+					i := 0
+					for b.Loop() {
 						if i%len(absent) == 0 && i > 0 {
 							b.StopTimer()
 							store = original.Clone()
 							b.StartTimer()
 						}
 						store.Set(absent[i%len(absent)], 42)
+						i++
 					}
 				})
 			}
@@ -577,9 +567,10 @@ func BenchmarkGet(b *testing.B) {
 						b.Skipf("no present keys of length %d", keyLen)
 					}
 					store := original.Clone()
-					b.ResetTimer()
-					for i := range b.N {
+					i := 0
+					for b.Loop() {
 						store.Get(present[i%len(present)])
+						i++
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -588,9 +579,10 @@ func BenchmarkGet(b *testing.B) {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
 					store := original.Clone()
-					b.ResetTimer()
-					for i := range b.N {
+					i := 0
+					for b.Loop() {
 						store.Get(absent[i%len(absent)])
+						i++
 					}
 				})
 			}
@@ -613,14 +605,15 @@ func BenchmarkDelete(b *testing.B) {
 						b.Skipf("insufficient present keys of length %d: %d", keyLen, len(present))
 					}
 					store := original.Clone()
-					b.ResetTimer()
-					for i := range b.N {
+					i := 0
+					for b.Loop() {
 						if i%len(present) == 0 && i > 0 {
 							b.StopTimer()
 							store = original.Clone()
 							b.StartTimer()
 						}
 						store.Delete(present[i%len(present)])
+						i++
 					}
 				})
 				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
@@ -629,9 +622,10 @@ func BenchmarkDelete(b *testing.B) {
 						b.Skipf("no absent keys of length %d", keyLen)
 					}
 					store := original.Clone()
-					b.ResetTimer()
-					for i := range b.N {
+					i := 0
+					for b.Loop() {
 						store.Delete(absent[i%len(absent)])
+						i++
 					}
 				})
 			}
@@ -652,31 +646,35 @@ func benchRange(b *testing.B, getBounds func(*testStore) ([]Bounds, []Bounds)) {
 				b.Skip()
 			}
 			b.Run("dir=forward/op=range", func(b *testing.B) {
-				b.ResetTimer()
-				for i := range b.N {
+				i := 0
+				for b.Loop() {
 					store.Range(&forward[i%len(forward)])
+					i++
 				}
 			})
 			b.Run("dir=forward/op=full", func(b *testing.B) {
-				b.ResetTimer()
-				for i := range b.N {
+				i := 0
+				for b.Loop() {
 					for k, v := range store.Range(&forward[i%len(forward)]) {
 						_, _ = k, v
 					}
+					i++
 				}
 			})
 			b.Run("dir=reverse/op=range", func(b *testing.B) {
-				b.ResetTimer()
-				for i := range b.N {
+				i := 0
+				for b.Loop() {
 					store.Range(&reverse[i%len(reverse)])
+					i++
 				}
 			})
 			b.Run("dir=reverse/op=full", func(b *testing.B) {
-				b.ResetTimer()
-				for i := range b.N {
+				i := 0
+				for b.Loop() {
 					for k, v := range store.Range(&reverse[i%len(reverse)]) {
 						_, _ = k, v
 					}
+					i++
 				}
 			})
 		})
