@@ -236,14 +236,6 @@ func asCloneable(factory func() kv.Store[byte]) func() TestStore {
 	}
 }
 
-func cmpEntryForward(a, b entry) int {
-	return bytes.Compare(a.key, b.key)
-}
-
-func cmpEntryReverse(a, b entry) int {
-	return bytes.Compare(b.key, a.key)
-}
-
 func collect(itr iter.Seq2[[]byte, byte]) []entry {
 	entries := []entry{}
 	for k, v := range itr {
@@ -410,9 +402,9 @@ func assertSame(t *testing.T, entries map[string]byte, store TestStore) {
 		assert.Equal(t, expected, actual)
 		sliceEntries = append(sliceEntries, entry{[]byte(k), expected})
 	}
-	slices.SortFunc(sliceEntries, cmpEntryForward)
+	slices.SortFunc(sliceEntries, func(a, b entry) int { return bytes.Compare(a.key, b.key) })
 	assert.Equal(t, sliceEntries, collect(store.Range(forwardAll)))
-	slices.SortFunc(sliceEntries, cmpEntryReverse)
+	slices.SortFunc(sliceEntries, func(a, b entry) int { return bytes.Compare(b.key, a.key) })
 	assert.Equal(t, sliceEntries, collect(store.Range(reverseAll)))
 }
 
