@@ -54,11 +54,11 @@ func createFuzzStoreConfigs(size int) []*storeConfig {
 	random := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 	config.name = "fuzz"
 	config.size = size
-	config.entries = map[string]byte{}
+	config.ref = newReference()
 	for count := 0; count < size; {
-		key := string(randomKey(fuzzMeanKeyLen, random))
-		if _, ok := config.entries[key]; !ok {
-			config.entries[key] = randomByte(random)
+		key := randomKey(fuzzMeanKeyLen, random)
+		if _, ok := config.ref.Get(key); !ok {
+			config.ref.Set(key, randomByte(random))
 			count++
 		}
 	}
@@ -67,11 +67,10 @@ func createFuzzStoreConfigs(size int) []*storeConfig {
 
 func FuzzGet(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
-	ref := createReferenceStore(fuzzStoreConfigs[0])
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
-		expected, expectedOk := ref.Get(key)
 		for _, fuzz := range fuzzStores {
+			expected, expectedOk := fuzz.config.ref.Get(key)
 			actual, actualOk := fuzz.store.Get(key)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, kv.KeyName(key))
 			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, kv.KeyName(key))
@@ -81,7 +80,10 @@ func FuzzGet(f *testing.F) {
 
 func FuzzSet(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
-	ref := createReferenceStore(fuzzStoreConfigs[0])
+	// This only works because there is only one fuzz store config.
+	// This is unfortunately necessary because configs are shared between TestStores.
+	// This needs to be fixed.
+	ref := fuzzStoreConfigs[0].ref.Clone()
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Set(key, value)
@@ -98,7 +100,10 @@ func FuzzSet(f *testing.F) {
 
 func FuzzDelete(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
-	ref := createReferenceStore(fuzzStoreConfigs[0])
+	// This only works because there is only one fuzz store config.
+	// This is unfortunately necessary because configs are shared between TestStores.
+	// This needs to be fixed.
+	ref := fuzzStoreConfigs[0].ref.Clone()
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Delete(key)
@@ -115,7 +120,6 @@ func FuzzDelete(f *testing.F) {
 
 func FuzzRange(f *testing.F) {
 	fuzzStores := createTestStores(fuzzRangeStoreConfigs)
-	ref := createReferenceStore(fuzzRangeStoreConfigs[0])
 	f.Fuzz(func(t *testing.T, fuzzBeginKey, fuzzEndKey uint32, fuzzBeginKeyLen, fuzzEndKeyLen byte) {
 		begin := keyForFuzzInputs(fuzzBeginKey, fuzzBeginKeyLen)
 		end := keyForFuzzInputs(fuzzEndKey, fuzzEndKeyLen)
@@ -127,18 +131,21 @@ func FuzzRange(f *testing.F) {
 		}
 		forward := From(begin).To(end)
 		reverse := From(end).DownTo(begin)
-		refForward := ref.Range(forward)
-		refReverse := ref.Range(reverse)
 		for _, fuzz := range fuzzStores {
-			assertItersEqual(t, refForward, fuzz.store.Range(forward), "%s: %s", fuzz.def.name, forward)
-			assertItersEqual(t, refReverse, fuzz.store.Range(reverse), "%s: %s", fuzz.def.name, reverse)
+			assertItersEqual(t, fuzz.config.ref.Range(forward), fuzz.store.Range(forward),
+				"%s: %s", fuzz.def.name, forward)
+			assertItersEqual(t, fuzz.config.ref.Range(reverse), fuzz.store.Range(reverse),
+				"%s: %s", fuzz.def.name, reverse)
 		}
 	})
 }
 
 func FuzzMixed(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
-	ref := createReferenceStore(fuzzStoreConfigs[0])
+	// This only works because there is only one fuzz store config.
+	// This is unfortunately necessary because configs are shared between TestStores.
+	// This needs to be fixed.
+	ref := fuzzStoreConfigs[0].ref.Clone()
 	f.Fuzz(func(t *testing.T, fuzzSetKey, fuzzDeleteKey uint32, fuzzSetKeyLen, fuzzDeleteKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzSetKey, fuzzSetKeyLen)
 		expected, expectedOk := ref.Set(key, value)
