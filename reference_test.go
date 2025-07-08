@@ -20,7 +20,7 @@ type reference struct {
 	dirty   bool
 }
 
-func newReference() TestStore {
+func newReference() *reference {
 	return &reference{
 		entries: map[string]byte{},
 	}

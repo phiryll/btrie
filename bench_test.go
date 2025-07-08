@@ -358,6 +358,10 @@ func createFixedBounds(step int, random *rand.Rand) (forward, reverse []Bounds) 
 
 func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeConfig {
 	random := rand.New(rand.NewPCG(uint64(len(entries)), 4839028453))
+	ref := newReference()
+	for k, v := range entries {
+		ref.Set([]byte(k), v)
+	}
 	present := createPresent(entries, random)
 	absent := createAbsent(entries, len(present)-1, random)
 	keys := append(slices.Concat(present...), slices.Concat(absent...)...)
@@ -366,7 +370,7 @@ func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeCo
 	return &storeConfig{
 		name:    fmt.Sprintf("corpus=%s/size=%d", corpusName, len(entries)),
 		size:    len(entries),
-		entries: entries,
+		ref:     ref,
 		present: present,
 		absent:  absent,
 		forward: forward,
@@ -407,8 +411,8 @@ func BenchmarkCreate(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			for b.Loop() {
 				store := bench.def.factory()
-				for k, v := range bench.config.entries {
-					store.Set([]byte(k), v)
+				for k, v := range bench.config.ref.All() {
+					store.Set(k, v)
 				}
 			}
 		})
