@@ -32,9 +32,7 @@ type (
 		size int
 		ref  *reference
 
-		// present/absent[i] = a set of keys of length i that are present/absent.
-		// For denser stores, there may be no absent keys of shorter lengths.
-		present, absent []keySet
+		present, absent keySet
 
 		// forward/reverse Bounds instances to test Range.
 		forward, reverse []Bounds
@@ -52,9 +50,6 @@ type (
 
 const (
 	zero = byte(0)
-
-	// The max key length from testPresentKeys, testAbsentKeys, and testNearKeys.
-	testMaxKeyLen = 3
 )
 
 var (
@@ -241,26 +236,22 @@ func createTestStoreConfigs() []*storeConfig {
 			fmt.Sprintf("sub-store=%0*b", len(testPresentKeys), keyBits),
 			bits.OnesCount(uint(keyBits)),
 			newReference(),
-			make([]keySet, testMaxKeyLen+1),
-			make([]keySet, testMaxKeyLen+1),
+			keySet{},
+			keySet{},
 			forward,
 			reverse,
 		}
 		mask := 0x01
 		for i, k := range testPresentKeys {
-			keyLen := len(k)
 			if keyBits&mask != 0 {
 				config.ref.Set(k, byte(i))
-				config.present[keyLen] = append(config.present[keyLen], k)
+				config.present = append(config.present, k)
 			} else {
-				config.absent[keyLen] = append(config.absent[keyLen], k)
+				config.absent = append(config.absent, k)
 			}
 			mask <<= 1
 		}
-		for _, k := range testAbsentKeys {
-			keyLen := len(k)
-			config.absent[keyLen] = append(config.absent[keyLen], k)
-		}
+		config.absent = append(config.absent, testAbsentKeys...)
 		result = append(result, &config)
 	}
 	return result
@@ -542,12 +533,10 @@ func TestStores(t *testing.T) {
 				})
 			}
 
-			for _, keys := range test.config.absent {
-				for _, k := range keys {
-					t.Run("op=absent/key="+kv.KeyName(k), func(t *testing.T) {
-						assertAbsent(t, k, store)
-					})
-				}
+			for _, k := range test.config.absent {
+				t.Run("op=absent/key="+kv.KeyName(k), func(t *testing.T) {
+					assertAbsent(t, k, store)
+				})
 			}
 
 			t.Run("op=range", func(t *testing.T) {
@@ -564,7 +553,6 @@ func TestStores(t *testing.T) {
 	}
 }
 
-//nolint:gocognit
 func TestClone(t *testing.T) {
 	t.Parallel()
 	for _, test := range createTestStores(testStoreConfigs) {
@@ -582,10 +570,8 @@ func TestClone(t *testing.T) {
 				store.Delete(k)
 			}
 			assertIterEmpty(t, store.Range(forwardAll))
-			for _, keys := range test.config.absent {
-				for i, k := range keys {
-					store.Set(k, byte(i))
-				}
+			for i, k := range test.config.absent {
+				store.Set(k, byte(i))
 			}
 			assertSame(t, test.config.ref, original)
 
@@ -595,10 +581,8 @@ func TestClone(t *testing.T) {
 				original.Delete(k)
 			}
 			assertIterEmpty(t, original.Range(forwardAll))
-			for _, keys := range test.config.absent {
-				for i, k := range keys {
-					original.Set(k, byte(i))
-				}
+			for i, k := range test.config.absent {
+				original.Set(k, byte(i))
 			}
 			assertSame(t, test.config.ref, store)
 		})

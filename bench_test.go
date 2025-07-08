@@ -32,8 +32,11 @@ const (
 	// i.e., don't benchmark if we will need to clone the store every N operations and N < benchMinNumMutableKeys.
 	benchMinNumMutableKeys = 1 << 10
 
-	// The maximum size of created absent and bounds slices, 64K.
-	genMaxSize = 1 << 16
+	// The maximum size of created absent key slices, 256K.
+	genAbsentMaxSize = 1 << 18
+
+	// The maximum size of created bounds slices, 64K.
+	genBoundsMaxSize = 1 << 16
 
 	// Only the lowercase characters a-z and newlines appear in this file.
 	filenameWords = "testdata/words_alpha.txt"
@@ -268,62 +271,52 @@ func entriesFromFile(filename string) map[string]byte {
 	return entries
 }
 
-func createPresent(entries map[string]byte, random *rand.Rand) []keySet {
-	present := []keySet{}
+func createPresent(entries map[string]byte, random *rand.Rand) keySet {
+	present := keySet{}
 	for k := range entries {
-		keyLen := len(k)
-		for i := len(present); i <= keyLen; i++ {
-			present = append(present, keySet{})
-		}
-		present[keyLen] = append(present[keyLen], []byte(k))
+		present = append(present, []byte(k))
 	}
-	for _, keys := range present {
-		slices.SortFunc(keys, bytes.Compare)
-		shuffle(keys, random)
-	}
+	slices.SortFunc(present, bytes.Compare)
+	shuffle(present, random)
 	return present
 }
 
-func createAbsent(entries map[string]byte, maxKeyLen int, random *rand.Rand) []keySet {
-	absent := make([]keySet, maxKeyLen+1)
+func createAbsent(entries map[string]byte, random *rand.Rand) keySet {
+	absent := keySet{}
 
 	// set absent for key lengths 0-2, everything not present
 	if _, ok := entries[""]; !ok {
-		absent[0] = append(absent[0], []byte{})
+		absent = append(absent, []byte{})
 	}
 	for hi := range 256 {
 		key := []byte{byte(hi)}
 		if _, ok := entries[string(key)]; !ok {
-			absent[1] = append(absent[1], key)
+			absent = append(absent, key)
 		}
 		for low := range 256 {
 			key := []byte{byte(hi), byte(low)}
 			if _, ok := entries[string(key)]; !ok {
-				absent[2] = append(absent[2], key)
+				absent = append(absent, key)
 			}
 		}
 	}
 
-	// set absent for key lengths 3+, randomly generated
-	// keep adding until each absent[keyLen] has maxGenSize keys
-	for keyLen := range absent {
-		if keyLen < 3 {
-			continue
-		}
-		for len(absent[keyLen]) < genMaxSize {
-			key := randomFixedLengthKey(keyLen, random)
-			if _, ok := entries[string(key)]; !ok {
-				absent[keyLen] = append(absent[keyLen], key)
-			}
+	// Add longer keys.
+	for len(absent) < genAbsentMaxSize {
+		key := randomFixedLengthKey(8, random)
+		if _, ok := entries[string(key)]; !ok {
+			absent = append(absent, key)
 		}
 	}
 
+	slices.SortFunc(absent, bytes.Compare)
+	shuffle(absent, random)
 	return absent
 }
 
 //nolint:nonamedreturns
 func createBounds(keys keySet) (forward, reverse []Bounds) {
-	for i := range genMaxSize {
+	for i := range genBoundsMaxSize {
 		begin := keys[(2*i)%len(keys)]
 		end := keys[(2*i+1)%len(keys)]
 		switch cmp := bytes.Compare(begin, end); {
@@ -363,8 +356,10 @@ func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeCo
 		ref.Set([]byte(k), v)
 	}
 	present := createPresent(entries, random)
-	absent := createAbsent(entries, len(present)-1, random)
-	keys := append(slices.Concat(present...), slices.Concat(absent...)...)
+	absent := createAbsent(entries, random)
+	keys := make([][]byte, len(present)+len(absent))
+	copy(keys, present)
+	copy(keys[:len(present)], absent)
 	shuffle(keys, random)
 	forward, reverse := createBounds(keys)
 	return &storeConfig{
@@ -503,69 +498,64 @@ func BenchmarkSet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
-			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
-				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
-					present := bench.config.present[keyLen]
-					if len(present) == 0 {
-						b.Skipf("no present keys of length %d", keyLen)
+			b.Run("existing=true", func(b *testing.B) {
+				present := bench.config.present
+				if len(present) == 0 {
+					b.Skipf("no present keys")
+				}
+				store := original.Clone()
+				i := 0
+				for b.Loop() {
+					store.Set(present[i%len(present)], 42)
+					i++
+				}
+			})
+			b.Run("existing=false", func(b *testing.B) {
+				absent := bench.config.absent
+				if len(absent) == 0 {
+					b.Skipf("no absent keys")
+				}
+				store := original.Clone()
+				i := 0
+				for b.Loop() {
+					if i%len(absent) == 0 && i > 0 {
+						b.StopTimer()
+						store = original.Clone()
+						b.StartTimer()
 					}
-					store := original.Clone()
-					i := 0
-					for b.Loop() {
-						store.Set(present[i%len(present)], 42)
-						i++
-					}
-				})
-				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
-					absent := bench.config.absent[keyLen]
-					if len(absent) == 0 {
-						b.Skipf("no absent keys of length %d", keyLen)
-					}
-					store := original.Clone()
-					i := 0
-					for b.Loop() {
-						if i%len(absent) == 0 && i > 0 {
-							b.StopTimer()
-							store = original.Clone()
-							b.StartTimer()
-						}
-						store.Set(absent[i%len(absent)], 42)
-						i++
-					}
-				})
-			}
+					store.Set(absent[i%len(absent)], 42)
+					i++
+				}
+			})
 		})
 	}
 }
 
-//nolint:gocognit
 func BenchmarkGet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		b.Run(bench.name, func(b *testing.B) {
-			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
-				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
-					present := bench.config.present[keyLen]
-					if len(present) == 0 {
-						b.Skipf("no present keys of length %d", keyLen)
-					}
-					i := 0
-					for b.Loop() {
-						bench.store.Get(present[i%len(present)])
-						i++
-					}
-				})
-				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
-					absent := bench.config.absent[keyLen]
-					if len(absent) == 0 {
-						b.Skipf("no absent keys of length %d", keyLen)
-					}
-					i := 0
-					for b.Loop() {
-						bench.store.Get(absent[i%len(absent)])
-						i++
-					}
-				})
-			}
+			b.Run("existing=true", func(b *testing.B) {
+				present := bench.config.present
+				if len(present) == 0 {
+					b.Skipf("no present keys")
+				}
+				i := 0
+				for b.Loop() {
+					bench.store.Get(present[i%len(present)])
+					i++
+				}
+			})
+			b.Run("existing=false", func(b *testing.B) {
+				absent := bench.config.absent
+				if len(absent) == 0 {
+					b.Skipf("no absent keys")
+				}
+				i := 0
+				for b.Loop() {
+					bench.store.Get(absent[i%len(absent)])
+					i++
+				}
+			})
 		})
 	}
 }
@@ -575,40 +565,35 @@ func BenchmarkDelete(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
-			for keyLen := 8; keyLen < len(bench.config.present); keyLen += 4 {
-				b.Run(fmt.Sprintf("keyLen=%d/existing=true", keyLen), func(b *testing.B) {
-					present := bench.config.present[keyLen]
-					if len(present) == 0 {
-						b.Skipf("no present keys of length %d", keyLen)
+			b.Run("existing=true", func(b *testing.B) {
+				present := bench.config.present
+				if len(present) < benchMinNumMutableKeys {
+					b.Skipf("insufficient present keys: %d", len(present))
+				}
+				store := original.Clone()
+				i := 0
+				for b.Loop() {
+					if i%len(present) == 0 && i > 0 {
+						b.StopTimer()
+						store = original.Clone()
+						b.StartTimer()
 					}
-					if len(present) < benchMinNumMutableKeys {
-						b.Skipf("insufficient present keys of length %d: %d", keyLen, len(present))
-					}
-					store := original.Clone()
-					i := 0
-					for b.Loop() {
-						if i%len(present) == 0 && i > 0 {
-							b.StopTimer()
-							store = original.Clone()
-							b.StartTimer()
-						}
-						store.Delete(present[i%len(present)])
-						i++
-					}
-				})
-				b.Run(fmt.Sprintf("keyLen=%d/existing=false", keyLen), func(b *testing.B) {
-					absent := bench.config.absent[keyLen]
-					if len(absent) == 0 {
-						b.Skipf("no absent keys of length %d", keyLen)
-					}
-					store := original.Clone()
-					i := 0
-					for b.Loop() {
-						store.Delete(absent[i%len(absent)])
-						i++
-					}
-				})
-			}
+					store.Delete(present[i%len(present)])
+					i++
+				}
+			})
+			b.Run("existing=false", func(b *testing.B) {
+				absent := bench.config.absent
+				if len(absent) == 0 {
+					b.Skipf("no absent keys")
+				}
+				store := original.Clone()
+				i := 0
+				for b.Loop() {
+					store.Delete(absent[i%len(absent)])
+					i++
+				}
+			})
 		})
 	}
 }
