@@ -8,7 +8,6 @@ import (
 	rand "math/rand/v2"
 	"os"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/phiryll/kv"
@@ -475,15 +474,6 @@ func BenchmarkDelete(b *testing.B) {
 	}
 }
 
-func fixedBounds(step int) keySet {
-	var keys keySet
-	for key := step / 2; key < 1<<24-step; key += step {
-		keyBytes := binary.BigEndian.AppendUint32(nil, uint32(key))
-		keys = append(keys, []byte{keyBytes[1], keyBytes[2], keyBytes[3]})
-	}
-	return keys
-}
-
 // Like rangePairs(s), but repeating, and random.
 // Assumes s is sorted.
 func randomPairs[V any](s []V) func() (V, V) {
@@ -499,24 +489,18 @@ func randomPairs[V any](s []V) func() (V, V) {
 	}
 }
 
-//nolint:gocognit
-func benchRange(b *testing.B, getBounds func(*testStore) keySet) {
+func BenchmarkAsc(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
-		keys := getBounds(bench)
 		b.Run(bench.name, func(b *testing.B) {
-			// This is a hack, but good enough for now.
-			// The words corpus is not uniformly random, unlike the forward/reverse ranges being used.
-			if strings.Contains(bench.name, "corpus=words") {
-				b.Skip()
-			}
-			b.Run("dir=forward/op=init", func(b *testing.B) {
+			keys := boundKeys(bench.config.ref)
+			b.Run("op=init", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
 					lowKey, highKey := next()
 					bench.store.Range(From(lowKey).To(highKey))
 				}
 			})
-			b.Run("dir=forward/op=full", func(b *testing.B) {
+			b.Run("op=full", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
 					lowKey, highKey := next()
@@ -525,14 +509,22 @@ func benchRange(b *testing.B, getBounds func(*testStore) keySet) {
 					}
 				}
 			})
-			b.Run("dir=reverse/op=init", func(b *testing.B) {
+		})
+	}
+}
+
+func BenchmarkDesc(b *testing.B) {
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		b.Run(bench.name, func(b *testing.B) {
+			keys := boundKeys(bench.config.ref)
+			b.Run("op=init", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
 					lowKey, highKey := next()
 					bench.store.Range(From(highKey).DownTo(lowKey))
 				}
 			})
-			b.Run("dir=reverse/op=full", func(b *testing.B) {
+			b.Run("op=full", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
 					lowKey, highKey := next()
@@ -543,24 +535,4 @@ func benchRange(b *testing.B, getBounds func(*testStore) keySet) {
 			})
 		})
 	}
-}
-
-func BenchmarkShortRange(b *testing.B) {
-	keys := fixedBounds(0x00_00_00_83)
-	benchRange(b, func(_ *testStore) keySet {
-		return keys
-	})
-}
-
-func BenchmarkLongRange(b *testing.B) {
-	keys := fixedBounds(0x00_02_13_13)
-	benchRange(b, func(_ *testStore) keySet {
-		return keys
-	})
-}
-
-func BenchmarkRandomRange(b *testing.B) {
-	benchRange(b, func(tt *testStore) keySet {
-		return boundKeys(tt.config.ref)
-	})
 }
