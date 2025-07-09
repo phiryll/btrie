@@ -1,9 +1,11 @@
 package kv_test
 
 import (
+	"bytes"
 	"fmt"
 	"iter"
 	"math/bits"
+	"slices"
 	"strings"
 	"testing"
 
@@ -31,11 +33,6 @@ type (
 		name string
 		size int
 		ref  *reference
-
-		present, absent keySet
-
-		// forward/reverse Bounds instances to test Range.
-		forward, reverse []Bounds
 	}
 
 	// A store created by a def.factory(), possibly with entries from config.
@@ -76,53 +73,6 @@ var (
 		{0xC5, 0},
 		{0xC5, 0x42},
 		{0xC5, 0x43},
-	}
-
-	// Non-empty keys very near presentTestKeys, but not in presentTestKeys.
-	testAbsentKeys = keySet{
-		{0, 0},
-		{0x22, 0xFF},
-		{0x23, 0, 0},
-		{0x23, 0xA4, 0xFF},
-		{0x23, 0xA5, 0},
-		{0x23, 0xA5, 0xFF},
-		{0x23, 0xA6, 0},
-		{0xC4, 0xFF},
-		{0xC5, 0, 0},
-		{0xC5, 0x41, 0xFF},
-		{0xC5, 0x42, 0},
-		{0xC5, 0x42, 0xFF},
-		{0xC5, 0x43, 0},
-	}
-
-	// presentTestKeys + absentTestKeys + +/-Inf.
-	// Except for the nils, these are in lexicographical order.
-	testNearKeys = keySet{
-		nil, // -Inf
-		{},
-		{0},
-		{0, 0},
-		{0x22, 0xFF},
-		{0x23},
-		{0x23, 0},
-		{0x23, 0, 0},
-		{0x23, 0xA4, 0xFF},
-		{0x23, 0xA5},
-		{0x23, 0xA5, 0},
-		{0x23, 0xA5, 0xFF},
-		{0x23, 0xA6},
-		{0x23, 0xA6, 0},
-		{0xC4, 0xFF},
-		{0xC5},
-		{0xC5, 0},
-		{0xC5, 0, 0},
-		{0xC5, 0x41, 0xFF},
-		{0xC5, 0x42},
-		{0xC5, 0x42, 0},
-		{0xC5, 0x42, 0xFF},
-		{0xC5, 0x43},
-		{0xC5, 0x43, 0},
-		nil, // +Inf
 	}
 
 	testStoreConfigs = createTestStoreConfigs()
@@ -217,41 +167,159 @@ func asCloneable(factory func() kv.Store[byte]) func() TestStore {
 	}
 }
 
+// Returns an iterator over the keys of itr.
+func keyIter[K, V any](itr iter.Seq2[K, V]) iter.Seq[K] {
+	return func(yield func(K) bool) {
+		for k := range itr {
+			if !yield(k) {
+				return
+			}
+		}
+	}
+}
+
+// Assumes a < b. Returns a copy of a if no distinct midpoint is possible.
+func midPoint(a, b []byte) []byte {
+	mid := make([]byte, len(a))
+	copy(mid, a)
+	for i := range a {
+		if i >= len(b) {
+			// not possible, because a > b if true
+			panic("something is very, very wrong")
+		}
+		if a[i] == b[i] {
+			continue
+		}
+		if a[i]+1 == b[i] {
+			// Keep mid[i] = a[i], guaranteeing mid < b. Increase the remaining bytes.
+			for j := i + 1; j < len(a); j++ {
+				mid[j] += (0xFF - a[j]) / 2
+			}
+			// Handles the case when the remaining bytes were all 0xFE or 0xFF.
+			return append(mid, 0x00)
+		}
+		// a[i] and b[i] differ by at least 2
+		mid[i] += (b[i] - a[i]) / 2
+		return mid
+	}
+	// If we reach here, a is a prefix of b.
+	for _, byt := range b[len(a):] {
+		mid = append(mid, byt/2)
+	}
+	// This happens if b is a followed by only zeroes. Truncate mid a bit.
+	if bytes.Equal(mid, b) {
+		return mid[:(len(a)+len(b))/2]
+	}
+	return mid
+}
+
+// Returns an ascending sequence of keys not in the given store.
+// The logic is roughly:
+//
+//	yield empty key
+//	for key in store.Asc(nil, nil) {
+//		yield midPoint between the last yielded key and key
+//		yield prevKey(key)
+//		yield nextKey(key)
+//	}
+//	yield midPoint between the largest key and {FF, FF, ...}
+//	yield {FF, FF, ...}
+//
+//nolint:gocognit
+func absentKeys[V any](store kv.Store[V]) iter.Seq[[]byte] {
+	return func(yield func([]byte) bool) {
+		// The previously yielded key.
+		lastYield := []byte{}
+		if _, ok := store.Get(lastYield); !ok {
+			if !yield(lastYield) {
+				return
+			}
+		}
+		for k := range store.Range(forwardAll) {
+			// Compute the midpoint between lastYield and k, for some definition of "midpoint".
+			// Note that lastYield < k, unless k is empty, because...
+			// (the code below assumes this is true)
+			//
+			// If no keys have been yielded yet, this is trivially true (lastYield is empty).
+			// So assume a key has been yielded,
+			// although lastYield could still be empty if store.Asc starts with {[0], [0, 0], ...}).
+			// There is no key X such that K < X < next(K) for any key K (follows from nextKey's implementation).
+			//
+			// Let K0 be the previously returned key from the store.Asc iterator, and K1 the current key. K0 < K1.
+			// K0 exists, because some key has been yielded.
+			// lastYield <= nextKey(K0), because that's the largest of the 3 possible keys (mid, prev, next).
+			// K0 < nextKey(K0) <= K1, because there are no keys between K0 and nextKey(K0).
+			// So we have lastYield <= nextKey(K0) <= K1, and we're trying to show lastYield < K1.
+			// Equivalently, we're trying to show lastYield != K1.
+			// But lastYield can't be K1, since no keys present in store are ever yielded.
+			keys := [][]byte{nextKey(k)}
+			if len(k) > 0 {
+				keys = append(keys, midPoint(lastYield, k), prevKey(k))
+			}
+			slices.SortFunc(keys, bytes.Compare)
+			for _, key := range keys {
+				if bytes.Compare(key, lastYield) <= 0 {
+					continue
+				}
+				if _, ok := store.Get(key); ok {
+					continue
+				}
+				if !yield(key) {
+					return
+				}
+				lastYield = key
+			}
+		}
+		final := bytes.Repeat([]byte{0xFF}, len(lastYield)+1)
+		if !yield(midPoint(lastYield, final)) {
+			return
+		}
+		yield(final)
+	}
+}
+
+// Returns present + absent + +/-Inf, sorted.
+func boundKeys[V any](store kv.Store[V]) [][]byte {
+	keys := slices.Collect(keyIter(store.Range(forwardAll)))
+	keys = slices.AppendSeq(keys, absentKeys(store))
+	slices.SortFunc(keys, bytes.Compare)
+	keys = slices.CompactFunc(keys, bytes.Equal)
+	nilKey := []byte(nil)
+	keys = append([][]byte{nilKey}, keys...)
+	keys = append(keys, nilKey)
+	return keys
+}
+
+// keys must be sorted.
+func rangePairs(keys [][]byte) iter.Seq2[[]byte, []byte] {
+	return func(yield func([]byte, []byte) bool) {
+		for i, low := range keys {
+			for _, high := range keys[i+1:] {
+				if !yield(low, high) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // storeConfigs for all possible subsequences of presentKeys.
 func createTestStoreConfigs() []*storeConfig {
 	result := []*storeConfig{}
-
-	// Every storeConfig here gets the same set of test Bounds.
-	var forward, reverse []Bounds
-	for i, low := range testNearKeys {
-		for _, high := range testNearKeys[i+1:] {
-			forward = append(forward, *From(low).To(high))
-			reverse = append(reverse, *From(high).DownTo(low))
-		}
-	}
-
 	// Every bit pattern of i defines which keys are present in that config.
 	for keyBits := range 1 << len(testPresentKeys) {
 		config := storeConfig{
 			fmt.Sprintf("sub-store=%0*b", len(testPresentKeys), keyBits),
 			bits.OnesCount(uint(keyBits)),
 			newReference(),
-			keySet{},
-			keySet{},
-			forward,
-			reverse,
 		}
 		mask := 0x01
 		for i, k := range testPresentKeys {
 			if keyBits&mask != 0 {
 				config.ref.Set(k, byte(i))
-				config.present = append(config.present, k)
-			} else {
-				config.absent = append(config.absent, k)
 			}
 			mask <<= 1
 		}
-		config.absent = append(config.absent, testAbsentKeys...)
 		result = append(result, &config)
 	}
 	return result
@@ -533,18 +601,19 @@ func TestStores(t *testing.T) {
 				})
 			}
 
-			for _, k := range test.config.absent {
+			for k := range absentKeys(test.config.ref) {
 				t.Run("op=absent/key="+kv.KeyName(k), func(t *testing.T) {
 					assertAbsent(t, k, store)
 				})
 			}
 
 			t.Run("op=range", func(t *testing.T) {
-				for _, bounds := range test.config.forward {
-					assertItersEqual(t, test.config.ref.Range(&bounds), store.Range(&bounds), "%s", &bounds)
-				}
-				for _, bounds := range test.config.reverse {
-					assertItersEqual(t, test.config.ref.Range(&bounds), store.Range(&bounds), "%s", &bounds)
+				keyPairs := boundKeys(test.config.ref)
+				for low, high := range rangePairs(keyPairs) {
+					forward := From(low).To(high)
+					reverse := From(high).DownTo(low)
+					assertItersEqual(t, test.config.ref.Range(forward), store.Range(forward), "%s", forward)
+					assertItersEqual(t, test.config.ref.Range(reverse), store.Range(reverse), "%s", reverse)
 				}
 				assertEarlyYield(t, test.config.size, store.Range(forwardAll))
 				assertEarlyYield(t, test.config.size, store.Range(reverseAll))
@@ -570,7 +639,8 @@ func TestClone(t *testing.T) {
 				store.Delete(k)
 			}
 			assertIterEmpty(t, store.Range(forwardAll))
-			for i, k := range test.config.absent {
+			i := 0
+			for k := range absentKeys(test.config.ref) {
 				store.Set(k, byte(i))
 			}
 			assertSame(t, test.config.ref, original)
@@ -581,8 +651,10 @@ func TestClone(t *testing.T) {
 				original.Delete(k)
 			}
 			assertIterEmpty(t, original.Range(forwardAll))
-			for i, k := range test.config.absent {
+			i = 0
+			for k := range absentKeys(test.config.ref) {
 				original.Set(k, byte(i))
+				i++
 			}
 			assertSame(t, test.config.ref, store)
 		})

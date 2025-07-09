@@ -2,7 +2,6 @@ package kv_test
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -27,16 +26,6 @@ import (
 
 const (
 	benchMeanRandomKeyLen = 8
-
-	// The minimum number of keys to benchmark when stores must be cloned after exhausting the keys.
-	// i.e., don't benchmark if we will need to clone the store every N operations and N < benchMinNumMutableKeys.
-	benchMinNumMutableKeys = 1 << 10
-
-	// The maximum size of created absent key slices, 256K.
-	genAbsentMaxSize = 1 << 18
-
-	// The maximum size of created bounds slices, 64K.
-	genBoundsMaxSize = 1 << 16
 
 	// Only the lowercase characters a-z and newlines appear in this file.
 	filenameWords = "testdata/words_alpha.txt"
@@ -78,14 +67,30 @@ func randomKey(meanLen int, random *rand.Rand) []byte {
 	return randomBytes(int(math.Round(val)), random)
 }
 
-func randomFixedLengthKey(keyLen int, random *rand.Rand) []byte {
-	return randomBytes(keyLen, random)
-}
-
 func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
 	random.Shuffle(len(slice), func(i, j int) {
 		slice[i], slice[j] = slice[j], slice[i]
 	})
+}
+
+// Returns a function which repeatedly loops over the elements of itr,
+// invoking reset after every full iteration.
+func repeat[V any](s []V, reset func()) func() V {
+	if len(s) == 0 {
+		panic("cannot repeat empty")
+	}
+	i := 0
+	return func() V {
+		value := s[i]
+		i++
+		if i == len(s) {
+			i = 0
+			if reset != nil {
+				reset()
+			}
+		}
+		return value
+	}
 }
 
 func BenchmarkTraverser(b *testing.B) {
@@ -271,105 +276,15 @@ func entriesFromFile(filename string) map[string]byte {
 	return entries
 }
 
-func createPresent(entries map[string]byte, random *rand.Rand) keySet {
-	present := keySet{}
-	for k := range entries {
-		present = append(present, []byte(k))
-	}
-	slices.SortFunc(present, bytes.Compare)
-	shuffle(present, random)
-	return present
-}
-
-func createAbsent(entries map[string]byte, random *rand.Rand) keySet {
-	absent := keySet{}
-
-	// set absent for key lengths 0-2, everything not present
-	if _, ok := entries[""]; !ok {
-		absent = append(absent, []byte{})
-	}
-	for hi := range 256 {
-		key := []byte{byte(hi)}
-		if _, ok := entries[string(key)]; !ok {
-			absent = append(absent, key)
-		}
-		for low := range 256 {
-			key := []byte{byte(hi), byte(low)}
-			if _, ok := entries[string(key)]; !ok {
-				absent = append(absent, key)
-			}
-		}
-	}
-
-	// Add longer keys.
-	for len(absent) < genAbsentMaxSize {
-		key := randomFixedLengthKey(8, random)
-		if _, ok := entries[string(key)]; !ok {
-			absent = append(absent, key)
-		}
-	}
-
-	slices.SortFunc(absent, bytes.Compare)
-	shuffle(absent, random)
-	return absent
-}
-
-//nolint:nonamedreturns
-func createBounds(keys keySet) (forward, reverse []Bounds) {
-	for i := range genBoundsMaxSize {
-		begin := keys[(2*i)%len(keys)]
-		end := keys[(2*i+1)%len(keys)]
-		switch cmp := bytes.Compare(begin, end); {
-		case cmp == 0:
-			end = append(end, 0)
-		case cmp > 0:
-			begin, end = end, begin
-		case cmp < 0:
-			// no adjustment needed
-		}
-		forward = append(forward, *From(begin).To(end))
-		reverse = append(reverse, *From(end).DownTo(begin))
-	}
-	return forward, reverse
-}
-
-//nolint:nonamedreturns
-func createFixedBounds(step int, random *rand.Rand) (forward, reverse []Bounds) {
-	for low := step / 2; low < 1<<24-step; low += step {
-		high := low + step
-		keyBytes := binary.BigEndian.AppendUint32(nil, uint32(low))
-		lowKey := []byte{keyBytes[1], keyBytes[2], keyBytes[3]}
-		keyBytes = binary.BigEndian.AppendUint32(nil, uint32(high))
-		highKey := []byte{keyBytes[1], keyBytes[2], keyBytes[3]}
-		forward = append(forward, *From(lowKey).To(highKey))
-		reverse = append(reverse, *From(highKey).DownTo(lowKey))
-	}
-	shuffle(forward, random)
-	shuffle(reverse, random)
-	return forward, reverse
-}
-
 func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeConfig {
-	random := rand.New(rand.NewPCG(uint64(len(entries)), 4839028453))
 	ref := newReference()
 	for k, v := range entries {
 		ref.Set([]byte(k), v)
 	}
-	present := createPresent(entries, random)
-	absent := createAbsent(entries, random)
-	keys := make([][]byte, len(present)+len(absent))
-	copy(keys, present)
-	copy(keys[:len(present)], absent)
-	shuffle(keys, random)
-	forward, reverse := createBounds(keys)
 	return &storeConfig{
-		name:    fmt.Sprintf("corpus=%s/size=%d", corpusName, len(entries)),
-		size:    len(entries),
-		ref:     ref,
-		present: present,
-		absent:  absent,
-		forward: forward,
-		reverse: reverse,
+		name: fmt.Sprintf("corpus=%s/size=%d", corpusName, len(entries)),
+		size: len(entries),
+		ref:  ref,
 	}
 }
 
@@ -493,153 +408,137 @@ func BenchmarkDense(b *testing.B) {
 	}
 }
 
-//nolint:gocognit
-func BenchmarkSet(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
-		original := bench.store
-		b.Run(bench.name, func(b *testing.B) {
-			b.Run("existing=true", func(b *testing.B) {
-				present := bench.config.present
-				if len(present) == 0 {
-					b.Skipf("no present keys")
-				}
-				store := original.Clone()
-				i := 0
-				for b.Loop() {
-					store.Set(present[i%len(present)], 42)
-					i++
-				}
-			})
-			b.Run("existing=false", func(b *testing.B) {
-				absent := bench.config.absent
-				if len(absent) == 0 {
-					b.Skipf("no absent keys")
-				}
-				store := original.Clone()
-				i := 0
-				for b.Loop() {
-					if i%len(absent) == 0 && i > 0 {
-						b.StopTimer()
-						store = original.Clone()
-						b.StartTimer()
-					}
-					store.Set(absent[i%len(absent)], 42)
-					i++
-				}
-			})
-		})
-	}
-}
-
 func BenchmarkGet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
-				present := bench.config.present
-				if len(present) == 0 {
-					b.Skipf("no present keys")
-				}
-				i := 0
+				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), nil)
 				for b.Loop() {
-					bench.store.Get(present[i%len(present)])
-					i++
+					bench.store.Get(next())
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {
-				absent := bench.config.absent
-				if len(absent) == 0 {
-					b.Skipf("no absent keys")
-				}
-				i := 0
+				next := repeat(slices.Collect(absentKeys(bench.config.ref)), nil)
 				for b.Loop() {
-					bench.store.Get(absent[i%len(absent)])
-					i++
+					bench.store.Get(next())
 				}
 			})
 		})
 	}
 }
 
-//nolint:gocognit
-func BenchmarkDelete(b *testing.B) {
+func BenchmarkSet(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
-		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
-				present := bench.config.present
-				if len(present) < benchMinNumMutableKeys {
-					b.Skipf("insufficient present keys: %d", len(present))
-				}
-				store := original.Clone()
-				i := 0
+				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), nil)
 				for b.Loop() {
-					if i%len(present) == 0 && i > 0 {
-						b.StopTimer()
-						store = original.Clone()
-						b.StartTimer()
-					}
-					store.Delete(present[i%len(present)])
-					i++
+					bench.store.Set(next(), 42)
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {
-				absent := bench.config.absent
-				if len(absent) == 0 {
-					b.Skipf("no absent keys")
-				}
-				store := original.Clone()
-				i := 0
+				store := bench.store.Clone()
+				next := repeat(slices.Collect(absentKeys(bench.config.ref)), func() {
+					b.StopTimer()
+					store = bench.store.Clone()
+					b.StartTimer()
+				})
 				for b.Loop() {
-					store.Delete(absent[i%len(absent)])
-					i++
+					store.Set(next(), 42)
 				}
 			})
 		})
 	}
 }
 
-//nolint:gocognit
-func benchRange(b *testing.B, getBounds func(*testStore) ([]Bounds, []Bounds)) {
+func BenchmarkDelete(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
-		forward, reverse := getBounds(bench)
-		original := bench.store
-		store := original.Clone()
+		b.Run(bench.name, func(b *testing.B) {
+			b.Run("existing=true", func(b *testing.B) {
+				store := bench.store.Clone()
+				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), func() {
+					b.StopTimer()
+					store = bench.store.Clone()
+					b.StartTimer()
+				})
+				for b.Loop() {
+					store.Delete(next())
+				}
+			})
+			b.Run("existing=false", func(b *testing.B) {
+				next := repeat(slices.Collect(absentKeys(bench.config.ref)), nil)
+				for b.Loop() {
+					bench.store.Delete(next())
+				}
+			})
+		})
+	}
+}
+
+func fixedBounds(step int) keySet {
+	var keys keySet
+	for key := step / 2; key < 1<<24-step; key += step {
+		keyBytes := binary.BigEndian.AppendUint32(nil, uint32(key))
+		keys = append(keys, []byte{keyBytes[1], keyBytes[2], keyBytes[3]})
+	}
+	return keys
+}
+
+// Like rangePairs(s), but repeating, and random.
+// Assumes s is sorted.
+func randomPairs[V any](s []V) func() (V, V) {
+	n := uint(len(s))
+	if n <= 1 {
+		panic("must have at least 2 elements")
+	}
+	random := rand.New(rand.NewPCG(3107354753921, 83741074321))
+	return func() (V, V) {
+		i := random.UintN(n - 1)
+		j := i + 1 + random.UintN(n-i-1)
+		return s[i], s[j]
+	}
+}
+
+//nolint:gocognit
+func benchRange(b *testing.B, getBounds func(*testStore) keySet) {
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		keys := getBounds(bench)
 		b.Run(bench.name, func(b *testing.B) {
 			// This is a hack, but good enough for now.
 			// The words corpus is not uniformly random, unlike the forward/reverse ranges being used.
 			if strings.Contains(bench.name, "corpus=words") {
 				b.Skip()
 			}
-			b.Run("dir=forward/op=range", func(b *testing.B) {
-				i := 0
+			b.Run("dir=forward/op=init", func(b *testing.B) {
+				next := randomPairs(keys)
 				for b.Loop() {
-					store.Range(&forward[i%len(forward)])
-					i++
+					lowKey, highKey := next()
+					bench.store.Range(From(lowKey).To(highKey))
 				}
 			})
 			b.Run("dir=forward/op=full", func(b *testing.B) {
-				i := 0
+				next := randomPairs(keys)
 				for b.Loop() {
-					for k, v := range store.Range(&forward[i%len(forward)]) {
+					lowKey, highKey := next()
+					for k, v := range bench.store.Range(From(lowKey).To(highKey)) {
 						_, _ = k, v
 					}
-					i++
 				}
 			})
-			b.Run("dir=reverse/op=range", func(b *testing.B) {
-				i := 0
+			b.Run("dir=reverse/op=init", func(b *testing.B) {
+				next := randomPairs(keys)
 				for b.Loop() {
-					store.Range(&reverse[i%len(reverse)])
-					i++
+					lowKey, highKey := next()
+					bench.store.Range(From(highKey).DownTo(lowKey))
 				}
 			})
 			b.Run("dir=reverse/op=full", func(b *testing.B) {
-				i := 0
+				next := randomPairs(keys)
 				for b.Loop() {
-					for k, v := range store.Range(&reverse[i%len(reverse)]) {
+					lowKey, highKey := next()
+					for k, v := range bench.store.Range(From(highKey).DownTo(lowKey)) {
 						_, _ = k, v
 					}
-					i++
 				}
 			})
 		})
@@ -647,23 +546,21 @@ func benchRange(b *testing.B, getBounds func(*testStore) ([]Bounds, []Bounds)) {
 }
 
 func BenchmarkShortRange(b *testing.B) {
-	random := rand.New(rand.NewPCG(74320567, 6234982127))
-	forward, reverse := createFixedBounds(0x00_00_00_83, random)
-	benchRange(b, func(_ *testStore) ([]Bounds, []Bounds) {
-		return forward, reverse
+	keys := fixedBounds(0x00_00_00_83)
+	benchRange(b, func(_ *testStore) keySet {
+		return keys
 	})
 }
 
 func BenchmarkLongRange(b *testing.B) {
-	random := rand.New(rand.NewPCG(48239752, 80321318701))
-	forward, reverse := createFixedBounds(0x00_02_13_13, random)
-	benchRange(b, func(_ *testStore) ([]Bounds, []Bounds) {
-		return forward, reverse
+	keys := fixedBounds(0x00_02_13_13)
+	benchRange(b, func(_ *testStore) keySet {
+		return keys
 	})
 }
 
 func BenchmarkRandomRange(b *testing.B) {
-	benchRange(b, func(tt *testStore) ([]Bounds, []Bounds) {
-		return tt.config.forward, tt.config.reverse
+	benchRange(b, func(tt *testStore) keySet {
+		return boundKeys(tt.config.ref)
 	})
 }
