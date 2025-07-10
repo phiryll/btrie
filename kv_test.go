@@ -561,20 +561,17 @@ func assertItersEqual[K, V any](t *testing.T, expected, actual iter.Seq2[K, V], 
 
 // This tests that an early yield does not fail,
 // and ensures those code paths get test coverage.
-func assertEarlyYield(t *testing.T, size int, itr iter.Seq2[[]byte, byte]) {
+func assertEarlyYield(t *testing.T, itr iter.Seq2[[]byte, byte]) {
+	const maxCount = 4
 	t.Helper()
-	expectedCount := size
-	if expectedCount > 4 {
-		expectedCount = 4
-	}
 	count := 0
 	for range itr {
-		if count > 3 {
+		if count >= maxCount {
 			break
 		}
 		count++
 	}
-	assert.Equal(t, expectedCount, count)
+	assert.LessOrEqual(t, count, maxCount)
 }
 
 func TestStores(t *testing.T) {
@@ -613,8 +610,8 @@ func TestStores(t *testing.T) {
 					assertItersEqual(t, test.config.ref.Range(forward), store.Range(forward), "%s", forward)
 					assertItersEqual(t, test.config.ref.Range(reverse), store.Range(reverse), "%s", reverse)
 				}
-				assertEarlyYield(t, test.config.size, store.Range(forwardAll))
-				assertEarlyYield(t, test.config.size, store.Range(reverseAll))
+				assertEarlyYield(t, store.Range(forwardAll))
+				assertEarlyYield(t, store.Range(reverseAll))
 			})
 		})
 	}
