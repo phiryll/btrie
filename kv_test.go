@@ -603,8 +603,7 @@ func TestStores(t *testing.T) {
 			}
 
 			t.Run("op=range", func(t *testing.T) {
-				keyPairs := boundKeys(test.config.ref)
-				for low, high := range rangePairs(keyPairs) {
+				for low, high := range rangePairs(boundKeys(test.config.ref)) {
 					forward := From(low).To(high)
 					reverse := From(high).DownTo(low)
 					assertItersEqual(t, test.config.ref.Range(forward), store.Range(forward), "%s", forward)
