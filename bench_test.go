@@ -489,6 +489,25 @@ func randomPairs[V any](s []V) func() (V, V) {
 	}
 }
 
+func BenchmarkAll(b *testing.B) {
+	for _, bench := range createTestStores(benchStoreConfigs) {
+		b.Run(bench.name, func(b *testing.B) {
+			b.Run("op=init", func(b *testing.B) {
+				for b.Loop() {
+					bench.store.Range(forwardAll)
+				}
+			})
+			b.Run("op=full", func(b *testing.B) {
+				for b.Loop() {
+					for k, v := range bench.store.Range(forwardAll) {
+						_, _ = k, v
+					}
+				}
+			})
+		})
+	}
+}
+
 func BenchmarkAsc(b *testing.B) {
 	for _, bench := range createTestStores(benchStoreConfigs) {
 		b.Run(bench.name, func(b *testing.B) {
