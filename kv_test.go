@@ -74,8 +74,6 @@ var (
 		{0xC5, 0x42},
 		{0xC5, 0x43},
 	}
-
-	testStoreConfigs = createTestStoreConfigs()
 )
 
 // nextKey and prevKey may get promoted to exported functions if there's a good use case.
@@ -581,7 +579,7 @@ func assertEarlyYield(t *testing.T, size int, itr iter.Seq2[[]byte, byte]) {
 
 func TestStores(t *testing.T) {
 	t.Parallel()
-	for _, test := range createTestStores(testStoreConfigs) {
+	for _, test := range createTestStores(createTestStoreConfigs()) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -624,7 +622,7 @@ func TestStores(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	t.Parallel()
-	for _, test := range createTestStores(testStoreConfigs) {
+	for _, test := range createTestStores(createTestStoreConfigs()) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			original := test.store
