@@ -34,6 +34,11 @@ func (r *reference) Clone() TestStore {
 	}
 }
 
+func (r *reference) makeDirty() {
+	r.ascKeys = nil
+	r.dirty = true
+}
+
 func (r *reference) refresh() {
 	if !r.dirty {
 		return
@@ -61,8 +66,7 @@ func (r *reference) Set(key []byte, value byte) (byte, bool) {
 	}
 	prev, ok := r.entries[string(key)]
 	r.entries[string(key)] = value
-	r.ascKeys = nil
-	r.dirty = true
+	r.makeDirty()
 	return prev, ok
 }
 
@@ -73,8 +77,7 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 	value, ok := r.entries[string(key)]
 	if ok {
 		delete(r.entries, string(key))
-		r.ascKeys = nil
-		r.dirty = true
+		r.makeDirty()
 	}
 	return value, ok
 }

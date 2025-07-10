@@ -533,6 +533,20 @@ func BenchmarkAsc(b *testing.B) {
 					}
 				}
 			})
+			b.Run("op=full-dirty", func(b *testing.B) {
+				ref, ok := bench.store.(*reference)
+				if !ok {
+					b.Skipf("skipping store of type %T", bench.store)
+				}
+				next := randomPairs(keys)
+				for b.Loop() {
+					lowKey, highKey := next()
+					ref.makeDirty()
+					for k, v := range ref.Range(From(lowKey).To(highKey)) {
+						_, _ = k, v
+					}
+				}
+			})
 		})
 	}
 }
@@ -553,6 +567,20 @@ func BenchmarkDesc(b *testing.B) {
 				for b.Loop() {
 					lowKey, highKey := next()
 					for k, v := range bench.store.Range(From(highKey).DownTo(lowKey)) {
+						_, _ = k, v
+					}
+				}
+			})
+			b.Run("op=full-dirty", func(b *testing.B) {
+				ref, ok := bench.store.(*reference)
+				if !ok {
+					b.Skipf("skipping store of type %T", bench.store)
+				}
+				next := randomPairs(keys)
+				for b.Loop() {
+					lowKey, highKey := next()
+					ref.makeDirty()
+					for k, v := range ref.Range(From(highKey).DownTo(lowKey)) {
 						_, _ = k, v
 					}
 				}
