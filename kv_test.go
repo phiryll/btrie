@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"iter"
-	"math/bits"
 	"slices"
 	"strings"
 	"testing"
@@ -301,24 +300,43 @@ func rangePairs(keys [][]byte) iter.Seq2[[]byte, []byte] {
 	}
 }
 
+func subsequences(n int) iter.Seq2[string, iter.Seq[int]] {
+	// Limiting this because 32 would result in 2^32 subsequences.
+	if n >= 32 {
+		panic(fmt.Sprintf("%d is too large", n))
+	}
+	return func(yieldSubSeq func(string, iter.Seq[int]) bool) {
+		// keyBits loops through bit pattern, aka keyBits, for n bits.
+		// Each 1 bit corresponds to an element of this subsequence.
+		for keyBits := range 1 << n {
+			name := fmt.Sprintf("%0*b", n, keyBits)
+			subSeq := func(yieldValue func(int) bool) {
+				mask := 0x01
+				for i := range n {
+					if keyBits&mask != 0 && !yieldValue(i) {
+						return
+					}
+					mask <<= 1
+				}
+			}
+			if !yieldSubSeq(name, subSeq) {
+				return
+			}
+		}
+	}
+}
+
 // storeConfigs for all possible subsequences of presentKeys.
 func createTestStoreConfigs() []*storeConfig {
 	result := []*storeConfig{}
-	// Every bit pattern of i defines which keys are present in that config.
-	for keyBits := range 1 << len(testPresentKeys) {
-		config := storeConfig{
-			fmt.Sprintf("sub-store=%0*b", len(testPresentKeys), keyBits),
-			bits.OnesCount(uint(keyBits)),
-			newReference(),
+	for name, indexIter := range subsequences(len(testPresentKeys)) {
+		ref := newReference()
+		size := 0
+		for i := range indexIter {
+			ref.Set(testPresentKeys[i], byte(i))
+			size++
 		}
-		mask := 0x01
-		for i, k := range testPresentKeys {
-			if keyBits&mask != 0 {
-				config.ref.Set(k, byte(i))
-			}
-			mask <<= 1
-		}
-		result = append(result, &config)
+		result = append(result, &storeConfig{"sub-store=" + name, size, ref})
 	}
 	return result
 }
