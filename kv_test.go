@@ -327,33 +327,36 @@ func subsequences(n int) iter.Seq2[string, iter.Seq[int]] {
 }
 
 // storeConfigs for all possible subsequences of presentKeys.
-func createTestStoreConfigs() []*storeConfig {
-	result := []*storeConfig{}
-	for name, indexIter := range subsequences(len(testPresentKeys)) {
-		ref := newReference()
-		size := 0
-		for i := range indexIter {
-			ref.Set(testPresentKeys[i], byte(i))
-			size++
+func createTestStoreConfigs() iter.Seq[*storeConfig] {
+	return func(yield func(*storeConfig) bool) {
+		for name, indexIter := range subsequences(len(testPresentKeys)) {
+			ref := newReference()
+			size := 0
+			for i := range indexIter {
+				ref.Set(testPresentKeys[i], byte(i))
+				size++
+			}
+			if !yield(&storeConfig{"sub-store=" + name, size, ref}) {
+				return
+			}
 		}
-		result = append(result, &storeConfig{"sub-store=" + name, size, ref})
 	}
-	return result
 }
 
-func createTestStores(storeConfigs []*storeConfig) []*testStore {
-	result := []*testStore{}
-	for _, config := range storeConfigs {
-		for _, def := range implDefs {
-			store := def.factory()
-			for k, v := range config.ref.All() {
-				store.Set(k, v)
+func createTestStores(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*testStore] {
+	return func(yield func(*testStore) bool) {
+		for config := range storeConfigs {
+			for _, def := range implDefs {
+				store := def.factory()
+				for k, v := range config.ref.All() {
+					store.Set(k, v)
+				}
+				if !yield(&testStore{config.name + "/" + def.name, store, def, config}) {
+					return
+				}
 			}
-			name := config.name + "/" + def.name
-			result = append(result, &testStore{name, store, def, config})
 		}
 	}
-	return result
 }
 
 /*
@@ -594,7 +597,7 @@ func assertEarlyYield(t *testing.T, itr iter.Seq2[[]byte, byte]) {
 
 func TestStores(t *testing.T) {
 	t.Parallel()
-	for _, test := range createTestStores(createTestStoreConfigs()) {
+	for test := range createTestStores(createTestStoreConfigs()) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -636,7 +639,7 @@ func TestStores(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	t.Parallel()
-	for _, test := range createTestStores(createTestStoreConfigs()) {
+	for test := range createTestStores(createTestStoreConfigs()) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			original := test.store

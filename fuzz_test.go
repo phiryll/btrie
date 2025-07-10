@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	rand "math/rand/v2"
+	"slices"
 	"testing"
 
 	"github.com/phiryll/kv"
@@ -66,7 +67,7 @@ func createFuzzStoreConfigs(size int) []*storeConfig {
 }
 
 func FuzzGet(f *testing.F) {
-	fuzzStores := createTestStores(fuzzStoreConfigs)
+	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		for _, fuzz := range fuzzStores {
@@ -79,7 +80,7 @@ func FuzzGet(f *testing.F) {
 }
 
 func FuzzSet(f *testing.F) {
-	fuzzStores := createTestStores(fuzzStoreConfigs)
+	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
@@ -99,7 +100,7 @@ func FuzzSet(f *testing.F) {
 }
 
 func FuzzDelete(f *testing.F) {
-	fuzzStores := createTestStores(fuzzStoreConfigs)
+	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
@@ -119,7 +120,7 @@ func FuzzDelete(f *testing.F) {
 }
 
 func FuzzRange(f *testing.F) {
-	fuzzStores := createTestStores(fuzzRangeStoreConfigs)
+	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzRangeStoreConfigs)))
 	f.Fuzz(func(t *testing.T, fuzzBeginKey, fuzzEndKey uint32, fuzzBeginKeyLen, fuzzEndKeyLen byte) {
 		begin := keyForFuzzInputs(fuzzBeginKey, fuzzBeginKeyLen)
 		end := keyForFuzzInputs(fuzzEndKey, fuzzEndKeyLen)
@@ -141,7 +142,7 @@ func FuzzRange(f *testing.F) {
 }
 
 func FuzzMixed(f *testing.F) {
-	fuzzStores := createTestStores(fuzzStoreConfigs)
+	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.

@@ -316,7 +316,7 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			for b.Loop() {
 				store := bench.def.factory()
@@ -332,7 +332,7 @@ func BenchmarkCreate(b *testing.B) {
 // If it is, that's a sign it's sharing storage instead of creating new storage.
 // This also helps to understand how Clone() can impact other benchmarks which use it.
 func BenchmarkClone(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		original := bench.store
 		b.Run(bench.name, func(b *testing.B) {
 			for b.Loop() {
@@ -408,7 +408,7 @@ func BenchmarkDense(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), nil)
@@ -427,7 +427,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), nil)
@@ -451,7 +451,7 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkDelete(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				store := bench.store.Clone()
@@ -495,7 +495,7 @@ func randomPairs[V any](s []V) func() (V, V) {
 }
 
 func BenchmarkAll(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("op=init", func(b *testing.B) {
 				for b.Loop() {
@@ -514,7 +514,7 @@ func BenchmarkAll(b *testing.B) {
 }
 
 func BenchmarkAsc(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			keys := boundKeys(bench.config.ref)
 			b.Run("op=init", func(b *testing.B) {
@@ -552,7 +552,7 @@ func BenchmarkAsc(b *testing.B) {
 }
 
 func BenchmarkDesc(b *testing.B) {
-	for _, bench := range createTestStores(benchStoreConfigs) {
+	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			keys := boundKeys(bench.config.ref)
 			b.Run("op=init", func(b *testing.B) {
