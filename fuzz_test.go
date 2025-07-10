@@ -81,7 +81,7 @@ func FuzzGet(f *testing.F) {
 func FuzzSet(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	// This only works because there is only one fuzz store config.
-	// This is unfortunately necessary because configs are shared between TestStores.
+	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
 	ref := fuzzStoreConfigs[0].ref.Clone()
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen, value byte) {
@@ -101,7 +101,7 @@ func FuzzSet(f *testing.F) {
 func FuzzDelete(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	// This only works because there is only one fuzz store config.
-	// This is unfortunately necessary because configs are shared between TestStores.
+	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
 	ref := fuzzStoreConfigs[0].ref.Clone()
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
@@ -143,7 +143,7 @@ func FuzzRange(f *testing.F) {
 func FuzzMixed(f *testing.F) {
 	fuzzStores := createTestStores(fuzzStoreConfigs)
 	// This only works because there is only one fuzz store config.
-	// This is unfortunately necessary because configs are shared between TestStores.
+	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
 	ref := fuzzStoreConfigs[0].ref.Clone()
 	f.Fuzz(func(t *testing.T, fuzzSetKey, fuzzDeleteKey uint32, fuzzSetKeyLen, fuzzDeleteKeyLen, value byte) {

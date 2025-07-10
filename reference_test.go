@@ -26,7 +26,7 @@ func newReference() *reference {
 	}
 }
 
-func (r *reference) Clone() TestStore {
+func (r *reference) Clone() ByteStore {
 	return &reference{
 		maps.Clone(r.entries),
 		slices.Clone(r.ascKeys),

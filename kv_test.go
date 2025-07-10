@@ -15,13 +15,13 @@ import (
 )
 
 type (
-	TestStore = kv.Cloneable[byte]
+	ByteStore = kv.Cloneable[byte]
 	Bounds    = kv.Bounds
 	keySet    = [][]byte // instances will generally have unique keys
 
 	implDef struct {
 		name    string
-		factory func() TestStore
+		factory func() ByteStore
 	}
 
 	// A description of a store to be tested or benchmarked.
@@ -39,7 +39,7 @@ type (
 	// For some tests, an empty store might be created and config might be nil.
 	testStore struct {
 		name   string
-		store  TestStore
+		store  ByteStore
 		def    *implDef
 		config *storeConfig
 	}
@@ -51,7 +51,7 @@ const (
 
 var (
 	implDefs = []*implDef{
-		{"impl=reference", func() TestStore { return TestStore(newReference()) }},
+		{"impl=reference", func() ByteStore { return ByteStore(newReference()) }},
 		{"impl=pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
 		{"impl=array-trie", asCloneable(kv.NewArrayTrie[byte])},
 	}
@@ -154,10 +154,10 @@ func TestPrevKey(t *testing.T) {
 	}
 }
 
-func asCloneable(factory func() kv.Store[byte]) func() TestStore {
-	return func() TestStore {
+func asCloneable(factory func() kv.Store[byte]) func() ByteStore {
+	return func() ByteStore {
 		store := factory()
-		cloneable, ok := store.(TestStore)
+		cloneable, ok := store.(ByteStore)
 		if !ok {
 			panic(fmt.Sprintf("%T is not Cloneable", store))
 		}
@@ -339,7 +339,7 @@ func createTestStores(storeConfigs []*storeConfig) []*testStore {
 }
 
 /*
-func assertPresent(t *testing.T, key []byte, value byte, store TestStore) {
+func assertPresent(t *testing.T, key []byte, value byte, store ByteStore) {
 	actual, ok := store.Get(key)
 	assert.True(t, ok)
 	assert.Equal(t, value, actual)
@@ -358,7 +358,7 @@ func assertPresent(t *testing.T, key []byte, value byte, store TestStore) {
 }
 */
 
-func assertAbsent(t *testing.T, key []byte, store TestStore) {
+func assertAbsent(t *testing.T, key []byte, store ByteStore) {
 	actual, ok := store.Get(key)
 	assert.False(t, ok)
 	assert.Equal(t, zero, actual)
@@ -375,7 +375,7 @@ func assertAbsent(t *testing.T, key []byte, store TestStore) {
 
 // Test that store contains only the key/value pairs in entries,
 // and that Range(forward/reverse) returns them in the correct order.
-func assertSame(t *testing.T, expected *reference, actual TestStore) {
+func assertSame(t *testing.T, expected *reference, actual ByteStore) {
 	for k, v := range expected.All() {
 		actual, ok := actual.Get(k)
 		assert.True(t, ok)
@@ -410,7 +410,7 @@ func TestNilArgPanics(t *testing.T) {
 // Tests Get/Set/Delete/Range with a specific key and store, which should not contain key.
 // The store should be the same after invoking this function.
 // Assumes store.Range(forwardAll) works.
-func testKey(t *testing.T, key []byte, store TestStore) {
+func testKey(t *testing.T, key []byte, store ByteStore) {
 	const value = byte(43)
 	const replacement = byte(57)
 	ref := newReference()
@@ -460,7 +460,7 @@ func TestEmptyKey(t *testing.T) {
 }
 
 // If String() exists, make sure it doesn't crash.
-func TestStoreString(t *testing.T) {
+func TestString(t *testing.T) {
 	t.Parallel()
 	for _, def := range implDefs {
 		t.Run(def.name, func(t *testing.T) {
