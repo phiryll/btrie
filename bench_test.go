@@ -483,8 +483,13 @@ func randomPairs[V any](s []V) func() (V, V) {
 	}
 	random := rand.New(rand.NewPCG(3107354753921, 83741074321))
 	return func() (V, V) {
-		i := random.UintN(n - 1)
-		j := i + 1 + random.UintN(n-i-1)
+		var i, j uint
+		for i == j {
+			i, j = random.UintN(n), random.UintN(n)
+		}
+		if i > j {
+			i, j = j, i
+		}
 		return s[i], s[j]
 	}
 }
