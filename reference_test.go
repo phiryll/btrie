@@ -85,13 +85,20 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	bounds = bounds.Clone()
 	if bounds.IsReverse {
-		return r.Desc(bounds.End, bounds.Begin)
+		// Desc behaves differently than Range, with low inclusive and high exclusive.
+		low, high := bounds.End, bounds.Begin
+		if low != nil {
+			low = nextKey(low)
+		}
+		if high != nil {
+			high = nextKey(high)
+		}
+		return r.Desc(low, high)
 	}
 	return r.Asc(bounds.Begin, bounds.End)
 }
 
 // Future methods on Store, replacing Range.
-// Desc will behave differently, with low inclusive and high exclusive.
 
 func (r *reference) All() iter.Seq2[[]byte, byte] {
 	return func(yield func([]byte, byte) bool) {
@@ -134,14 +141,7 @@ func (r *reference) Desc(low, high []byte) iter.Seq2[[]byte, byte] {
 	}
 	return func(yield func([]byte, byte) bool) {
 		r.refresh()
-		a, b := low, high
-		if a != nil {
-			a = nextKey(a)
-		}
-		if b != nil {
-			b = nextKey(b)
-		}
-		for _, key := range slices.Backward(r.between(a, b)) {
+		for _, key := range slices.Backward(r.between(low, high)) {
 			if !yield(key, r.entries[string(key)]) {
 				return
 			}
