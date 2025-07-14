@@ -546,6 +546,9 @@ func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
 				}
 			})
 			b.Run("op=full", func(b *testing.B) {
+				if d, ok := bench.store.(dirtyable); ok {
+					d.refresh()
+				}
 				next := randomPairs(keys)
 				for b.Loop() {
 					low, high := next()
@@ -555,15 +558,15 @@ func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
 				}
 			})
 			b.Run("op=full-dirty", func(b *testing.B) {
-				ref, ok := bench.store.(*reference)
+				d, ok := bench.store.(dirtyable)
 				if !ok {
 					b.Skipf("skipping store of type %T", bench.store)
 				}
 				next := randomPairs(keys)
 				for b.Loop() {
 					low, high := next()
-					ref.makeDirty()
-					for k, v := range ref.Range(bounds(low, high)) {
+					d.makeDirty()
+					for k, v := range bench.store.Range(bounds(low, high)) {
 						_, _ = k, v
 					}
 				}

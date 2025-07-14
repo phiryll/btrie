@@ -18,6 +18,13 @@ type (
 	Bounds    = kv.Bounds
 	keySet    = [][]byte // instances will generally have unique keys
 
+	// Used when benchmarking to force state changes.
+	// Currently only implemented by reference.
+	dirtyable interface {
+		makeDirty()
+		refresh()
+	}
+
 	implDef struct {
 		name    string
 		factory func() ByteStore
