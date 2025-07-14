@@ -172,8 +172,12 @@ func BenchmarkChildBounds(b *testing.B) {
 			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
 		},
 		{
-			From(nil).To(high),
-			keySet{empty, high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
+			From(nil).To(highKey),
+			keySet{
+				empty,
+				highKey[:1], highKey[:2], highKey[:3], prevKey(highKey), highKey, nextKey(highKey),
+				after,
+			},
 		},
 		{
 			From(nil).To(nil),
@@ -184,18 +188,23 @@ func BenchmarkChildBounds(b *testing.B) {
 			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
 		},
 		{
-			From(empty).To(high),
-			keySet{empty, nextKey(empty), high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after},
+			From(empty).To(highKey),
+			keySet{
+				empty, nextKey(empty),
+				highKey[:1], highKey[:2], highKey[:3], prevKey(highKey), highKey, nextKey(highKey),
+				after,
+			},
 		},
 		{
 			From(empty).To(nil),
 			keySet{empty, nextKey(empty), after},
 		},
 		{
-			From(nextKey(empty)).To(high),
+			From(nextKey(empty)).To(highKey),
 			keySet{
-				empty, nextKey(empty), nextKey(nextKey(empty)), high[:1], high[:2], high[:3],
-				prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), nextKey(nextKey(empty)),
+				highKey[:1], highKey[:2], highKey[:3], prevKey(highKey), highKey, nextKey(highKey),
+				after,
 			},
 		},
 		{
@@ -203,32 +212,43 @@ func BenchmarkChildBounds(b *testing.B) {
 			keySet{empty, nextKey(empty), nextKey(nextKey(empty)), after},
 		},
 		{
-			From(low).To(high),
+			From(lowKey).To(highKey),
 			keySet{
-				empty, nextKey(empty), low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
-				high[:1], high[:2], high[:3], prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty),
+				lowKey[:1], lowKey[:2], lowKey[:3], prevKey(lowKey), lowKey, nextKey(lowKey),
+				highKey[:1], highKey[:2], highKey[:3], prevKey(highKey), highKey, nextKey(highKey),
+				after,
 			},
 		},
 		{
-			From(low).To(nil),
-			keySet{empty, nextKey(empty), low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low), after},
+			From(lowKey).To(nil),
+			keySet{
+				empty, nextKey(empty),
+				lowKey[:1], lowKey[:2], lowKey[:3], prevKey(lowKey), lowKey, nextKey(lowKey),
+				after,
+			},
 		},
 
 		// 2 byte common prefix
 		{
-			From(low).To(low2),
+			From(lowKey).To(low2),
 			keySet{
-				empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low), low, nextKey(low),
-				midLows, low2[:3], prevKey(low2), low2, nextKey(low2), after,
+				empty, nextKey(empty), before,
+				lowKey[:1], lowKey[:2], lowKey[:3], prevKey(lowKey), lowKey, nextKey(lowKey),
+				midLows,
+				low2[:3], prevKey(low2), low2, nextKey(low2),
+				after,
 			},
 		},
 
 		// From is a prefix of To
 		{
-			From(low[:2]).To(low),
+			From(lowKey[:2]).To(lowKey),
 			keySet{
-				empty, nextKey(empty), before, low[:1], prevKey(low[:2]), low[:2], nextKey(low[:2]), low[:3],
-				prevKey(low), low, nextKey(low), after,
+				empty, nextKey(empty), before,
+				lowKey[:1], prevKey(lowKey[:2]), lowKey[:2], nextKey(lowKey[:2]),
+				lowKey[:3], prevKey(lowKey), lowKey, nextKey(lowKey),
+				after,
 			},
 		},
 	} {
@@ -513,6 +533,7 @@ func BenchmarkAll(b *testing.B) {
 	}
 }
 
+//nolint:gocognit
 func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
 	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
