@@ -513,22 +513,22 @@ func BenchmarkAll(b *testing.B) {
 	}
 }
 
-func BenchmarkAsc(b *testing.B) {
+func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
 	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			keys := boundKeys(bench.config.ref)
 			b.Run("op=init", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
-					lowKey, highKey := next()
-					bench.store.Range(From(lowKey).To(highKey))
+					low, high := next()
+					bench.store.Range(bounds(low, high))
 				}
 			})
 			b.Run("op=full", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
-					lowKey, highKey := next()
-					for k, v := range bench.store.Range(From(lowKey).To(highKey)) {
+					low, high := next()
+					for k, v := range bench.store.Range(bounds(low, high)) {
 						_, _ = k, v
 					}
 				}
@@ -540,9 +540,9 @@ func BenchmarkAsc(b *testing.B) {
 				}
 				next := randomPairs(keys)
 				for b.Loop() {
-					lowKey, highKey := next()
+					low, high := next()
 					ref.makeDirty()
-					for k, v := range ref.Range(From(lowKey).To(highKey)) {
+					for k, v := range ref.Range(bounds(low, high)) {
 						_, _ = k, v
 					}
 				}
@@ -551,40 +551,10 @@ func BenchmarkAsc(b *testing.B) {
 	}
 }
 
+func BenchmarkAsc(b *testing.B) {
+	benchRange(b, func(low, high []byte) *Bounds { return From(low).To(high) })
+}
+
 func BenchmarkDesc(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
-			keys := boundKeys(bench.config.ref)
-			b.Run("op=init", func(b *testing.B) {
-				next := randomPairs(keys)
-				for b.Loop() {
-					lowKey, highKey := next()
-					bench.store.Range(From(highKey).DownTo(lowKey))
-				}
-			})
-			b.Run("op=full", func(b *testing.B) {
-				next := randomPairs(keys)
-				for b.Loop() {
-					lowKey, highKey := next()
-					for k, v := range bench.store.Range(From(highKey).DownTo(lowKey)) {
-						_, _ = k, v
-					}
-				}
-			})
-			b.Run("op=full-dirty", func(b *testing.B) {
-				ref, ok := bench.store.(*reference)
-				if !ok {
-					b.Skipf("skipping store of type %T", bench.store)
-				}
-				next := randomPairs(keys)
-				for b.Loop() {
-					lowKey, highKey := next()
-					ref.makeDirty()
-					for k, v := range ref.Range(From(highKey).DownTo(lowKey)) {
-						_, _ = k, v
-					}
-				}
-			})
-		})
-	}
+	benchRange(b, func(low, high []byte) *Bounds { return From(high).DownTo(low) })
 }
