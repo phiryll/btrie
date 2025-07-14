@@ -180,10 +180,6 @@ func midPoint(a, b []byte) []byte {
 	mid := make([]byte, len(a))
 	copy(mid, a)
 	for i := range a {
-		if i >= len(b) {
-			// not possible, because a > b if true
-			panic("something is very, very wrong")
-		}
 		if a[i] == b[i] {
 			continue
 		}
