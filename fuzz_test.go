@@ -51,19 +51,16 @@ func keyForFuzzInputs(fuzzKey uint32, fuzzKeyLen byte) []byte {
 }
 
 func createFuzzStoreConfigs(size int) []*storeConfig {
-	var config storeConfig
 	random := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
-	config.name = "fuzz"
-	config.size = size
-	config.ref = newReference()
+	ref := newReference()
 	for count := 0; count < size; {
 		key := randomKey(fuzzMeanKeyLen, random)
-		if _, ok := config.ref.Get(key); !ok {
-			config.ref.Set(key, randomByte(random))
+		if _, ok := ref.Get(key); !ok {
+			ref.Set(key, randomByte(random))
 			count++
 		}
 	}
-	return []*storeConfig{&config}
+	return []*storeConfig{{"fuzz", size, ref}}
 }
 
 func FuzzGet(f *testing.F) {
