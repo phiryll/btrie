@@ -66,12 +66,6 @@ func randomKey(meanLen int, random *rand.Rand) []byte {
 	return randomBytes(int(math.Round(val)), random)
 }
 
-func shuffle[S ~[]E, E any](slice S, random *rand.Rand) {
-	random.Shuffle(len(slice), func(i, j int) {
-		slice[i], slice[j] = slice[j], slice[i]
-	})
-}
-
 // Returns a function which repeatedly loops over the elements of itr,
 // invoking reset after every full iteration.
 func repeat[V any](s []V, reset func()) func() V {
@@ -346,71 +340,6 @@ func BenchmarkCreate(b *testing.B) {
 				}
 			}
 		})
-	}
-}
-
-// This benchmark is for memory allocations, not time.
-// Creates one store and sets many keys per benchmark iteration.
-func BenchmarkSparse(b *testing.B) {
-	random := rand.New(rand.NewPCG(12337405, 432843980))
-	var keys keySet
-	for k := range 1 << 8 {
-		keyByte := byte(k)
-		keys = append(keys, []byte{keyByte, keyByte, keyByte, keyByte})
-	}
-	shuffle(keys, random)
-	for _, def := range implDefs {
-		b.Run(def.name, func(b *testing.B) {
-			for b.Loop() {
-				store := def.factory()
-				for _, k := range keys {
-					store.Set(k, 0)
-				}
-			}
-		})
-	}
-}
-
-// This benchmark is for memory allocations, not time.
-// Creates one store and sets many keys per benchmark iteration.
-func BenchmarkDense(b *testing.B) {
-	random := rand.New(rand.NewPCG(9321075532, 1293487543289))
-	oneKeys := make(keySet, 1<<8)
-	twoKeys := make(keySet, 1<<16)
-	threeKeys := make(keySet, 1<<24)
-	for k := range 1 << 8 {
-		oneKeys[k] = []byte{byte(k)}
-	}
-	for k := range 1 << 16 {
-		keyBytes := binary.LittleEndian.AppendUint16(nil, uint16(k))
-		twoKeys[k] = []byte{keyBytes[0], keyBytes[1]}
-	}
-	for k := range 1 << 24 {
-		keyBytes := binary.LittleEndian.AppendUint32(nil, uint32(k))
-		threeKeys[k] = []byte{keyBytes[0], keyBytes[1], keyBytes[2]}
-	}
-	shuffle(oneKeys, random)
-	shuffle(twoKeys, random)
-	shuffle(threeKeys, random)
-	keySets := []keySet{oneKeys, twoKeys, threeKeys}
-	for _, def := range implDefs {
-		for _, tt := range []struct {
-			name string
-			keys keySet
-		}{
-			{"/keyLen=1", keySets[0]},
-			{"/keyLen=2", keySets[1]},
-			{"/keyLen=3", keySets[2]},
-		} {
-			b.Run(def.name+tt.name, func(b *testing.B) {
-				for b.Loop() {
-					store := def.factory()
-					for _, k := range tt.keys {
-						store.Set(k, 0)
-					}
-				}
-			})
-		}
 	}
 }
 
