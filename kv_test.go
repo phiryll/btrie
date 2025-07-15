@@ -33,7 +33,7 @@ type (
 	// A description of a store to be tested or benchmarked.
 	// Some fields may not be populated depending on the use case.
 	//
-	// For benchmarking, there is one storeConfig with a given size used by all benchmarks,
+	// For benchmarking, there is one storeConfig for each corpus used by all benchmarks,
 	// shared by all store implementations.
 	storeConfig struct {
 		name string
@@ -41,13 +41,12 @@ type (
 		ref  *reference
 	}
 
-	// A store created by a def.factory(), possibly with entries from config.
-	// For some tests, an empty store might be created and config might be nil.
-	testStore struct {
+	// A named store created by [storeUnderTest.def], with entries from [storeUnderTest.config].
+	storeUnderTest struct {
 		name   string
-		store  ByteStore
 		def    *implDef
 		config *storeConfig
+		ByteStore
 	}
 )
 
@@ -161,12 +160,12 @@ func TestPrevKey(t *testing.T) {
 }
 
 // Recreates s.store.
-func (s *testStore) resetFromConfig() {
+func (s *storeUnderTest) resetFromConfig() {
 	store := s.def.factory()
 	for k, v := range s.config.ref.Asc(nil, nil) {
 		store.Set([]byte(k), v)
 	}
-	s.store = store
+	s.ByteStore = store
 }
 
 // Returns an iterator over the keys of itr.
@@ -345,15 +344,15 @@ func createTestStoreConfigs() iter.Seq[*storeConfig] {
 	}
 }
 
-func createTestStores(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*testStore] {
-	return func(yield func(*testStore) bool) {
+func createTestStores(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*storeUnderTest] {
+	return func(yield func(*storeUnderTest) bool) {
 		for config := range storeConfigs {
 			for _, def := range implDefs {
 				store := def.factory()
 				for k, v := range config.ref.All() {
 					store.Set(k, v)
 				}
-				if !yield(&testStore{config.name + "/" + def.name, store, def, config}) {
+				if !yield(&storeUnderTest{config.name + "/" + def.name, def, config, store}) {
 					return
 				}
 			}
@@ -599,41 +598,41 @@ func assertEarlyYield(t *testing.T, itr iter.Seq2[[]byte, byte]) {
 
 func TestStores(t *testing.T) {
 	t.Parallel()
-	for test := range createTestStores(createTestStoreConfigs()) {
-		t.Run(test.name, func(t *testing.T) {
+	for store := range createTestStores(createTestStoreConfigs()) {
+		t.Run(store.name, func(t *testing.T) {
 			t.Parallel()
 
 			// Build the store, testing along the way.
-			store := test.def.factory()
+			s := store.def.factory()
 			ref := newReference()
-			for k, v := range test.config.ref.All() {
+			for k, v := range store.config.ref.All() {
 				t.Run("op=set/key="+kv.KeyName(k), func(t *testing.T) {
-					assertAbsent(t, k, store)
-					assertSame(t, ref, store)
+					assertAbsent(t, k, s)
+					assertSame(t, ref, s)
 
-					actual, ok := store.Set(k, v)
+					actual, ok := s.Set(k, v)
 					assert.False(t, ok)
 					assert.Equal(t, zero, actual)
 					ref.Set(k, v)
-					assertSame(t, ref, store)
+					assertSame(t, ref, s)
 				})
 			}
 
-			for k := range absentKeys(test.config.ref) {
+			for k := range absentKeys(store.config.ref) {
 				t.Run("op=absent/key="+kv.KeyName(k), func(t *testing.T) {
-					assertAbsent(t, k, store)
+					assertAbsent(t, k, s)
 				})
 			}
 
 			t.Run("op=range", func(t *testing.T) {
-				for low, high := range rangePairs(boundKeys(test.config.ref)) {
+				for low, high := range rangePairs(boundKeys(store.config.ref)) {
 					forward := From(low).To(high)
 					reverse := From(high).DownTo(low)
-					assertItersEqual(t, test.config.ref.Range(forward), store.Range(forward), "%s", forward)
-					assertItersEqual(t, test.config.ref.Range(reverse), store.Range(reverse), "%s", reverse)
+					assertItersEqual(t, store.config.ref.Range(forward), s.Range(forward), "%s", forward)
+					assertItersEqual(t, store.config.ref.Range(reverse), s.Range(reverse), "%s", reverse)
 				}
-				assertEarlyYield(t, store.Range(forwardAll))
-				assertEarlyYield(t, store.Range(reverseAll))
+				assertEarlyYield(t, s.Range(forwardAll))
+				assertEarlyYield(t, s.Range(reverseAll))
 			})
 		})
 	}

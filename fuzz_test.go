@@ -77,7 +77,7 @@ func FuzzGet(f *testing.F) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		for _, fuzz := range fuzzStores {
 			expected, expectedOk := fuzz.config.ref.Get(key)
-			actual, actualOk := fuzz.store.Get(key)
+			actual, actualOk := fuzz.Get(key)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, kv.KeyName(key))
 			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, kv.KeyName(key))
 		}
@@ -94,10 +94,10 @@ func FuzzSet(f *testing.F) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Set(key, value)
 		for _, fuzz := range fuzzStores {
-			actual, actualOk := fuzz.store.Set(key, value)
+			actual, actualOk := fuzz.Set(key, value)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
-			actual, ok := fuzz.store.Get(key)
+			actual, ok := fuzz.Get(key)
 			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 		}
@@ -114,10 +114,10 @@ func FuzzDelete(f *testing.F) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Delete(key)
 		for _, fuzz := range fuzzStores {
-			actual, actualOk := fuzz.store.Delete(key)
+			actual, actualOk := fuzz.Delete(key)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, kv.KeyName(key))
 			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, kv.KeyName(key))
-			actual, ok := fuzz.store.Get(key)
+			actual, ok := fuzz.Get(key)
 			assert.False(t, ok, "%s: %s", fuzz.def.name, kv.KeyName(key))
 			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, kv.KeyName(key))
 		}
@@ -138,9 +138,9 @@ func FuzzRange(f *testing.F) {
 		forward := From(begin).To(end)
 		reverse := From(end).DownTo(begin)
 		for _, fuzz := range fuzzStores {
-			assertItersEqual(t, fuzz.config.ref.Range(forward), fuzz.store.Range(forward),
+			assertItersEqual(t, fuzz.config.ref.Range(forward), fuzz.Range(forward),
 				"%s: %s", fuzz.def.name, forward)
-			assertItersEqual(t, fuzz.config.ref.Range(reverse), fuzz.store.Range(reverse),
+			assertItersEqual(t, fuzz.config.ref.Range(reverse), fuzz.Range(reverse),
 				"%s: %s", fuzz.def.name, reverse)
 		}
 	})
@@ -156,10 +156,10 @@ func FuzzMixed(f *testing.F) {
 		key := keyForFuzzInputs(fuzzSetKey, fuzzSetKeyLen)
 		expected, expectedOk := ref.Set(key, value)
 		for _, fuzz := range fuzzStores {
-			actual, actualOk := fuzz.store.Set(key, value)
+			actual, actualOk := fuzz.Set(key, value)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			assert.Equal(t, expected, actual, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
-			actual, ok := fuzz.store.Get(key)
+			actual, ok := fuzz.Get(key)
 			assert.True(t, ok, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 			assert.Equal(t, value, actual, "%s: %s=%d", fuzz.def.name, kv.KeyName(key), value)
 		}
@@ -167,10 +167,10 @@ func FuzzMixed(f *testing.F) {
 		key = keyForFuzzInputs(fuzzDeleteKey, fuzzDeleteKeyLen)
 		expected, expectedOk = ref.Delete(key)
 		for _, fuzz := range fuzzStores {
-			actual, actualOk := fuzz.store.Delete(key)
+			actual, actualOk := fuzz.Delete(key)
 			assert.Equal(t, expectedOk, actualOk, "%s: %s", fuzz.def.name, kv.KeyName(key))
 			assert.Equal(t, expected, actual, "%s: %s", fuzz.def.name, kv.KeyName(key))
-			actual, ok := fuzz.store.Get(key)
+			actual, ok := fuzz.Get(key)
 			assert.False(t, ok, "%s: %s", fuzz.def.name, kv.KeyName(key))
 			assert.Equal(t, byte(0), actual, "%s: %s", fuzz.def.name, kv.KeyName(key))
 		}

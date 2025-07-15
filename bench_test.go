@@ -337,12 +337,12 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
+	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+		b.Run(store.name, func(b *testing.B) {
 			for b.Loop() {
-				store := bench.def.factory()
-				for k, v := range bench.config.ref.All() {
-					store.Set(k, v)
+				s := store.def.factory()
+				for k, v := range store.config.ref.All() {
+					s.Set(k, v)
 				}
 			}
 		})
@@ -415,18 +415,18 @@ func BenchmarkDense(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
+	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
-				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), nil)
+				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
 				for b.Loop() {
-					bench.store.Get(next())
+					store.Get(next())
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {
-				next := repeat(slices.Collect(absentKeys(bench.config.ref)), nil)
+				next := repeat(slices.Collect(absentKeys(store.config.ref)), nil)
 				for b.Loop() {
-					bench.store.Get(next())
+					store.Get(next())
 				}
 			})
 		})
@@ -434,22 +434,22 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
+	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
-				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), nil)
+				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
 				for b.Loop() {
-					bench.store.Set(next(), 42)
+					store.Set(next(), 42)
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {
-				next := repeat(slices.Collect(absentKeys(bench.config.ref)), func() {
+				next := repeat(slices.Collect(absentKeys(store.config.ref)), func() {
 					b.StopTimer()
-					bench.resetFromConfig()
+					store.resetFromConfig()
 					b.StartTimer()
 				})
 				for b.Loop() {
-					bench.store.Set(next(), 42)
+					store.Set(next(), 42)
 				}
 			})
 		})
@@ -457,22 +457,22 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkDelete(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
+	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
-				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), func() {
+				next := repeat(slices.Collect(keyIter(store.config.ref.All())), func() {
 					b.StopTimer()
-					bench.resetFromConfig()
+					store.resetFromConfig()
 					b.StartTimer()
 				})
 				for b.Loop() {
-					bench.store.Delete(next())
+					store.Delete(next())
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {
-				next := repeat(slices.Collect(absentKeys(bench.config.ref)), nil)
+				next := repeat(slices.Collect(absentKeys(store.config.ref)), nil)
 				for b.Loop() {
-					bench.store.Delete(next())
+					store.Delete(next())
 				}
 			})
 		})
@@ -500,16 +500,16 @@ func randomPairs[V any](s []V) func() (V, V) {
 }
 
 func BenchmarkAll(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
+	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+		b.Run(store.name, func(b *testing.B) {
 			b.Run("op=init", func(b *testing.B) {
 				for b.Loop() {
-					bench.store.Range(forwardAll)
+					store.Range(forwardAll)
 				}
 			})
 			b.Run("op=full", func(b *testing.B) {
 				for b.Loop() {
-					for k, v := range bench.store.Range(forwardAll) {
+					for k, v := range store.Range(forwardAll) {
 						_, _ = k, v
 					}
 				}
@@ -520,38 +520,38 @@ func BenchmarkAll(b *testing.B) {
 
 //nolint:gocognit
 func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(bench.name, func(b *testing.B) {
-			keys := boundKeys(bench.config.ref)
+	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+		b.Run(store.name, func(b *testing.B) {
+			keys := boundKeys(store.config.ref)
 			b.Run("op=init", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
 					low, high := next()
-					bench.store.Range(bounds(low, high))
+					store.Range(bounds(low, high))
 				}
 			})
 			b.Run("op=full", func(b *testing.B) {
-				if d, ok := bench.store.(dirtyable); ok {
+				if d, ok := store.ByteStore.(dirtyable); ok {
 					d.refresh()
 				}
 				next := randomPairs(keys)
 				for b.Loop() {
 					low, high := next()
-					for k, v := range bench.store.Range(bounds(low, high)) {
+					for k, v := range store.Range(bounds(low, high)) {
 						_, _ = k, v
 					}
 				}
 			})
 			b.Run("op=full-dirty", func(b *testing.B) {
-				d, ok := bench.store.(dirtyable)
+				d, ok := store.ByteStore.(dirtyable)
 				if !ok {
-					b.Skipf("skipping store of type %T", bench.store)
+					b.Skipf("skipping store of type %T", store.ByteStore)
 				}
 				next := randomPairs(keys)
 				for b.Loop() {
 					low, high := next()
 					d.makeDirty()
-					for k, v := range bench.store.Range(bounds(low, high)) {
+					for k, v := range store.Range(bounds(low, high)) {
 						_, _ = k, v
 					}
 				}
