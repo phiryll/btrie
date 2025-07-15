@@ -163,7 +163,7 @@ func TestPrevKey(t *testing.T) {
 func (s *storeUnderTest) resetFromConfig() {
 	store := s.def.factory()
 	for k, v := range s.config.ref.Asc(nil, nil) {
-		store.Set([]byte(k), v)
+		store.Set(k, v)
 	}
 	s.ByteStore = store
 }
@@ -344,7 +344,7 @@ func createTestStoreConfigs() iter.Seq[*storeConfig] {
 	}
 }
 
-func createTestStores(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*storeUnderTest] {
+func createStoresUnderTest(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*storeUnderTest] {
 	return func(yield func(*storeUnderTest) bool) {
 		for config := range storeConfigs {
 			for _, def := range implDefs {
@@ -598,7 +598,7 @@ func assertEarlyYield(t *testing.T, itr iter.Seq2[[]byte, byte]) {
 
 func TestStores(t *testing.T) {
 	t.Parallel()
-	for store := range createTestStores(createTestStoreConfigs()) {
+	for store := range createStoresUnderTest(createTestStoreConfigs()) {
 		t.Run(store.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -800,9 +800,8 @@ func TestFail9(t *testing.T) {
 			key := []byte{0x23}
 			store.Set(key, 6)
 			store.Delete(key)
-			// make sure reference.dirty is false
-			for range store.Range(forwardAll) {
-				break
+			if d, ok := store.(dirtyable); ok {
+				d.refresh()
 			}
 			assert.Equal(t, expected, sStore.String())
 		})

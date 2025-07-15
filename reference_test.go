@@ -101,6 +101,7 @@ func (r *reference) All() iter.Seq2[[]byte, byte] {
 	}
 }
 
+//nolint:revive
 func (r *reference) between(low, high []byte) (int, int) {
 	lowIndex, highIndex := 0, len(r.ascKeys)
 	if low != nil {

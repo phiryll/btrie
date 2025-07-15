@@ -13,18 +13,10 @@ import (
 	"github.com/phiryll/kv"
 )
 
-// No benchmark can have a truly random element, random seeds must be constants!
-
-// Because these are stateful data structures, accurately benchmarking mutating methods (Set, Delete) is cumbersome.
-// The two possible approaches are to recreate the data structure every time through the loop,
-// or when it reaches a state that is no longer useful to benchmark.
-// The latter approach was chosen here, since recreation is expensive.
-// The benchmark timer is paused when the stores are recreated.
-// The measured benchmark timing overhead for pausing the timer is tiny (~8ns on my machine),
-// but the wall clock overhead can be significant.
+// No benchmark can have a truly random element, random seeds must be constants.
 
 const (
-	benchMeanRandomKeyLen = 8
+	benchRandomMeanKeyLen = 8
 
 	// Only the lowercase characters a-z and newlines appear in this file.
 	filenameWords = "testdata/words_alpha.txt"
@@ -262,7 +254,7 @@ func randomEntries(numEntries int) map[string]byte {
 	random := rand.New(rand.NewPCG(uint64(numEntries), 83741074321))
 	entries := map[string]byte{}
 	for count := 0; count < numEntries; {
-		key := string(randomKey(benchMeanRandomKeyLen, random))
+		key := string(randomKey(benchRandomMeanKeyLen, random))
 		if _, ok := entries[key]; !ok {
 			entries[key] = randomByte(random)
 			count++
@@ -324,27 +316,29 @@ func BenchmarkFactory(b *testing.B) {
 	for _, def := range implDefs {
 		b.Run(def.name, func(b *testing.B) {
 			for b.Loop() {
-				_ = def.factory()
+				def.factory()
 			}
 		})
 	}
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
-		b.Run(store.name, func(b *testing.B) {
-			for b.Loop() {
-				s := store.def.factory()
-				for k, v := range store.config.ref.All() {
-					s.Set(k, v)
+	for _, config := range createBenchStoreConfigs() {
+		for _, def := range implDefs {
+			b.Run(config.name+"/"+def.name, func(b *testing.B) {
+				for b.Loop() {
+					store := def.factory()
+					for k, v := range config.ref.Asc(nil, nil) {
+						store.Set(k, v)
+					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
 
 func BenchmarkGet(b *testing.B) {
-	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
@@ -363,7 +357,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
@@ -386,7 +380,7 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkDelete(b *testing.B) {
-	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), func() {
@@ -429,7 +423,7 @@ func randomPairs[V any](s []V) func() (V, V) {
 }
 
 func BenchmarkAll(b *testing.B) {
-	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("op=init", func(b *testing.B) {
 				for b.Loop() {
@@ -449,14 +443,13 @@ func BenchmarkAll(b *testing.B) {
 
 //nolint:gocognit
 func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
-	for store := range createTestStores(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
 		b.Run(store.name, func(b *testing.B) {
 			keys := boundKeys(store.config.ref)
 			b.Run("op=init", func(b *testing.B) {
 				next := randomPairs(keys)
 				for b.Loop() {
-					low, high := next()
-					store.Range(bounds(low, high))
+					store.Range(bounds(next()))
 				}
 			})
 			b.Run("op=full", func(b *testing.B) {
@@ -465,8 +458,7 @@ func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
 				}
 				next := randomPairs(keys)
 				for b.Loop() {
-					low, high := next()
-					for k, v := range store.Range(bounds(low, high)) {
+					for k, v := range store.Range(bounds(next())) {
 						_, _ = k, v
 					}
 				}
@@ -478,9 +470,8 @@ func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
 				}
 				next := randomPairs(keys)
 				for b.Loop() {
-					low, high := next()
 					d.makeDirty()
-					for k, v := range store.Range(bounds(low, high)) {
+					for k, v := range store.Range(bounds(next())) {
 						_, _ = k, v
 					}
 				}

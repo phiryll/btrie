@@ -72,7 +72,7 @@ func createReferenceStore(config *storeConfig) ByteStore {
 }
 
 func FuzzGet(f *testing.F) {
-	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
+	fuzzStores := slices.Collect(createStoresUnderTest(slices.Values(fuzzStoreConfigs)))
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		for _, fuzz := range fuzzStores {
@@ -85,7 +85,7 @@ func FuzzGet(f *testing.F) {
 }
 
 func FuzzSet(f *testing.F) {
-	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
+	fuzzStores := slices.Collect(createStoresUnderTest(slices.Values(fuzzStoreConfigs)))
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
@@ -105,7 +105,7 @@ func FuzzSet(f *testing.F) {
 }
 
 func FuzzDelete(f *testing.F) {
-	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
+	fuzzStores := slices.Collect(createStoresUnderTest(slices.Values(fuzzStoreConfigs)))
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
@@ -125,7 +125,7 @@ func FuzzDelete(f *testing.F) {
 }
 
 func FuzzRange(f *testing.F) {
-	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzRangeStoreConfigs)))
+	fuzzStores := slices.Collect(createStoresUnderTest(slices.Values(fuzzRangeStoreConfigs)))
 	f.Fuzz(func(t *testing.T, fuzzBeginKey, fuzzEndKey uint32, fuzzBeginKeyLen, fuzzEndKeyLen byte) {
 		begin := keyForFuzzInputs(fuzzBeginKey, fuzzBeginKeyLen)
 		end := keyForFuzzInputs(fuzzEndKey, fuzzEndKeyLen)
@@ -147,7 +147,7 @@ func FuzzRange(f *testing.F) {
 }
 
 func FuzzMixed(f *testing.F) {
-	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
+	fuzzStores := slices.Collect(createStoresUnderTest(slices.Values(fuzzStoreConfigs)))
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
