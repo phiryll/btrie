@@ -3,6 +3,7 @@ package kv_test
 import (
 	"bytes"
 	"encoding/binary"
+	"maps"
 	rand "math/rand/v2"
 	"slices"
 	"testing"
@@ -63,6 +64,13 @@ func createFuzzStoreConfigs(size int) []*storeConfig {
 	return []*storeConfig{{"fuzz", size, ref}}
 }
 
+func createReferenceStore(config *storeConfig) ByteStore {
+	return &reference{
+		entries: maps.Clone(config.ref.entries),
+		dirty:   true,
+	}
+}
+
 func FuzzGet(f *testing.F) {
 	fuzzStores := slices.Collect(createTestStores(slices.Values(fuzzStoreConfigs)))
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
@@ -81,7 +89,7 @@ func FuzzSet(f *testing.F) {
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
-	ref := fuzzStoreConfigs[0].ref.Clone()
+	ref := createReferenceStore(fuzzStoreConfigs[0])
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Set(key, value)
@@ -101,7 +109,7 @@ func FuzzDelete(f *testing.F) {
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
-	ref := fuzzStoreConfigs[0].ref.Clone()
+	ref := createReferenceStore(fuzzStoreConfigs[0])
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
 		expected, expectedOk := ref.Delete(key)
@@ -143,7 +151,7 @@ func FuzzMixed(f *testing.F) {
 	// This only works because there is only one fuzz store config.
 	// This is unfortunately necessary because configs are shared between these test Stores.
 	// This needs to be fixed.
-	ref := fuzzStoreConfigs[0].ref.Clone()
+	ref := createReferenceStore(fuzzStoreConfigs[0])
 	f.Fuzz(func(t *testing.T, fuzzSetKey, fuzzDeleteKey uint32, fuzzSetKeyLen, fuzzDeleteKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzSetKey, fuzzSetKeyLen)
 		expected, expectedOk := ref.Set(key, value)

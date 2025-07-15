@@ -349,20 +349,6 @@ func BenchmarkCreate(b *testing.B) {
 	}
 }
 
-// For mutable implementations, Clone() should be efficient, but not absurdly efficient.
-// If it is, that's a sign it's sharing storage instead of creating new storage.
-// This also helps to understand how Clone() can impact other benchmarks which use it.
-func BenchmarkClone(b *testing.B) {
-	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
-		original := bench.store
-		b.Run(bench.name, func(b *testing.B) {
-			for b.Loop() {
-				_ = original.Clone()
-			}
-		})
-	}
-}
-
 // This benchmark is for memory allocations, not time.
 // Creates one store and sets many keys per benchmark iteration.
 func BenchmarkSparse(b *testing.B) {
@@ -457,14 +443,13 @@ func BenchmarkSet(b *testing.B) {
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {
-				store := bench.store.Clone()
 				next := repeat(slices.Collect(absentKeys(bench.config.ref)), func() {
 					b.StopTimer()
-					store = bench.store.Clone()
+					bench.resetFromConfig()
 					b.StartTimer()
 				})
 				for b.Loop() {
-					store.Set(next(), 42)
+					bench.store.Set(next(), 42)
 				}
 			})
 		})
@@ -475,14 +460,13 @@ func BenchmarkDelete(b *testing.B) {
 	for bench := range createTestStores(slices.Values(benchStoreConfigs)) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
-				store := bench.store.Clone()
 				next := repeat(slices.Collect(keyIter(bench.config.ref.All())), func() {
 					b.StopTimer()
-					store = bench.store.Clone()
+					bench.resetFromConfig()
 					b.StartTimer()
 				})
 				for b.Loop() {
-					store.Delete(next())
+					bench.store.Delete(next())
 				}
 			})
 			b.Run("existing=false", func(b *testing.B) {

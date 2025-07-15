@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"iter"
-	"maps"
 	"slices"
 	"strings"
 
@@ -23,14 +22,6 @@ type reference struct {
 func newReference() *reference {
 	return &reference{
 		entries: map[string]byte{},
-	}
-}
-
-func (r *reference) Clone() ByteStore {
-	return &reference{
-		maps.Clone(r.entries),
-		slices.Clone(r.ascKeys),
-		r.dirty,
 	}
 }
 

@@ -14,7 +14,7 @@ import (
 )
 
 type (
-	ByteStore = kv.Cloneable[byte]
+	ByteStore = kv.Store[byte]
 	Bounds    = kv.Bounds
 	keySet    = [][]byte // instances will generally have unique keys
 
@@ -57,9 +57,9 @@ const (
 
 var (
 	implDefs = []*implDef{
-		{"impl=reference", func() ByteStore { return ByteStore(newReference()) }},
-		{"impl=pointer-trie", asCloneable(kv.NewPointerTrie[byte])},
-		{"impl=array-trie", asCloneable(kv.NewArrayTrie[byte])},
+		{"impl=reference", func() ByteStore { return newReference() }},
+		{"impl=pointer-trie", kv.NewPointerTrie[byte]},
+		{"impl=array-trie", kv.NewArrayTrie[byte]},
 	}
 
 	From       = kv.From
@@ -160,15 +160,13 @@ func TestPrevKey(t *testing.T) {
 	}
 }
 
-func asCloneable(factory func() kv.Store[byte]) func() ByteStore {
-	return func() ByteStore {
-		store := factory()
-		cloneable, ok := store.(ByteStore)
-		if !ok {
-			panic(fmt.Sprintf("%T is not Cloneable", store))
-		}
-		return cloneable
+// Recreates s.store.
+func (s *testStore) resetFromConfig() {
+	store := s.def.factory()
+	for k, v := range s.config.ref.Asc(nil, nil) {
+		store.Set([]byte(k), v)
 	}
+	s.store = store
 }
 
 // Returns an iterator over the keys of itr.
@@ -637,45 +635,6 @@ func TestStores(t *testing.T) {
 				assertEarlyYield(t, store.Range(forwardAll))
 				assertEarlyYield(t, store.Range(reverseAll))
 			})
-		})
-	}
-}
-
-func TestClone(t *testing.T) {
-	t.Parallel()
-	for test := range createTestStores(createTestStoreConfigs()) {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			original := test.store
-			assertSame(t, test.config.ref, original)
-
-			// test that the clone was correct
-			store := original.Clone()
-			assertSame(t, test.config.ref, store)
-
-			// mutate the clone and test that original hasn't changed
-			for k := range test.config.ref.All() {
-				store.Delete(k)
-			}
-			assertIterEmpty(t, store.Range(forwardAll))
-			i := 0
-			for k := range absentKeys(test.config.ref) {
-				store.Set(k, byte(i))
-			}
-			assertSame(t, test.config.ref, original)
-
-			// mutate the original and test that the clone hasn't changed
-			store = original.Clone()
-			for k := range test.config.ref.All() {
-				original.Delete(k)
-			}
-			assertIterEmpty(t, original.Range(forwardAll))
-			i = 0
-			for k := range absentKeys(test.config.ref) {
-				original.Set(k, byte(i))
-				i++
-			}
-			assertSame(t, test.config.ref, store)
 		})
 	}
 }
