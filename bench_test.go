@@ -300,6 +300,7 @@ func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeCo
 	for k, v := range entries {
 		ref.Set([]byte(k), v)
 	}
+	ref.refresh()
 	return &storeConfig{
 		name: fmt.Sprintf("corpus=%s/size=%d", corpusName, len(entries)),
 		size: len(entries),

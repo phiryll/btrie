@@ -339,6 +339,7 @@ func createTestStoreConfigs() iter.Seq[*storeConfig] {
 				ref.Set(testPresentKeys[i], byte(i))
 				size++
 			}
+			ref.refresh()
 			if !yield(&storeConfig{"sub-store=" + name, size, ref}) {
 				return
 			}
