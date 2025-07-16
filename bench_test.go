@@ -23,10 +23,8 @@ const (
 	filenameWords = "testdata/words_alpha.txt"
 )
 
-var (
-	// How many entries randomly generated benchmarked stores will have.
-	benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
-)
+// How many entries randomly generated benchmarked stores will have.
+var benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
 
 func randomBytes(n int, random *rand.Rand) []byte {
 	if n == 0 {
