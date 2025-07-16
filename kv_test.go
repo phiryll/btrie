@@ -32,9 +32,7 @@ type (
 
 	// A description of a store to be tested or benchmarked.
 	// Some fields may not be populated depending on the use case.
-	//
-	// For benchmarking, there is one storeConfig for each corpus used by all benchmarks,
-	// shared by all store implementations.
+	// Note that storeConfigs are often reused between multiple storeUnderTest instances.
 	storeConfig struct {
 		name string
 		size int
