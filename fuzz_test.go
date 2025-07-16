@@ -59,7 +59,7 @@ func createReferenceStore(config *storeConfig) ByteStore {
 
 func FuzzGet(f *testing.F) {
 	config := createFuzzStoreConfig("fuzz", fuzzSize)
-	stores := slices.Collect(createStoresUnderTest(singleton(config)))
+	stores := slices.Collect(storesUnderTest(singleton(config)))
 	ref := createReferenceStore(config)
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
@@ -74,7 +74,7 @@ func FuzzGet(f *testing.F) {
 
 func FuzzSet(f *testing.F) {
 	config := createFuzzStoreConfig("fuzz", fuzzSize)
-	stores := slices.Collect(createStoresUnderTest(singleton(config)))
+	stores := slices.Collect(storesUnderTest(singleton(config)))
 	ref := createReferenceStore(config)
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
@@ -92,7 +92,7 @@ func FuzzSet(f *testing.F) {
 
 func FuzzDelete(f *testing.F) {
 	config := createFuzzStoreConfig("fuzz", fuzzSize)
-	stores := slices.Collect(createStoresUnderTest(singleton(config)))
+	stores := slices.Collect(storesUnderTest(singleton(config)))
 	ref := createReferenceStore(config)
 	f.Fuzz(func(t *testing.T, fuzzKey uint32, fuzzKeyLen byte) {
 		key := keyForFuzzInputs(fuzzKey, fuzzKeyLen)
@@ -110,7 +110,7 @@ func FuzzDelete(f *testing.F) {
 
 func FuzzRange(f *testing.F) {
 	config := createFuzzStoreConfig("fuzz-range", fuzzRangeSize)
-	stores := slices.Collect(createStoresUnderTest(singleton(config)))
+	stores := slices.Collect(storesUnderTest(singleton(config)))
 	ref := createReferenceStore(config)
 	f.Fuzz(func(t *testing.T, fuzzBeginKey, fuzzEndKey uint32, fuzzBeginKeyLen, fuzzEndKeyLen byte) {
 		begin := keyForFuzzInputs(fuzzBeginKey, fuzzBeginKeyLen)
@@ -134,7 +134,7 @@ func FuzzRange(f *testing.F) {
 
 func FuzzMixed(f *testing.F) {
 	config := createFuzzStoreConfig("fuzz", fuzzSize)
-	stores := slices.Collect(createStoresUnderTest(singleton(config)))
+	stores := slices.Collect(storesUnderTest(singleton(config)))
 	ref := createReferenceStore(config)
 	f.Fuzz(func(t *testing.T, fuzzSetKey, fuzzDeleteKey uint32, fuzzSetKeyLen, fuzzDeleteKeyLen, value byte) {
 		key := keyForFuzzInputs(fuzzSetKey, fuzzSetKeyLen)

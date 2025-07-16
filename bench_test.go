@@ -23,8 +23,10 @@ const (
 	filenameWords = "testdata/words_alpha.txt"
 )
 
-// How many entries randomly generated benchmarked stores will have.
-var benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
+var (
+	// How many entries randomly generated benchmarked stores will have.
+	benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
+)
 
 func randomBytes(n int, random *rand.Rand) []byte {
 	if n == 0 {
@@ -279,7 +281,7 @@ func entriesFromFile(filename string) iter.Seq2[[]byte, byte] {
 	}
 }
 
-func createBenchStoreConfigs() iter.Seq[*storeConfig] {
+func benchStoreConfigs() iter.Seq[*storeConfig] {
 	return func(yield func(*storeConfig) bool) {
 		for _, size := range benchRandomSizes {
 			random := rand.New(rand.NewPCG(437120712374, 83741074321))
@@ -303,7 +305,7 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for config := range createBenchStoreConfigs() {
+	for config := range benchStoreConfigs() {
 		for _, def := range implDefs {
 			b.Run(config.name+"/"+def.name, func(b *testing.B) {
 				for b.Loop() {
@@ -318,7 +320,7 @@ func BenchmarkCreate(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
+	for store := range storesUnderTest(benchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
@@ -337,7 +339,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
+	for store := range storesUnderTest(benchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
@@ -360,7 +362,7 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkDelete(b *testing.B) {
-	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
+	for store := range storesUnderTest(benchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), func() {
@@ -403,7 +405,7 @@ func randomPairs[V any](s []V) func() (V, V) {
 }
 
 func BenchmarkAll(b *testing.B) {
-	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
+	for store := range storesUnderTest(benchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("op=init", func(b *testing.B) {
 				for b.Loop() {
@@ -423,7 +425,7 @@ func BenchmarkAll(b *testing.B) {
 
 //nolint:gocognit
 func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
-	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
+	for store := range storesUnderTest(benchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			keys := boundKeys(store.config.ref)
 			b.Run("op=init", func(b *testing.B) {

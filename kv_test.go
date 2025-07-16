@@ -352,7 +352,7 @@ func createTestStoreConfig(corpusName string, maxSize int, itr iter.Seq2[[]byte,
 }
 
 // storeConfigs for all possible subsequences of presentKeys.
-func createTestStoreConfigs() iter.Seq[*storeConfig] {
+func testStoreConfigs() iter.Seq[*storeConfig] {
 	return func(yield func(*storeConfig) bool) {
 		for name, indexIter := range subsequences(len(testPresentKeys)) {
 			keyValueItr := func(yieldKeyValue func([]byte, byte) bool) {
@@ -369,7 +369,7 @@ func createTestStoreConfigs() iter.Seq[*storeConfig] {
 	}
 }
 
-func createStoresUnderTest(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*storeUnderTest] {
+func storesUnderTest(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*storeUnderTest] {
 	return func(yield func(*storeUnderTest) bool) {
 		for config := range storeConfigs {
 			for _, def := range implDefs {
@@ -621,7 +621,7 @@ func assertEarlyYield(t *testing.T, itr iter.Seq2[[]byte, byte]) {
 
 func TestStores(t *testing.T) {
 	t.Parallel()
-	for store := range createStoresUnderTest(createTestStoreConfigs()) {
+	for store := range storesUnderTest(testStoreConfigs()) {
 		t.Run(store.name, func(t *testing.T) {
 			t.Parallel()
 
