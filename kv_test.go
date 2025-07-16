@@ -326,18 +326,37 @@ func subsequences(n int) iter.Seq2[string, iter.Seq[int]] {
 	}
 }
 
+func createTestStoreConfig(corpusName string, maxSize int, itr iter.Seq2[[]byte, byte]) *storeConfig {
+	size := 0
+	ref := newReference()
+	for k, v := range itr {
+		if _, ok := ref.Set(k, v); !ok {
+			size++
+		}
+		if maxSize > 0 && size == maxSize {
+			break
+		}
+	}
+	ref.refresh()
+	return &storeConfig{
+		fmt.Sprintf("corpus=%s/size=%d", corpusName, size),
+		size,
+		ref,
+	}
+}
+
 // storeConfigs for all possible subsequences of presentKeys.
 func createTestStoreConfigs() iter.Seq[*storeConfig] {
 	return func(yield func(*storeConfig) bool) {
 		for name, indexIter := range subsequences(len(testPresentKeys)) {
-			ref := newReference()
-			size := 0
-			for i := range indexIter {
-				ref.Set(testPresentKeys[i], byte(i))
-				size++
+			keyValueItr := func(yieldKeyValue func([]byte, byte) bool) {
+				for i := range indexIter {
+					if !yieldKeyValue(testPresentKeys[i], byte(i)) {
+						return
+					}
+				}
 			}
-			ref.refresh()
-			if !yield(&storeConfig{"sub-store=" + name, size, ref}) {
+			if !yield(createTestStoreConfig(name, -1, keyValueItr)) {
 				return
 			}
 		}
@@ -348,11 +367,9 @@ func createStoresUnderTest(storeConfigs iter.Seq[*storeConfig]) iter.Seq[*storeU
 	return func(yield func(*storeUnderTest) bool) {
 		for config := range storeConfigs {
 			for _, def := range implDefs {
-				store := def.factory()
-				for k, v := range config.ref.All() {
-					store.Set(k, v)
-				}
-				if !yield(&storeUnderTest{config.name + "/" + def.name, def, config, store}) {
+				store := storeUnderTest{config.name + "/" + def.name, def, config, nil}
+				store.resetFromConfig()
+				if !yield(&store) {
 					return
 				}
 			}

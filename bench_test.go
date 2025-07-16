@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"iter"
 	"math"
 	rand "math/rand/v2"
 	"os"
@@ -250,65 +251,54 @@ func BenchmarkChildBounds(b *testing.B) {
 	}
 }
 
-func randomEntries(numEntries int) map[string]byte {
-	random := rand.New(rand.NewPCG(uint64(numEntries), 83741074321))
-	entries := map[string]byte{}
-	for count := 0; count < numEntries; {
-		key := string(randomKey(benchRandomMeanKeyLen, random))
-		if _, ok := entries[key]; !ok {
-			entries[key] = randomByte(random)
-			count++
+// The returned sequence does not terminate.
+func randomEntries() iter.Seq2[[]byte, byte] {
+	return func(yield func([]byte, byte) bool) {
+		random := rand.New(rand.NewPCG(437120712374, 83741074321))
+		for {
+			key := randomKey(benchRandomMeanKeyLen, random)
+			if !yield(key, randomByte(random)) {
+				return
+			}
 		}
 	}
-	return entries
 }
 
-func entriesFromFile(filename string) map[string]byte {
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(fmt.Sprintf("text file %s could not be opened: %s", filename, err))
-	}
-	//nolint:errcheck
-	defer file.Close()
-	entries := map[string]byte{}
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		entries[scanner.Text()] = 0
-	}
-	if err := scanner.Err(); err != nil {
-		panic(fmt.Sprintf("error reading text file %s: %s", filename, err))
-	}
-	return entries
-}
-
-func createBenchStoreConfig(corpusName string, entries map[string]byte) *storeConfig {
-	ref := newReference()
-	for k, v := range entries {
-		ref.Set([]byte(k), v)
-	}
-	ref.refresh()
-	return &storeConfig{
-		name: fmt.Sprintf("corpus=%s/size=%d", corpusName, len(entries)),
-		size: len(entries),
-		ref:  ref,
+func entriesFromFile(filename string) iter.Seq2[[]byte, byte] {
+	return func(yield func([]byte, byte) bool) {
+		file, err := os.Open(filename)
+		if err != nil {
+			panic(fmt.Sprintf("text file %s could not be opened: %s", filename, err))
+		}
+		//nolint:errcheck
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			if !yield([]byte(scanner.Text()), 0) {
+				return
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			panic(fmt.Sprintf("error reading text file %s: %s", filename, err))
+		}
 	}
 }
 
 func createBenchRandomStoreConfigs() []*storeConfig {
 	result := []*storeConfig{}
 	for _, size := range benchRandomSizes {
-		result = append(result, createBenchStoreConfig("random", randomEntries(size)))
+		result = append(result, createTestStoreConfig("random", size, randomEntries()))
 	}
 	return result
 }
 
 // Config with lower-case english words, values are all 0.
-func createBenchWordStoreConfigs() []*storeConfig {
-	return []*storeConfig{createBenchStoreConfig("words", entriesFromFile(filenameWords))}
+func createBenchWordStoreConfig() *storeConfig {
+	return createTestStoreConfig("words", -1, entriesFromFile(filenameWords))
 }
 
 func createBenchStoreConfigs() []*storeConfig {
-	return append(createBenchRandomStoreConfigs(), createBenchWordStoreConfigs()...)
+	return append(createBenchRandomStoreConfigs(), createBenchWordStoreConfig())
 }
 
 // This helps to understand how factory() can impact other benchmarks which use it.
@@ -323,7 +313,7 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for _, config := range createBenchStoreConfigs() {
+	for _, config := range benchStoreConfigs {
 		for _, def := range implDefs {
 			b.Run(config.name+"/"+def.name, func(b *testing.B) {
 				for b.Loop() {
