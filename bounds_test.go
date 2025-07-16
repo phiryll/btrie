@@ -14,12 +14,12 @@ const (
 
 var (
 	// Keys used by Bounds testing and benchmarking.
-	empty  = []byte{}
-	before = []byte{0x02, 0x27}
-	low    = []byte{0x04, 0x99, 0x72, 0xD3}
-	within = []byte{0x27, 0x83, 0x02}
-	high   = []byte{0x42, 0x12, 0xBC, 0x60}
-	after  = []byte{0xA5, 0x02}
+	empty   = []byte{}
+	before  = []byte{0x02, 0x27}
+	lowKey  = []byte{0x04, 0x99, 0x72, 0xD3}
+	within  = []byte{0x27, 0x83, 0x02}
+	highKey = []byte{0x42, 0x12, 0xBC, 0x60}
+	after   = []byte{0xA5, 0x02}
 
 	// low < low2, they share a common prefix of 2 bytes.
 	low2    = []byte{0x04, 0x99, 0x9E, 0x27}
@@ -29,16 +29,16 @@ var (
 func TestBoundsBuilderPanics(t *testing.T) {
 	t.Parallel()
 	assert.Panics(t, func() {
-		From(high).To(low)
+		From(highKey).To(lowKey)
 	})
 	assert.Panics(t, func() {
-		From(low).DownTo(high)
+		From(lowKey).DownTo(highKey)
 	})
 	assert.Panics(t, func() {
-		From(low).To(low)
+		From(lowKey).To(lowKey)
 	})
 	assert.Panics(t, func() {
-		From(low).DownTo(low)
+		From(lowKey).DownTo(lowKey)
 	})
 }
 
@@ -47,9 +47,9 @@ func TestBoundsBuilder(t *testing.T) {
 	for _, tt := range []struct {
 		first, second []byte
 	}{
-		{low, high},
-		{nil, low},
-		{low, nil},
+		{lowKey, highKey},
+		{nil, lowKey},
+		{lowKey, nil},
 		{nil, nil},
 	} {
 		t.Run(fmt.Sprintf("(%s,%s)", kv.KeyName(tt.first), kv.KeyName(tt.second)), func(t *testing.T) {
@@ -90,78 +90,78 @@ func TestBoundsCompareKey(t *testing.T) {
 			keySet{},
 			keySet{},
 			keySet{
-				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
-				prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), before, prevKey(lowKey), lowKey, nextKey(lowKey), within,
+				prevKey(highKey), highKey, nextKey(highKey), after,
 			},
 		},
 		{
-			From(nil).To(low),
+			From(nil).To(lowKey),
 			keySet{},
-			keySet{empty, nextKey(empty), before, prevKey(low)},
-			keySet{low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{empty, nextKey(empty), before, prevKey(lowKey)},
+			keySet{lowKey, nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
 		},
 		{
 			From(nil).To(nil),
 			keySet{},
 			keySet{
-				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
-				prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), before, prevKey(lowKey), lowKey, nextKey(lowKey), within,
+				prevKey(highKey), highKey, nextKey(highKey), after,
 			},
 			keySet{},
 		},
 		{
-			From(empty).To(low),
+			From(empty).To(lowKey),
 			keySet{},
-			keySet{empty, nextKey(empty), before, prevKey(low)},
-			keySet{low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			keySet{empty, nextKey(empty), before, prevKey(lowKey)},
+			keySet{lowKey, nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
 		},
 		{
 			From(empty).To(nil),
 			keySet{},
 			keySet{
-				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
-				prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), before, prevKey(lowKey), lowKey, nextKey(lowKey), within,
+				prevKey(highKey), highKey, nextKey(highKey), after,
 			},
 			keySet{},
 		},
 		{
-			From(low[:2]).To(low),
-			keySet{empty, nextKey(empty), before, low[:1], prevKey(low[:2])},
-			keySet{low[:2], nextKey(low[:2]), low[:3], prevKey(low)},
-			keySet{low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			From(lowKey[:2]).To(lowKey),
+			keySet{empty, nextKey(empty), before, lowKey[:1], prevKey(lowKey[:2])},
+			keySet{lowKey[:2], nextKey(lowKey[:2]), lowKey[:3], prevKey(lowKey)},
+			keySet{lowKey, nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
 		},
 		{
-			From(low).To(low2),
-			keySet{empty, nextKey(empty), before, low[:1], low[:2], low[:3], prevKey(low)},
-			keySet{low, nextKey(low), midLows, prevKey(low2)},
-			keySet{low2, nextKey(low2), within, prevKey(high), high, nextKey(high), after},
+			From(lowKey).To(low2),
+			keySet{empty, nextKey(empty), before, lowKey[:1], lowKey[:2], lowKey[:3], prevKey(lowKey)},
+			keySet{lowKey, nextKey(lowKey), midLows, prevKey(low2)},
+			keySet{low2, nextKey(low2), within, prevKey(highKey), highKey, nextKey(highKey), after},
 		},
 		{
-			From(low).To(high),
-			keySet{empty, nextKey(empty), before, prevKey(low)},
-			keySet{low, nextKey(low), within, prevKey(high)},
-			keySet{high, nextKey(high), after},
+			From(lowKey).To(highKey),
+			keySet{empty, nextKey(empty), before, prevKey(lowKey)},
+			keySet{lowKey, nextKey(lowKey), within, prevKey(highKey)},
+			keySet{highKey, nextKey(highKey), after},
 		},
 		{
-			From(low).To(nil),
-			keySet{empty, nextKey(empty), before, prevKey(low)},
-			keySet{low, nextKey(low), within, prevKey(high), high, nextKey(high), after},
+			From(lowKey).To(nil),
+			keySet{empty, nextKey(empty), before, prevKey(lowKey)},
+			keySet{lowKey, nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
 			keySet{},
 		},
 
 		// reverse bounds
 		{
-			From(nil).DownTo(low),
+			From(nil).DownTo(lowKey),
 			keySet{},
-			keySet{nextKey(low), within, prevKey(high), high, nextKey(high), after},
-			keySet{empty, nextKey(empty), before, prevKey(low), low},
+			keySet{nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
+			keySet{empty, nextKey(empty), before, prevKey(lowKey), lowKey},
 		},
 		{
 			From(nil).DownTo(empty),
 			keySet{},
 			keySet{
-				nextKey(empty), before, prevKey(low), low, nextKey(low), within,
-				prevKey(high), high, nextKey(high), after,
+				nextKey(empty), before, prevKey(lowKey), lowKey, nextKey(lowKey), within,
+				prevKey(highKey), highKey, nextKey(highKey), after,
 			},
 			keySet{empty},
 		},
@@ -169,46 +169,46 @@ func TestBoundsCompareKey(t *testing.T) {
 			From(nil).DownTo(nil),
 			keySet{},
 			keySet{
-				empty, nextKey(empty), before, prevKey(low), low, nextKey(low), within,
-				prevKey(high), high, nextKey(high), after,
+				empty, nextKey(empty), before, prevKey(lowKey), lowKey, nextKey(lowKey), within,
+				prevKey(highKey), highKey, nextKey(highKey), after,
 			},
 			keySet{},
 		},
 		{
-			From(high).DownTo(low),
-			keySet{nextKey(high), after},
-			keySet{nextKey(low), within, prevKey(high), high},
-			keySet{empty, nextKey(empty), before, prevKey(low), low},
+			From(highKey).DownTo(lowKey),
+			keySet{nextKey(highKey), after},
+			keySet{nextKey(lowKey), within, prevKey(highKey), highKey},
+			keySet{empty, nextKey(empty), before, prevKey(lowKey), lowKey},
 		},
 		{
-			From(low).DownTo(low[:2]),
-			keySet{nextKey(low), within, prevKey(high), high, nextKey(high), after},
-			keySet{nextKey(low[:2]), low[:3], prevKey(low), low},
-			keySet{empty, nextKey(empty), before, low[:1], low[:2], prevKey(low[:2])},
+			From(lowKey).DownTo(lowKey[:2]),
+			keySet{nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
+			keySet{nextKey(lowKey[:2]), lowKey[:3], prevKey(lowKey), lowKey},
+			keySet{empty, nextKey(empty), before, lowKey[:1], lowKey[:2], prevKey(lowKey[:2])},
 		},
 		{
-			From(low2).DownTo(low),
-			keySet{nextKey(low2), within, prevKey(high), high, nextKey(high), after},
-			keySet{nextKey(low), midLows, prevKey(low2), low2},
-			keySet{empty, nextKey(empty), before, prevKey(low), low[:1], low[:2], low[:3], low},
+			From(low2).DownTo(lowKey),
+			keySet{nextKey(low2), within, prevKey(highKey), highKey, nextKey(highKey), after},
+			keySet{nextKey(lowKey), midLows, prevKey(low2), low2},
+			keySet{empty, nextKey(empty), before, prevKey(lowKey), lowKey[:1], lowKey[:2], lowKey[:3], lowKey},
 		},
 		{
-			From(low).DownTo(empty),
-			keySet{nextKey(low), within, prevKey(high), high, nextKey(high), after},
-			keySet{nextKey(empty), before, prevKey(low), low},
+			From(lowKey).DownTo(empty),
+			keySet{nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
+			keySet{nextKey(empty), before, prevKey(lowKey), lowKey},
 			keySet{empty},
 		},
 		{
-			From(low).DownTo(nil),
-			keySet{nextKey(low), within, prevKey(high), high, nextKey(high), after},
-			keySet{empty, nextKey(empty), before, prevKey(low), low},
+			From(lowKey).DownTo(nil),
+			keySet{nextKey(lowKey), within, prevKey(highKey), highKey, nextKey(highKey), after},
+			keySet{empty, nextKey(empty), before, prevKey(lowKey), lowKey},
 			keySet{},
 		},
 		{
 			From(empty).DownTo(nil),
 			keySet{
-				nextKey(empty), before, prevKey(low), low, nextKey(low), within,
-				prevKey(high), high, nextKey(high), after,
+				nextKey(empty), before, prevKey(lowKey), lowKey, nextKey(lowKey), within,
+				prevKey(highKey), highKey, nextKey(highKey), after,
 			},
 			keySet{empty},
 			keySet{},
@@ -261,17 +261,17 @@ func TestChildBounds(t *testing.T) {
 			},
 		},
 		{
-			From(nil).To(low),
+			From(nil).To(lowKey),
 			[]expectedChildBounds{
-				{empty, 0, low[0], true},
+				{empty, 0, lowKey[0], true},
 				{nextKey(empty), 0, maxByte, true},
 				{before, 0, maxByte, true},
-				{low[:1], 0, low[1], true},
-				{low[:2], 0, low[2], true},
-				{low[:3], 0, low[3], true},
-				{prevKey(low), 0, maxByte, true},
-				{low, 0, 0, false},
-				{nextKey(low), 0, 0, false},
+				{lowKey[:1], 0, lowKey[1], true},
+				{lowKey[:2], 0, lowKey[2], true},
+				{lowKey[:3], 0, lowKey[3], true},
+				{prevKey(lowKey), 0, maxByte, true},
+				{lowKey, 0, 0, false},
+				{nextKey(lowKey), 0, 0, false},
 			},
 		},
 		{
@@ -284,17 +284,17 @@ func TestChildBounds(t *testing.T) {
 			},
 		},
 		{
-			From(empty).To(low),
+			From(empty).To(lowKey),
 			[]expectedChildBounds{
-				{empty, 0, low[0], true},
+				{empty, 0, lowKey[0], true},
 				{nextKey(empty), 0, maxByte, true},
 				{before, 0, maxByte, true},
-				{low[:1], 0, low[1], true},
-				{low[:2], 0, low[2], true},
-				{low[:3], 0, low[3], true},
-				{prevKey(low), 0, maxByte, true},
-				{low, 0, 0, false},
-				{nextKey(low), 0, 0, false},
+				{lowKey[:1], 0, lowKey[1], true},
+				{lowKey[:2], 0, lowKey[2], true},
+				{lowKey[:3], 0, lowKey[3], true},
+				{prevKey(lowKey), 0, maxByte, true},
+				{lowKey, 0, 0, false},
+				{nextKey(lowKey), 0, 0, false},
 			},
 		},
 		{
@@ -307,58 +307,58 @@ func TestChildBounds(t *testing.T) {
 			},
 		},
 		{
-			From(low).To(high),
+			From(lowKey).To(highKey),
 			[]expectedChildBounds{
-				{empty, low[0], high[0], true},
+				{empty, lowKey[0], highKey[0], true},
 				{nextKey(empty), 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], low[1], maxByte, true},
-				{low[:2], low[2], maxByte, true},
-				{low[:3], low[3], maxByte, true},
-				{prevKey(low), 0, 0, false},
-				{low, 0, maxByte, true},
-				{nextKey(low), 0, maxByte, true},
+				{lowKey[:1], lowKey[1], maxByte, true},
+				{lowKey[:2], lowKey[2], maxByte, true},
+				{lowKey[:3], lowKey[3], maxByte, true},
+				{prevKey(lowKey), 0, 0, false},
+				{lowKey, 0, maxByte, true},
+				{nextKey(lowKey), 0, maxByte, true},
 				{within, 0, maxByte, true},
-				{high[:1], 0, high[1], true},
-				{high[:2], 0, high[2], true},
-				{high[:3], 0, high[3], true},
-				{prevKey(high), 0, maxByte, true},
-				{high, 0, 0, false},
-				{nextKey(high), 0, 0, false},
+				{highKey[:1], 0, highKey[1], true},
+				{highKey[:2], 0, highKey[2], true},
+				{highKey[:3], 0, highKey[3], true},
+				{prevKey(highKey), 0, maxByte, true},
+				{highKey, 0, 0, false},
+				{nextKey(highKey), 0, 0, false},
 				{after, 0, 0, false},
 			},
 		},
 		{
-			From(low).To(nil),
+			From(lowKey).To(nil),
 			[]expectedChildBounds{
-				{empty, low[0], maxByte, true},
+				{empty, lowKey[0], maxByte, true},
 				{nextKey(empty), 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], low[1], maxByte, true},
-				{low[:2], low[2], maxByte, true},
-				{low[:3], low[3], maxByte, true},
-				{prevKey(low), 0, 0, false},
-				{low, 0, maxByte, true},
-				{nextKey(low), 0, maxByte, true},
+				{lowKey[:1], lowKey[1], maxByte, true},
+				{lowKey[:2], lowKey[2], maxByte, true},
+				{lowKey[:3], lowKey[3], maxByte, true},
+				{prevKey(lowKey), 0, 0, false},
+				{lowKey, 0, maxByte, true},
+				{nextKey(lowKey), 0, maxByte, true},
 				{after, 0, maxByte, true},
 			},
 		},
 
 		// reverse, begin[0] != end[0]
 		{
-			From(nil).DownTo(low),
+			From(nil).DownTo(lowKey),
 			[]expectedChildBounds{
 				{after, maxByte, 0, true},
 				{within, maxByte, 0, true},
-				{nextKey(low), maxByte, 0, true},
-				{low, maxByte, 0, true},
-				{prevKey(low), 0, 0, false},
-				{low[:3], maxByte, low[3], true},
-				{low[:2], maxByte, low[2], true},
-				{low[:1], maxByte, low[1], true},
+				{nextKey(lowKey), maxByte, 0, true},
+				{lowKey, maxByte, 0, true},
+				{prevKey(lowKey), 0, 0, false},
+				{lowKey[:3], maxByte, lowKey[3], true},
+				{lowKey[:2], maxByte, lowKey[2], true},
+				{lowKey[:1], maxByte, lowKey[1], true},
 				{before, 0, 0, false},
 				{nextKey(empty), 0, 0, false},
-				{empty, maxByte, low[0], true},
+				{empty, maxByte, lowKey[0], true},
 			},
 		},
 		{
@@ -380,57 +380,57 @@ func TestChildBounds(t *testing.T) {
 			},
 		},
 		{
-			From(high).DownTo(low),
+			From(highKey).DownTo(lowKey),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
-				{nextKey(high), 0, 0, false},
-				{high, 0, 0, false},
-				{prevKey(high), maxByte, 0, true},
-				{high[:3], high[3], 0, true},
-				{high[:2], high[2], 0, true},
-				{high[:1], high[1], 0, true},
+				{nextKey(highKey), 0, 0, false},
+				{highKey, 0, 0, false},
+				{prevKey(highKey), maxByte, 0, true},
+				{highKey[:3], highKey[3], 0, true},
+				{highKey[:2], highKey[2], 0, true},
+				{highKey[:1], highKey[1], 0, true},
 				{within, maxByte, 0, true},
-				{nextKey(low), maxByte, 0, true},
-				{low, maxByte, 0, true},
-				{prevKey(low), 0, 0, false},
-				{low[:3], maxByte, low[3], true},
-				{low[:2], maxByte, low[2], true},
-				{low[:1], maxByte, low[1], true},
+				{nextKey(lowKey), maxByte, 0, true},
+				{lowKey, maxByte, 0, true},
+				{prevKey(lowKey), 0, 0, false},
+				{lowKey[:3], maxByte, lowKey[3], true},
+				{lowKey[:2], maxByte, lowKey[2], true},
+				{lowKey[:1], maxByte, lowKey[1], true},
 				{before, 0, 0, false},
 				{nextKey(empty), 0, 0, false},
-				{empty, high[0], low[0], true},
+				{empty, highKey[0], lowKey[0], true},
 			},
 		},
 		{
-			From(low).DownTo(empty),
+			From(lowKey).DownTo(empty),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
 				{within, 0, 0, false},
-				{nextKey(low), 0, 0, false},
-				{low, 0, 0, false},
-				{prevKey(low), maxByte, 0, true},
-				{low[:3], low[3], 0, true},
-				{low[:2], low[2], 0, true},
-				{low[:1], low[1], 0, true},
+				{nextKey(lowKey), 0, 0, false},
+				{lowKey, 0, 0, false},
+				{prevKey(lowKey), maxByte, 0, true},
+				{lowKey[:3], lowKey[3], 0, true},
+				{lowKey[:2], lowKey[2], 0, true},
+				{lowKey[:1], lowKey[1], 0, true},
 				{before, maxByte, 0, true},
 				{nextKey(empty), maxByte, 0, true},
-				{empty, low[0], 0, true},
+				{empty, lowKey[0], 0, true},
 			},
 		},
 		{
-			From(low).DownTo(nil),
+			From(lowKey).DownTo(nil),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
 				{within, 0, 0, false},
-				{nextKey(low), 0, 0, false},
-				{low, 0, 0, false},
-				{prevKey(low), maxByte, 0, true},
-				{low[:3], low[3], 0, true},
-				{low[:2], low[2], 0, true},
-				{low[:1], low[1], 0, true},
+				{nextKey(lowKey), 0, 0, false},
+				{lowKey, 0, 0, false},
+				{prevKey(lowKey), maxByte, 0, true},
+				{lowKey[:3], lowKey[3], 0, true},
+				{lowKey[:2], lowKey[2], 0, true},
+				{lowKey[:1], lowKey[1], 0, true},
 				{before, maxByte, 0, true},
 				{nextKey(empty), maxByte, 0, true},
-				{empty, low[0], 0, true},
+				{empty, lowKey[0], 0, true},
 			},
 		},
 		{
@@ -444,17 +444,17 @@ func TestChildBounds(t *testing.T) {
 
 		// forward, 2 byte common prefix
 		{
-			From(low).To(low2),
+			From(lowKey).To(low2),
 			[]expectedChildBounds{
-				{empty, low[0], low[0], true},
+				{empty, lowKey[0], lowKey[0], true},
 				{nextKey(empty), 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], low[1], low[1], true},
-				{low[:2], low[2], low2[2], true},
-				{low[:3], low[3], maxByte, true},
-				{prevKey(low), 0, 0, false},
-				{low, 0, maxByte, true},
-				{nextKey(low), 0, maxByte, true},
+				{lowKey[:1], lowKey[1], lowKey[1], true},
+				{lowKey[:2], lowKey[2], low2[2], true},
+				{lowKey[:3], lowKey[3], maxByte, true},
+				{prevKey(lowKey), 0, 0, false},
+				{lowKey, 0, maxByte, true},
+				{nextKey(lowKey), 0, maxByte, true},
 				{midLows, 0, maxByte, true},
 				{low2[:3], 0, low2[3], true},
 				{prevKey(low2), 0, maxByte, true},
@@ -466,7 +466,7 @@ func TestChildBounds(t *testing.T) {
 
 		// reverse, 2 byte common prefix
 		{
-			From(low2).DownTo(low),
+			From(low2).DownTo(lowKey),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
 				{nextKey(low2), 0, 0, false},
@@ -474,53 +474,53 @@ func TestChildBounds(t *testing.T) {
 				{prevKey(low2), maxByte, 0, true},
 				{low2[:3], low2[3], 0, true},
 				{midLows, maxByte, 0, true},
-				{nextKey(low), maxByte, 0, true},
-				{low, maxByte, 0, true},
-				{prevKey(low), 0, 0, false},
-				{low[:3], maxByte, low[3], true},
-				{low[:2], low2[2], low[2], true},
-				{low[:1], low[1], low[1], true},
+				{nextKey(lowKey), maxByte, 0, true},
+				{lowKey, maxByte, 0, true},
+				{prevKey(lowKey), 0, 0, false},
+				{lowKey[:3], maxByte, lowKey[3], true},
+				{lowKey[:2], low2[2], lowKey[2], true},
+				{lowKey[:1], lowKey[1], lowKey[1], true},
 				{before, 0, 0, false},
 				{nextKey(empty), 0, 0, false},
-				{empty, low[0], low[0], true},
+				{empty, lowKey[0], lowKey[0], true},
 			},
 		},
 
 		// forward, From is a prefix of To
 		{
-			From(low[:2]).To(low),
+			From(lowKey[:2]).To(lowKey),
 			[]expectedChildBounds{
-				{empty, low[0], low[0], true},
+				{empty, lowKey[0], lowKey[0], true},
 				{nextKey(empty), 0, 0, false},
 				{before, 0, 0, false},
-				{low[:1], low[1], low[1], true},
-				{prevKey(low[:2]), 0, 0, false},
-				{low[:2], 0, low[2], true},
-				{nextKey(low[:2]), 0, maxByte, true},
-				{low[:3], 0, low[3], true},
-				{prevKey(low), 0, maxByte, true},
-				{low, 0, 0, false},
-				{nextKey(low), 0, 0, false},
+				{lowKey[:1], lowKey[1], lowKey[1], true},
+				{prevKey(lowKey[:2]), 0, 0, false},
+				{lowKey[:2], 0, lowKey[2], true},
+				{nextKey(lowKey[:2]), 0, maxByte, true},
+				{lowKey[:3], 0, lowKey[3], true},
+				{prevKey(lowKey), 0, maxByte, true},
+				{lowKey, 0, 0, false},
+				{nextKey(lowKey), 0, 0, false},
 				{after, 0, 0, false},
 			},
 		},
 
 		// reverse, DownTo is a prefix of From
 		{
-			From(low).DownTo(low[:2]),
+			From(lowKey).DownTo(lowKey[:2]),
 			[]expectedChildBounds{
 				{after, 0, 0, false},
-				{nextKey(low), 0, 0, false},
-				{low, 0, 0, false},
-				{prevKey(low), maxByte, 0, true},
-				{low[:3], low[3], 0, true},
-				{nextKey(low[:2]), maxByte, 0, true},
-				{low[:2], low[2], 0, true},
-				{prevKey(low[:2]), 0, 0, false},
-				{low[:1], low[1], low[1], true},
+				{nextKey(lowKey), 0, 0, false},
+				{lowKey, 0, 0, false},
+				{prevKey(lowKey), maxByte, 0, true},
+				{lowKey[:3], lowKey[3], 0, true},
+				{nextKey(lowKey[:2]), maxByte, 0, true},
+				{lowKey[:2], lowKey[2], 0, true},
+				{prevKey(lowKey[:2]), 0, 0, false},
+				{lowKey[:1], lowKey[1], lowKey[1], true},
 				{before, 0, 0, false},
 				{nextKey(empty), 0, 0, false},
-				{empty, low[0], low[0], true},
+				{empty, lowKey[0], lowKey[0], true},
 			},
 		},
 	} {

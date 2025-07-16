@@ -4,6 +4,13 @@ package kv
 // The identifiers are in the kv package, but the filename ends in _test.go,
 // preventing their inclusion in the public API.
 
+type (
+	TestingAdjFunction     = adjFunction[int]
+	TestingTraverser       = traverser[int]
+	TestingPathAdjFunction = pathAdjFunction[int]
+	TestingPathTraverser   = pathTraverser[int]
+)
+
 var (
 	TestingChildBounds    = (*Bounds).childBounds
 	TestingPreOrder       = preOrder[int]
@@ -11,50 +18,3 @@ var (
 	TestingPreOrderPaths  = preOrderPaths[int]
 	TestingPostOrderPaths = postOrderPaths[int]
 )
-
-type (
-	Cloneable[V any] interface {
-		Store[V]
-		Clone() Cloneable[V]
-	}
-
-	TestingAdjFunction     = adjFunction[int]
-	TestingTraverser       = traverser[int]
-	TestingPathAdjFunction = pathAdjFunction[int]
-	TestingPathTraverser   = pathTraverser[int]
-)
-
-// Assumes V is not a reference type.
-func (n *ptrTrieNode[V]) Clone() Cloneable[V] {
-	return clonePointerTrie(n)
-}
-
-func clonePointerTrie[V any](n *ptrTrieNode[V]) *ptrTrieNode[V] {
-	clone := *n
-	clone.children = make([]*ptrTrieNode[V], len(n.children))
-	for i, child := range n.children {
-		clone.children[i] = clonePointerTrie(child)
-	}
-	return &clone
-}
-
-// Assumes V is not a reference type.
-func (n *arrayTrieNode[V]) Clone() Cloneable[V] {
-	return cloneArrayTrie(n)
-}
-
-func cloneArrayTrie[V any](n *arrayTrieNode[V]) *arrayTrieNode[V] {
-	if n == nil {
-		return nil
-	}
-	clone := *n
-	if n.children != nil {
-		clone.children = &[256]*arrayTrieNode[V]{}
-		for i, child := range n.children {
-			if child != nil {
-				clone.children[i] = cloneArrayTrie(child)
-			}
-		}
-	}
-	return &clone
-}

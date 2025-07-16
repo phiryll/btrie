@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"iter"
-	"maps"
 	"slices"
 	"strings"
 
@@ -26,12 +25,9 @@ func newReference() *reference {
 	}
 }
 
-func (r *reference) Clone() TestStore {
-	return &reference{
-		maps.Clone(r.entries),
-		slices.Clone(r.ascKeys),
-		r.dirty,
-	}
+func (r *reference) makeDirty() {
+	r.ascKeys = nil
+	r.dirty = true
 }
 
 func (r *reference) refresh() {
@@ -61,8 +57,7 @@ func (r *reference) Set(key []byte, value byte) (byte, bool) {
 	}
 	prev, ok := r.entries[string(key)]
 	r.entries[string(key)] = value
-	r.ascKeys = nil
-	r.dirty = true
+	r.makeDirty()
 	return prev, ok
 }
 
@@ -73,8 +68,7 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 	value, ok := r.entries[string(key)]
 	if ok {
 		delete(r.entries, string(key))
-		r.ascKeys = nil
-		r.dirty = true
+		r.makeDirty()
 	}
 	return value, ok
 }
@@ -82,13 +76,20 @@ func (r *reference) Delete(key []byte) (byte, bool) {
 func (r *reference) Range(bounds *Bounds) iter.Seq2[[]byte, byte] {
 	bounds = bounds.Clone()
 	if bounds.IsReverse {
-		return r.Desc(bounds.End, bounds.Begin)
+		// Desc behaves differently than Range, with low inclusive and high exclusive.
+		low, high := bounds.End, bounds.Begin
+		if low != nil {
+			low = nextKey(low)
+		}
+		if high != nil {
+			high = nextKey(high)
+		}
+		return r.Desc(low, high)
 	}
 	return r.Asc(bounds.Begin, bounds.End)
 }
 
 // Future methods on Store, replacing Range.
-// Desc will behave differently, with low inclusive and high exclusive.
 
 func (r *reference) All() iter.Seq2[[]byte, byte] {
 	return func(yield func([]byte, byte) bool) {
@@ -100,15 +101,17 @@ func (r *reference) All() iter.Seq2[[]byte, byte] {
 	}
 }
 
-func (r *reference) between(low, high []byte) [][]byte {
+//nolint:revive
+func (r *reference) between(low, high []byte) (int, int) {
 	lowIndex, highIndex := 0, len(r.ascKeys)
 	if low != nil {
 		lowIndex, _ = slices.BinarySearchFunc(r.ascKeys, low, bytes.Compare)
 	}
 	if high != nil {
-		highIndex, _ = slices.BinarySearchFunc(r.ascKeys, high, bytes.Compare)
+		highIndex, _ = slices.BinarySearchFunc(r.ascKeys[lowIndex:], high, bytes.Compare)
+		highIndex += lowIndex
 	}
-	return r.ascKeys[lowIndex:highIndex]
+	return lowIndex, highIndex
 }
 
 func (r *reference) Asc(low, high []byte) iter.Seq2[[]byte, byte] {
@@ -117,7 +120,9 @@ func (r *reference) Asc(low, high []byte) iter.Seq2[[]byte, byte] {
 	}
 	return func(yield func([]byte, byte) bool) {
 		r.refresh()
-		for _, key := range r.between(low, high) {
+		lowIndex, highIndex := r.between(low, high)
+		for i := lowIndex; i < highIndex; i++ {
+			key := r.ascKeys[i]
 			if !yield(key, r.entries[string(key)]) {
 				return
 			}
@@ -131,14 +136,9 @@ func (r *reference) Desc(low, high []byte) iter.Seq2[[]byte, byte] {
 	}
 	return func(yield func([]byte, byte) bool) {
 		r.refresh()
-		a, b := low, high
-		if a != nil {
-			a = nextKey(a)
-		}
-		if b != nil {
-			b = nextKey(b)
-		}
-		for _, key := range slices.Backward(r.between(a, b)) {
+		lowIndex, highIndex := r.between(low, high)
+		for i := highIndex - 1; i >= lowIndex; i-- {
+			key := r.ascKeys[i]
 			if !yield(key, r.entries[string(key)]) {
 				return
 			}
