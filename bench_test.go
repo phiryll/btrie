@@ -23,10 +23,8 @@ const (
 	filenameWords = "testdata/words_alpha.txt"
 )
 
-var (
-	// How many entries randomly generated benchmarked stores will have.
-	benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
-)
+// How many entries randomly generated benchmarked stores will have.
+var benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
 
 func randomBytes(n int, random *rand.Rand) []byte {
 	if n == 0 {
@@ -250,11 +248,10 @@ func BenchmarkChildBounds(b *testing.B) {
 }
 
 // The returned sequence does not terminate.
-func randomEntries() iter.Seq2[[]byte, byte] {
+func randomEntries(meanKeyLen int, random *rand.Rand) iter.Seq2[[]byte, byte] {
 	return func(yield func([]byte, byte) bool) {
-		random := rand.New(rand.NewPCG(437120712374, 83741074321))
 		for {
-			key := randomKey(benchRandomMeanKeyLen, random)
+			key := randomKey(meanKeyLen, random)
 			if !yield(key, randomByte(random)) {
 				return
 			}
@@ -285,7 +282,8 @@ func entriesFromFile(filename string) iter.Seq2[[]byte, byte] {
 func createBenchStoreConfigs() iter.Seq[*storeConfig] {
 	return func(yield func(*storeConfig) bool) {
 		for _, size := range benchRandomSizes {
-			if !yield(createTestStoreConfig("random", size, randomEntries())) {
+			random := rand.New(rand.NewPCG(437120712374, 83741074321))
+			if !yield(createTestStoreConfig("random", size, randomEntries(benchRandomMeanKeyLen, random))) {
 				return
 			}
 		}

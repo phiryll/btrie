@@ -168,6 +168,12 @@ func (s *storeUnderTest) resetFromConfig() {
 	s.ByteStore = store
 }
 
+func singleton[V any](value V) iter.Seq[V] {
+	return func(yield func(V) bool) {
+		yield(value)
+	}
+}
+
 // Returns an iterator over the keys of itr.
 func keyIter[K, V any](itr iter.Seq2[K, V]) iter.Seq[K] {
 	return func(yield func(K) bool) {
