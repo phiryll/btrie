@@ -26,8 +26,6 @@ const (
 var (
 	// How many entries randomly generated benchmarked stores will have.
 	benchRandomSizes = []int{1 << 16, 1 << 18, 1 << 20}
-
-	benchStoreConfigs = createBenchStoreConfigs()
 )
 
 func randomBytes(n int, random *rand.Rand) []byte {
@@ -284,24 +282,18 @@ func entriesFromFile(filename string) iter.Seq2[[]byte, byte] {
 	}
 }
 
-func createBenchRandomStoreConfigs() []*storeConfig {
-	result := []*storeConfig{}
-	for _, size := range benchRandomSizes {
-		result = append(result, createTestStoreConfig("random", size, randomEntries()))
+func createBenchStoreConfigs() iter.Seq[*storeConfig] {
+	return func(yield func(*storeConfig) bool) {
+		for _, size := range benchRandomSizes {
+			if !yield(createTestStoreConfig("random", size, randomEntries())) {
+				return
+			}
+		}
+		yield(createTestStoreConfig("words", -1, entriesFromFile(filenameWords)))
 	}
-	return result
 }
 
-// Config with lower-case english words, values are all 0.
-func createBenchWordStoreConfig() *storeConfig {
-	return createTestStoreConfig("words", -1, entriesFromFile(filenameWords))
-}
-
-func createBenchStoreConfigs() []*storeConfig {
-	return append(createBenchRandomStoreConfigs(), createBenchWordStoreConfig())
-}
-
-// This helps to understand how factory() can impact other benchmarks which use it.
+// Just making sure factory() isn't expensive.
 func BenchmarkFactory(b *testing.B) {
 	for _, def := range implDefs {
 		b.Run(def.name, func(b *testing.B) {
@@ -313,7 +305,7 @@ func BenchmarkFactory(b *testing.B) {
 }
 
 func BenchmarkCreate(b *testing.B) {
-	for _, config := range benchStoreConfigs {
+	for config := range createBenchStoreConfigs() {
 		for _, def := range implDefs {
 			b.Run(config.name+"/"+def.name, func(b *testing.B) {
 				for b.Loop() {
@@ -328,7 +320,7 @@ func BenchmarkCreate(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
@@ -347,7 +339,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkSet(b *testing.B) {
-	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), nil)
@@ -370,7 +362,7 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkDelete(b *testing.B) {
-	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("existing=true", func(b *testing.B) {
 				next := repeat(slices.Collect(keyIter(store.config.ref.All())), func() {
@@ -413,7 +405,7 @@ func randomPairs[V any](s []V) func() (V, V) {
 }
 
 func BenchmarkAll(b *testing.B) {
-	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			b.Run("op=init", func(b *testing.B) {
 				for b.Loop() {
@@ -433,7 +425,7 @@ func BenchmarkAll(b *testing.B) {
 
 //nolint:gocognit
 func benchRange(b *testing.B, bounds func(low, high []byte) *Bounds) {
-	for store := range createStoresUnderTest(slices.Values(benchStoreConfigs)) {
+	for store := range createStoresUnderTest(createBenchStoreConfigs()) {
 		b.Run(store.name, func(b *testing.B) {
 			keys := boundKeys(store.config.ref)
 			b.Run("op=init", func(b *testing.B) {
